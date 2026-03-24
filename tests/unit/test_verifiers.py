@@ -11,6 +11,7 @@ Pattern per verifier (CLAUDE.md §4.2):
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 from typing import Any
@@ -468,6 +469,10 @@ def _mock_litellm_response(content: str) -> MagicMock:
     return resp
 
 
+@pytest.mark.skipif(
+    not importlib.util.find_spec("litellm"),
+    reason="litellm not installed",
+)
 class TestLLMJudgeVerifier:
 
     def test_passes_when_score_above_threshold(self) -> None:
