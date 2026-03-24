@@ -1,0 +1,122 @@
+[
+  {
+    "id": "AML-001",
+    "customer_id": "CUST-A",
+    "customer_name": "Zhang Wei",
+    "transaction_amount": 52000,
+    "transaction_type": "WIRE_TRANSFER",
+    "counterparty_country": "CN",
+    "alert_reason": "Geographic risk — transfers to elevated-risk jurisdiction",
+    "account_age_days": 1847,
+    "previous_alerts": 0,
+    "severity": "LOW"
+  },
+  {
+    "id": "AML-002",
+    "customer_id": "CUST-B",
+    "customer_name": "Marie Dubois",
+    "transaction_amount": 175000,
+    "transaction_type": "OFFSHORE_TRANSFER",
+    "counterparty_country": "VG",
+    "alert_reason": "Offshore account activity — British Virgin Islands",
+    "account_age_days": 892,
+    "previous_alerts": 1,
+    "severity": "MEDIUM"
+  },
+  {
+    "id": "AML-003",
+    "customer_id": "CUST-C",
+    "customer_name": "Carlos Mendoza",
+    "transaction_amount": 820000,
+    "transaction_type": "CASH_DEPOSIT",
+    "counterparty_country": "US",
+    "alert_reason": "Structuring pattern — 23 deposits below $10K threshold over 14 days",
+    "account_age_days": 412,
+    "previous_alerts": 2,
+    "severity": "HIGH"
+  },
+  {
+    "id": "AML-004",
+    "customer_id": "CUST-D",
+    "customer_name": "Nadia Petrov",
+    "transaction_amount": 2100000,
+    "transaction_type": "ROUND_TRIP",
+    "counterparty_country": "AE",
+    "alert_reason": "Round-trip transactions via shell companies in FATF high-risk jurisdictions",
+    "account_age_days": 67,
+    "previous_alerts": 0,
+    "severity": "CRITICAL"
+  },
+  {
+    "id": "AML-005",
+    "customer_id": "CUST-A",
+    "customer_name": "Zhang Wei",
+    "transaction_amount": 215000,
+    "transaction_type": "WIRE_TRANSFER",
+    "counterparty_country": "HK",
+    "alert_reason": "Velocity spike — 11 new counterparties in 48 hours (previously flagged in AML-001)",
+    "account_age_days": 1854,
+    "previous_alerts": 1,
+    "severity": "HIGH"
+  },
+  {
+    "id": "AML-006",
+    "customer_id": "CUST-B",
+    "customer_name": "Marie Dubois",
+    "transaction_amount": 8500,
+    "transaction_type": "DOMESTIC_TRANSFER",
+    "counterparty_country": "FR",
+    "alert_reason": "Routine domestic transfer (follow-up to AML-002)",
+    "account_age_days": 899,
+    "previous_alerts": 2,
+    "severity": "LOW"
+  },
+  {
+    "id": "AML-007",
+    "customer_id": "CUST-E",
+    "customer_name": "Priya Sharma",
+    "transaction_amount": 45000,
+    "transaction_type": "CASH_WITHDRAWAL",
+    "counterparty_country": "IN",
+    "alert_reason": "Recurring near-threshold withdrawals — potential structuring awareness",
+    "account_age_days": 1203,
+    "previous_alerts": 0,
+    "severity": "MEDIUM"
+  },
+  {
+    "id": "AML-008",
+    "customer_id": "CUST-F",
+    "customer_name": "Omar Al-Rashid",
+    "transaction_amount": 680000,
+    "transaction_type": "WIRE_TRANSFER",
+    "counterparty_country": "IR",
+    "alert_reason": "Transfer to institution on OFAC secondary sanctions list",
+    "account_age_days": 234,
+    "previous_alerts": 0,
+    "severity": "HIGH"
+  },
+  {
+    "id": "AML-009",
+    "customer_id": "CUST-G",
+    "customer_name": "Sarah Johnson",
+    "transaction_amount": 4850,
+    "transaction_type": "ACH_CREDIT",
+    "counterparty_country": "US",
+    "alert_reason": "Irregular deposit amount — deviation from 18-month baseline",
+    "account_age_days": 2910,
+    "previous_alerts": 0,
+    "severity": "LOW"
+  },
+  {
+    "id": "AML-010",
+    "customer_id": "CUST-H",
+    "customer_name": "Michael Torres",
+    "transaction_amount": 120000,
+    "transaction_type": "LOAN_DISBURSEMENT",
+    "counterparty_country": "US",
+    "alert_reason": "Large disbursement to non-bank payee",
+    "account_age_days": 1560,
+    "previous_alerts": 0,
+    "severity": "LOW"
+  }
+]
