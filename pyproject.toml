@@ -97,6 +97,9 @@ self_consistency   = "veridian.verify.builtin.confidence:SelfConsistencyVerifier
 # Third-party hooks auto-discovered via this entry point.
 [project.entry-points."veridian.hooks"]
 
+[tool.hatch.build.targets.wheel]
+packages = ["veridian"]
+
 [project.urls]
 Homepage      = "https://github.com/AV-CSE31/veridian"
 Repository    = "https://github.com/AV-CSE31/veridian"
