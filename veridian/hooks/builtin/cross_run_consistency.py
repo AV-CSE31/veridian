@@ -48,9 +48,9 @@ USAGE:
 """
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
-import dataclasses
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
