@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "veridian"
+name = "veridian-ai"
 version = "0.1.0"
 description = "Production-grade infrastructure for reliable long-running AI agents — verified, crash-safe, observable."
 authors = [{ name = "Veridian contributors" }]
