@@ -1,0 +1,176 @@
+{
+  "total": 9,
+  "passed": 9,
+  "failed": 0,
+  "experiments": [
+    {
+      "experiment_id": "E-01",
+      "hypothesis": "Veridian reduces silent failures under drift by \u226540%",
+      "passed": true,
+      "primary_metric": "silent_failure_rate_reduction_pct",
+      "primary_value": 100.0,
+      "threshold": 40.0,
+      "secondary_metrics": {
+        "baseline_sfr": 0.3,
+        "veridian_sfr": 0.0,
+        "drifted_tasks": 30,
+        "caught_by_verifier": 30,
+        "false_positives": 13,
+        "total_tasks": 100
+      },
+      "notes": "SemanticGroundingVerifier caught 30/30 drifted outputs with 13 false positives."
+    },
+    {
+      "experiment_id": "E-02",
+      "hypothesis": "Static filter FPR >=20%; SemanticGrounding reduces FPR",
+      "passed": true,
+      "primary_metric": "static_false_positive_rate",
+      "primary_value": 0.8182,
+      "threshold": 0.2,
+      "secondary_metrics": {
+        "veridian_fpr": 0.0,
+        "fpr_reduction_pct": 100.0,
+        "static_f1": 0.1538,
+        "veridian_f1": 0.7097,
+        "total_skills": 100,
+        "hallucinated_skills": 11,
+        "clean_skills": 89,
+        "static_threshold": 0.6
+      },
+      "notes": "Static (threshold=0.6): FPR=0.818, F1=0.154. Veridian (SemanticGrounding): FPR=0.000, F1=0.710. FPR reduction: 100.0%."
+    },
+    {
+      "experiment_id": "E-03",
+      "hypothesis": "SemanticGrounding improves OOD retrieval precision by >=25%",
+      "passed": true,
+      "primary_metric": "ood_precision_improvement_pct",
+      "primary_value": 212.5,
+      "threshold": 25.0,
+      "secondary_metrics": {
+        "baseline_ood_precision": 0.32,
+        "veridian_ood_precision": 1.0,
+        "ood_corrupted": 34,
+        "in_dist_baseline_precision": 1.0,
+        "in_dist_veridian_precision": 1.0,
+        "ood_queries": 50,
+        "in_dist_queries": 50,
+        "ood_corruption_rate": 0.65
+      },
+      "notes": "OOD precision: 0.320 -> 1.000 (+212.5%). In-dist: 1.000 -> 1.000."
+    },
+    {
+      "experiment_id": "E-04",
+      "hypothesis": "CrossRunConsistencyHook achieves AUROC \u2265 0.85 as drift detector",
+      "passed": true,
+      "primary_metric": "auroc",
+      "primary_value": 1.0,
+      "threshold": 0.85,
+      "secondary_metrics": {
+        "total_tasks": 80,
+        "drifted_tasks": 28,
+        "total_conflicts_detected": 84,
+        "critical_conflicts": 45,
+        "entities_tracked": 20
+      },
+      "notes": "Hook detected 84 conflicts (45 critical) across 20 entities."
+    },
+    {
+      "experiment_id": "E-05",
+      "hypothesis": "TrustedExecutor reduces adversarial acceptance to <5%",
+      "passed": true,
+      "primary_metric": "adversarial_acceptance_rate",
+      "primary_value": 0.0,
+      "threshold": 0.05,
+      "secondary_metrics": {
+        "adversarial_caught": 20,
+        "adversarial_total": 20,
+        "clean_pass_rate": 1.0,
+        "clean_false_quarantine": 0,
+        "clean_total": 35,
+        "sensitivity": "high"
+      },
+      "notes": "OutputSanitizer (high sensitivity): caught 20/20 adversarial (100%). Clean false quarantine: 0/35 (0.0%)."
+    },
+    {
+      "experiment_id": "E-06",
+      "hypothesis": "Trust decays geometrically across agent hops with R\u00b2 \u2265 0.80",
+      "passed": true,
+      "primary_metric": "geometric_decay_r_squared",
+      "primary_value": 0.9998,
+      "threshold": 0.8,
+      "secondary_metrics": {
+        "fitted_T0": 0.7647,
+        "fitted_decay_per_hop": 0.8033,
+        "actual_decay_factor": 0.8,
+        "n_chains": 30,
+        "n_hops": 5,
+        "mean_trust_hop_0": 0.7611,
+        "mean_trust_hop_4": 0.318,
+        "tasks_stored": 150
+      },
+      "notes": "Geometric fit: trust(n) \u2248 0.765 \u00d7 0.803^n. R\u00b2=0.9998. Ledger round-trip verified for all 150 tasks."
+    },
+    {
+      "experiment_id": "E-07",
+      "hypothesis": "TaskQualityGate achieves F1 >= 0.85 on compliance gap identification",
+      "passed": true,
+      "primary_metric": "f1_gap_detection",
+      "primary_value": 0.8571,
+      "threshold": 0.85,
+      "secondary_metrics": {
+        "precision": 1.0,
+        "recall": 0.75,
+        "true_positives": 30,
+        "false_positives": 0,
+        "false_negatives": 10,
+        "detection_threshold": 0.75,
+        "total_tasks": 100,
+        "gap_tasks": 40,
+        "good_tasks": 60,
+        "avg_gap_score": 0.7047,
+        "avg_good_score": 0.9
+      },
+      "notes": "Detection threshold=0.75. F1=0.857, P=1.000, R=0.750. Avg scores: gap=0.705, good=0.900."
+    },
+    {
+      "experiment_id": "E-08",
+      "hypothesis": "EntropyGC achieves >=95% recall with zero missed CRITICAL invalidations",
+      "passed": true,
+      "primary_metric": "recall",
+      "primary_value": 1.0,
+      "threshold": 0.95,
+      "secondary_metrics": {
+        "zero_missed_critical": true,
+        "stale_detected": 20,
+        "stale_ground_truth": 20,
+        "retry_detected": 5,
+        "retry_ground_truth": 5,
+        "abandoned_detected": 3,
+        "abandoned_ground_truth": 3,
+        "total_issues_detected": 28,
+        "entropy_report_written": true
+      },
+      "notes": "Stale: 20/20. Retries: 5/5. Abandoned chains: 3/3. Missed critical: 0."
+    },
+    {
+      "experiment_id": "E-09",
+      "hypothesis": "Full Veridian pipeline maintains gains with \u22645% degradation vs individual components",
+      "passed": true,
+      "primary_metric": "degradation_from_best_individual_pct",
+      "primary_value": 0.0,
+      "threshold": 5.0,
+      "secondary_metrics": {
+        "no_veridian_f1": 0.0,
+        "grounding_only_f1": 0.8571,
+        "consistency_only_f1": 0.0,
+        "full_pipeline_f1": 0.8571,
+        "improvement_vs_baseline_pct": 85714285714.29,
+        "full_pipeline_sfr": 0.0,
+        "no_veridian_sfr": 0.3,
+        "drifted_tasks": 15,
+        "total_tasks": 50
+      },
+      "notes": "F1: none=0.000, grounding=0.857, consistency=0.000, full=0.857. Degradation vs best individual: 0.0%."
+    }
+  ]
+}

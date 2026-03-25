@@ -1,0 +1,63 @@
+docs/
+
+# Internal engineering docs (IP protected)
+AGENTS.md
+CLAUDE.md
+
+# Secrets / credentials
+.env
+.env.*
+*.key
+*.pem
+*.p12
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Type checking
+.mypy_cache/
+
+# Ruff
+.ruff_cache/
+
+# Veridian runtime files (don't commit ledger state)
+ledger.json
+ledger.lock
+progress.md
+veridian_trace.jsonl
+entropy_report.md
+conflicts.jsonl
+quarantine.jsonl
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Distribution
+*.tar.gz
+*.whl

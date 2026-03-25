@@ -1,0 +1,2268 @@
+[
+  {
+    "id": "query_in_dist_0096",
+    "text": "Check process process against NIST-CSF control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.792,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_ood_0053",
+    "text": "Process CC9.2 via code pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5087,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_in_dist_0005",
+    "text": "Review log_export for HIPAA control_id evidence",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.849,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0042",
+    "text": "Evaluate CC9.2 using legal methodology",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5522,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_in_dist_0097",
+    "text": "Extract renewal_terms from MSA agreement",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8714,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0005",
+    "text": "Process storage via legal pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6623,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0012",
+    "text": "Assess non_compete risk in contract_party contract",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8869,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0081",
+    "text": "Audit Slack system for NIST-CSF compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8761,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_ood_0006",
+    "text": "Evaluate indemnification using compliance methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4843,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0062",
+    "text": "Process CC5.1 via code pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4211,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_ood_0090",
+    "text": "Evaluate dispute_resolution using code methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5523,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0049",
+    "text": "Optimize file_IO performance in data_pipeline",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8931,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0030",
+    "text": "Assess encryption gap against HIPAA requirement control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8811,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_in_dist_0084",
+    "text": "Review NDA for force_majeure clauses",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9001,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0050",
+    "text": "Evaluate auth using compliance methodology",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5668,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0003",
+    "text": "Fix memory_leak bug in queue",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.79,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0023",
+    "text": "Process indemnification via code pipeline",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5566,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0089",
+    "text": "Apply legal risk framework to CC5.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4099,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_ood_0016",
+    "text": "Process notifications via compliance pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5844,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0004",
+    "text": "Fix SQL_injection bug in api_gateway",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9078,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0033",
+    "text": "Process limitation_of_liability via code pipeline",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4594,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0079",
+    "text": "Assess confidentiality risk in contract_party contract",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8759,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0091",
+    "text": "Migrate api_gateway from Django 3.x to Django 5.x",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8832,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0051",
+    "text": "Add property-based tests for notifications",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8679,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0046",
+    "text": "Assess termination risk in contract_party contract",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9337,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0032",
+    "text": "Audit AWS_IAM system for HIPAA compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8113,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_in_dist_0092",
+    "text": "Verify data_residency compliance with SOX",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9419,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0055",
+    "text": "Evaluate CC9.1 control for PCI-DSS compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9228,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0073",
+    "text": "Evaluate termination using code methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5035,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0012",
+    "text": "Apply code risk framework to CC8.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5616,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_in_dist_0000",
+    "text": "Extract payment_terms from partnership agreement",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7743,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0040",
+    "text": "Verify liability_cap compliance with CCPA",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7864,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0076",
+    "text": "Assess dispute_resolution risk in contract_party contract",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9819,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0078",
+    "text": "Identify governing_law obligations for contract_party",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8203,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0050",
+    "text": "Migrate cache from Python 2.7 to Flask 3.x",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7822,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0096",
+    "text": "Process confidentiality via compliance pipeline",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6996,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0025",
+    "text": "Review log_export for ISO27001 control_id evidence",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8925,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_in_dist_0001",
+    "text": "Fix race_condition bug in search",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8763,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0077",
+    "text": "Review employment for confidentiality clauses",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8385,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0064",
+    "text": "Migrate payments from Python 2.7 to Flask 3.x",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9022,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0039",
+    "text": "Process data_pipeline via legal pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4029,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0079",
+    "text": "Apply compliance risk framework to search assessment",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6196,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0034",
+    "text": "Identify non_compete obligations for contract_party",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9574,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0086",
+    "text": "Refactor global_state in auth to use ORM_queries",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8111,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0054",
+    "text": "Fix XSS bug in cache",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.963,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0009",
+    "text": "Evaluate A1.2 control for ISO27001 compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8016,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_in_dist_0065",
+    "text": "Fix n+1_query bug in api_gateway",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9779,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0059",
+    "text": "Check process process against PCI-DSS control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8607,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0083",
+    "text": "Process scheduler via legal pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3906,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0013",
+    "text": "Process cache via legal pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5773,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0009",
+    "text": "Apply legal risk framework to CC5.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4586,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0070",
+    "text": "Evaluate CC7.2 using legal methodology",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.524,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0055",
+    "text": "Evaluate A1.2 using code methodology",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5042,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0011",
+    "text": "Assess audit_logging gap against ISO27001 requirement control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9635,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0035",
+    "text": "Evaluate A1.2 using code methodology",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5933,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_ood_0077",
+    "text": "Process dispute_resolution via compliance pipeline",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6826,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0049",
+    "text": "Process limitation_of_liability via code pipeline",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5061,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0004",
+    "text": "Evaluate governing_law using code methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6801,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0052",
+    "text": "Evaluate data_pipeline using legal methodology",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6636,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0026",
+    "text": "Process CC6.1 via legal pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3555,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0003",
+    "text": "Apply legal risk framework to CC8.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3901,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_in_dist_0007",
+    "text": "Audit Slack system for NIST-CSF compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9808,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0015",
+    "text": "Review policy_document for PCI-DSS control_id evidence",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9587,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0059",
+    "text": "Process IP_ownership via code pipeline",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5977,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0025",
+    "text": "Apply legal risk framework to CC5.2 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.644,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0037",
+    "text": "Apply compliance risk framework to storage assessment",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3789,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0023",
+    "text": "Optimize file_IO performance in api_gateway",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8082,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0071",
+    "text": "Verify data_residency compliance with HIPAA",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8589,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0044",
+    "text": "Apply legal risk framework to CC9.2 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4419,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0046",
+    "text": "Apply code risk framework to IP_ownership assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4446,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0089",
+    "text": "Fix memory_leak bug in scheduler",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.905,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0060",
+    "text": "Evaluate CC7.2 using code methodology",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3512,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0064",
+    "text": "Evaluate change_of_control using code methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3589,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0018",
+    "text": "Review SLA for force_majeure clauses",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9307,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0006",
+    "text": "Add integration tests for data_pipeline",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8852,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0036",
+    "text": "Optimize file_IO performance in payments",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7977,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0047",
+    "text": "Review system_screenshot for PCI-DSS control_id evidence",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.937,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_ood_0068",
+    "text": "Apply legal risk framework to auth assessment",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6675,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0001",
+    "text": "Process CC7.2 via code pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6109,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_in_dist_0033",
+    "text": "Assess access_control gap against HIPAA requirement control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8616,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_in_dist_0021",
+    "text": "Identify governing_law obligations for contract_party",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9357,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0039",
+    "text": "Verify liability_cap compliance with GDPR",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9002,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0014",
+    "text": "Evaluate queue using compliance methodology",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5673,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0072",
+    "text": "Verify audit_rights compliance with GDPR",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8087,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0038",
+    "text": "Refactor sync_blocking_calls in auth to use ORM_queries",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8353,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0058",
+    "text": "Fix deadlock bug in api_gateway",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.981,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0010",
+    "text": "Apply legal risk framework to CC8.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6695,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0029",
+    "text": "Process CC8.1 via code pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3526,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0067",
+    "text": "Extract SLA_credits from SOW agreement",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9209,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0069",
+    "text": "Apply compliance risk framework to indemnification assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6373,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0075",
+    "text": "Evaluate CC6.1 control for SOC2 compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8501,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_in_dist_0062",
+    "text": "Check process process against NIST-CSF control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7929,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_in_dist_0041",
+    "text": "Refactor raw_SQL_queries in payments to use event_driven",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9805,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0099",
+    "text": "Assess encryption gap against SOC2 requirement control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9239,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0083",
+    "text": "Assess vendor_management gap against HIPAA requirement control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8197,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_in_dist_0043",
+    "text": "Audit GitHub system for ISO27001 compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9066,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0087",
+    "text": "Apply compliance risk framework to dispute_resolution assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4807,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0071",
+    "text": "Apply compliance risk framework to IP_ownership assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3923,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0030",
+    "text": "Process queue via legal pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5517,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0057",
+    "text": "Evaluate force_majeure using compliance methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3755,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0094",
+    "text": "Apply legal risk framework to queue assessment",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6334,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0066",
+    "text": "Process confidentiality via compliance pipeline",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.365,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0002",
+    "text": "Evaluate search using compliance methodology",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4503,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0007",
+    "text": "Process CC9.1 via code pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6427,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0008",
+    "text": "Evaluate CC6.1 control for NIST-CSF compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.893,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_in_dist_0024",
+    "text": "Review policy_document for HIPAA control_id evidence",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9112,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0018",
+    "text": "Apply compliance risk framework to dispute_resolution assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5757,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0081",
+    "text": "Evaluate CC9.2 using legal methodology",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5757,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_ood_0061",
+    "text": "Apply code risk framework to confidentiality assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3693,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0041",
+    "text": "Apply legal risk framework to CC9.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6135,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0056",
+    "text": "Optimize database_query performance in data_pipeline",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.875,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0067",
+    "text": "Evaluate governing_law using code methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6737,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0076",
+    "text": "Process storage via legal pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5076,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0060",
+    "text": "Audit Datadog system for SOC2 compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8741,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0040",
+    "text": "Evaluate A1.1 using legal methodology",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6298,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_in_dist_0069",
+    "text": "Review acquisition for non_compete clauses",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7529,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0087",
+    "text": "Review policy_document for HIPAA control_id evidence",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7773,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_ood_0063",
+    "text": "Process C1.1 via legal pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5911,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0027",
+    "text": "Process notifications via compliance pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6321,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0002",
+    "text": "Refactor hardcoded_secrets in api_gateway to use env_secrets",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9291,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0080",
+    "text": "Migrate payments from Python 2.7 to Flask 3.x",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9238,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0021",
+    "text": "Process PI1.1 via code pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3528,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0066",
+    "text": "Fix race_condition bug in auth",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9689,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0026",
+    "text": "Assess change_management gap against NIST-CSF requirement control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.785,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_ood_0011",
+    "text": "Evaluate confidentiality using code methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3729,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0032",
+    "text": "Process force_majeure via code pipeline",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6615,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0063",
+    "text": "Evaluate A1.2 control for NIST-CSF compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.916,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_in_dist_0037",
+    "text": "Migrate auth from Python 3.8 to Django 5.x",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8301,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0084",
+    "text": "Apply compliance risk framework to cache assessment",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4196,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0098",
+    "text": "Process CC8.1 via legal pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5125,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_in_dist_0042",
+    "text": "Assess incident_response gap against HIPAA requirement control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9829,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_in_dist_0027",
+    "text": "Extract notice_period from vendor agreement",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9319,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0019",
+    "text": "Identify non_compete obligations for contract_party",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7855,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0073",
+    "text": "Optimize database_query performance in search",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7944,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0045",
+    "text": "Optimize JSON_serialization performance in notifications",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7663,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0000",
+    "text": "Process A1.2 via legal pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6468,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_ood_0093",
+    "text": "Evaluate queue using legal methodology",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.364,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0022",
+    "text": "Identify governing_law obligations for contract_party",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8671,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0017",
+    "text": "Apply code risk framework to confidentiality assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4117,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0048",
+    "text": "Extract SLA_credits from NDA agreement",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9866,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0054",
+    "text": "Apply code risk framework to CC8.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.622,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0094",
+    "text": "Optimize HTTP_requests performance in notifications",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.795,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0051",
+    "text": "Process payments via legal pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6852,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0074",
+    "text": "Add integration tests for auth",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9549,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0045",
+    "text": "Process force_majeure via code pipeline",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.589,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0036",
+    "text": "Process scheduler via compliance pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4092,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0020",
+    "text": "Apply compliance risk framework to data_pipeline assessment",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4185,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0031",
+    "text": "Fix deadlock bug in data_pipeline",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9882,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0034",
+    "text": "Apply legal risk framework to CC5.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5509,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_ood_0080",
+    "text": "Process CC7.2 via legal pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6453,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0024",
+    "text": "Process queue via compliance pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4239,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0015",
+    "text": "Process PI1.1 via code pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5568,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0088",
+    "text": "Check process process against HIPAA control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7966,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_in_dist_0095",
+    "text": "Review interview_notes for SOC2 control_id evidence",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7708,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_in_dist_0016",
+    "text": "Optimize HTTP_requests performance in auth",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.763,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0085",
+    "text": "Evaluate confidentiality using compliance methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6082,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0070",
+    "text": "Audit PagerDuty system for SOC2 compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9618,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0008",
+    "text": "Process search via compliance pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6154,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0028",
+    "text": "Process scheduler via compliance pipeline",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4984,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0068",
+    "text": "Review system_screenshot for PCI-DSS control_id evidence",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7782,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_in_dist_0090",
+    "text": "Identify governing_law obligations for contract_party",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.861,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0082",
+    "text": "Verify audit_rights compliance with HIPAA",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8747,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0057",
+    "text": "Evaluate A1.1 control for HIPAA compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8791,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_ood_0095",
+    "text": "Evaluate CC7.2 using code methodology",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5926,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0048",
+    "text": "Evaluate api_gateway using compliance methodology",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5855,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0022",
+    "text": "Evaluate indemnification using code methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3503,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0029",
+    "text": "Assess limitation_of_liability risk in contract_party contract",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.858,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0097",
+    "text": "Process CC5.1 via code pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5543,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0061",
+    "text": "Check process process against SOC2 control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9369,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0091",
+    "text": "Process governing_law via code pipeline",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5157,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0035",
+    "text": "Check process process against ISO27001 control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9669,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0052",
+    "text": "Extract payment_terms from lease agreement",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8481,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0074",
+    "text": "Evaluate dispute_resolution using compliance methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6579,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0017",
+    "text": "Audit GitHub system for HIPAA compliance",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8284,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0043",
+    "text": "Apply code risk framework to limitation_of_liability assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4896,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0065",
+    "text": "Apply code risk framework to CC5.2 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5369,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0044",
+    "text": "Assess governing_law risk in contract_party contract",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8532,
+    "ground_truth": {
+      "risk_level": "MEDIUM",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_ood_0099",
+    "text": "Evaluate api_gateway using legal methodology",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4538,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0082",
+    "text": "Apply code risk framework to non_compete assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3652,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0010",
+    "text": "Assess governing_law risk in contract_party contract",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7726,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0092",
+    "text": "Apply legal risk framework to A1.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.502,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0019",
+    "text": "Evaluate termination using compliance methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5813,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0086",
+    "text": "Apply legal risk framework to CC5.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.369,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_in_dist_0098",
+    "text": "Refactor sync_blocking_calls in search to use env_secrets",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9258,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_in_dist_0028",
+    "text": "Review lease for dispute_resolution clauses",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.9724,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0013",
+    "text": "Migrate cache from Flask 1.x to Python 3.12",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8672,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0093",
+    "text": "Extract SLA_credits from employment agreement",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7575,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0072",
+    "text": "Apply legal risk framework to CC9.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3721,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_ood_0031",
+    "text": "Apply code risk framework to confidentiality assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6866,
+    "ground_truth": {
+      "risk_level": "LOW",
+      "decision": "ALLOW"
+    }
+  },
+  {
+    "id": "query_in_dist_0014",
+    "text": "Add property-based tests for auth",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7688,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_ood_0088",
+    "text": "Apply legal risk framework to search assessment",
+    "domain": "code",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3945,
+    "ground_truth": {
+      "status": "passed"
+    }
+  },
+  {
+    "id": "query_in_dist_0085",
+    "text": "Refactor raw_SQL_queries in data_pipeline to use env_secrets",
+    "domain": "code",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7609,
+    "ground_truth": {
+      "status": "failed"
+    }
+  },
+  {
+    "id": "query_ood_0058",
+    "text": "Evaluate CC8.1 using legal methodology",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5826,
+    "ground_truth": {
+      "status": "gap"
+    }
+  },
+  {
+    "id": "query_in_dist_0020",
+    "text": "Identify dispute_resolution obligations for contract_party",
+    "domain": "legal",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.8816,
+    "ground_truth": {
+      "risk_level": "HIGH",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0075",
+    "text": "Apply compliance risk framework to termination assessment",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4957,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_in_dist_0053",
+    "text": "Check process process against ISO27001 control_id",
+    "domain": "compliance",
+    "distribution": "in_dist",
+    "is_ambiguous": false,
+    "relevance_score": 0.7659,
+    "ground_truth": {
+      "status": "not_applicable"
+    }
+  },
+  {
+    "id": "query_ood_0047",
+    "text": "Process CC9.2 via code pipeline",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.5852,
+    "ground_truth": {
+      "status": "partial"
+    }
+  },
+  {
+    "id": "query_ood_0038",
+    "text": "Apply code risk framework to CC9.1 assessment",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.6503,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  },
+  {
+    "id": "query_ood_0056",
+    "text": "Evaluate termination using code methodology",
+    "domain": "legal",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.4004,
+    "ground_truth": {
+      "risk_level": "CRITICAL",
+      "decision": "ESCALATE"
+    }
+  },
+  {
+    "id": "query_ood_0078",
+    "text": "Evaluate CC5.2 using code methodology",
+    "domain": "compliance",
+    "distribution": "ood",
+    "is_ambiguous": true,
+    "relevance_score": 0.3911,
+    "ground_truth": {
+      "status": "compliant"
+    }
+  }
+]
