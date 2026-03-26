@@ -31,11 +31,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task
-from veridian.core.quality_gate import TaskQualityGate
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
 from examples.experiments.shared.metrics import f1, print_result
+
+from veridian.core.quality_gate import TaskQualityGate
+from veridian.core.task import Task
 
 FRAMEWORKS = ["SOC2", "ISO27001", "NIST-CSF", "PCI-DSS", "HIPAA"]
 CONTROLS = [

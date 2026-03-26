@@ -7,6 +7,7 @@ TDD: these tests are written BEFORE the implementation.
 
 INVARIANT: EntropyGC NEVER mutates any ledger state. Every test asserts this.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -81,6 +82,7 @@ class TestCheckStaleInProgress:
         # Force the updated_at to look old
         task = ledger.get("t1")
         from datetime import datetime, timedelta
+
         task.updated_at = datetime.utcnow() - timedelta(hours=2)
         data = ledger._read_raw()  # type: ignore[attr-defined]
         data["tasks"][task.id]["updated_at"] = task.updated_at.isoformat()
@@ -107,6 +109,7 @@ class TestCheckStaleInProgress:
         ledger.claim("t1", runner_id="old-run")
         task = ledger.get("t1")
         from datetime import datetime, timedelta
+
         task.updated_at = datetime.utcnow() - timedelta(hours=2)
         data = ledger._read_raw()  # type: ignore[attr-defined]
         data["tasks"][task.id]["updated_at"] = task.updated_at.isoformat()
@@ -246,8 +249,7 @@ class TestCheckMissingRequiredFields:
         gc = EntropyGC(ledger=ledger)
         issues = gc.check_missing_required_fields()
         assert any(
-            i.task_id == "t1" and i.issue_type == IssueType.MISSING_REQUIRED_FIELD
-            for i in issues
+            i.task_id == "t1" and i.issue_type == IssueType.MISSING_REQUIRED_FIELD for i in issues
         )
 
     def test_detects_task_with_empty_description(self, tmp_path: Path) -> None:
@@ -258,8 +260,7 @@ class TestCheckMissingRequiredFields:
         gc = EntropyGC(ledger=ledger)
         issues = gc.check_missing_required_fields()
         assert any(
-            i.task_id == "t1" and i.issue_type == IssueType.MISSING_REQUIRED_FIELD
-            for i in issues
+            i.task_id == "t1" and i.issue_type == IssueType.MISSING_REQUIRED_FIELD for i in issues
         )
 
     def test_no_flag_for_complete_task(self, tmp_path: Path) -> None:
@@ -283,10 +284,7 @@ class TestCheckPriorityOutliers:
 
         gc = EntropyGC(ledger=ledger)
         issues = gc.check_priority_outliers()
-        assert any(
-            i.task_id == "t1" and i.issue_type == IssueType.PRIORITY_OUTLIER
-            for i in issues
-        )
+        assert any(i.task_id == "t1" and i.issue_type == IssueType.PRIORITY_OUTLIER for i in issues)
 
     def test_no_flag_for_valid_priority(self, tmp_path: Path) -> None:
         """A task with priority in 0–100 must not be flagged."""
@@ -309,10 +307,7 @@ class TestCheckRetryExhaustion:
 
         gc = EntropyGC(ledger=ledger)
         issues = gc.check_retry_exhaustion()
-        assert any(
-            i.task_id == "t1" and i.issue_type == IssueType.RETRY_EXHAUSTION
-            for i in issues
-        )
+        assert any(i.task_id == "t1" and i.issue_type == IssueType.RETRY_EXHAUSTION for i in issues)
 
     def test_no_flag_for_task_with_retries_left(self, tmp_path: Path) -> None:
         """A task with retry_count < max_retries must not be flagged."""
@@ -346,8 +341,7 @@ class TestCheckDuplicateTaskIds:
             issues = gc.check_duplicate_task_ids()
 
         assert any(
-            i.issue_type == IssueType.DUPLICATE_TASK_ID and i.task_id == "dup"
-            for i in issues
+            i.issue_type == IssueType.DUPLICATE_TASK_ID and i.task_id == "dup" for i in issues
         )
         # The unique task should NOT be flagged
         assert not any(i.task_id == "unique" for i in issues)
@@ -376,6 +370,7 @@ class TestCheckProgressStall:
         # Manually backdate updated_at
         task = ledger.get("t1")
         from datetime import datetime, timedelta
+
         task.updated_at = datetime.utcnow() - timedelta(hours=25)
         data = ledger._read_raw()  # type: ignore[attr-defined]
         data["tasks"][task.id]["updated_at"] = task.updated_at.isoformat()
@@ -383,10 +378,7 @@ class TestCheckProgressStall:
 
         gc = EntropyGC(ledger=ledger, stall_threshold_seconds=3600)
         issues = gc.check_progress_stall()
-        assert any(
-            i.task_id == "t1" and i.issue_type == IssueType.PROGRESS_STALL
-            for i in issues
-        )
+        assert any(i.task_id == "t1" and i.issue_type == IssueType.PROGRESS_STALL for i in issues)
 
     def test_stall_check_never_mutates_ledger(self, tmp_path: Path) -> None:
         """check_progress_stall must not change any task."""
@@ -437,8 +429,7 @@ class TestEntropyGCRun:
     def test_run_on_clean_ledger_returns_no_issues(self, tmp_path: Path) -> None:
         """A healthy ledger should produce zero entropy issues."""
         tasks = [
-            Task(id=f"t{i}", title=f"Task {i}", description=f"Description {i}")
-            for i in range(3)
+            Task(id=f"t{i}", title=f"Task {i}", description=f"Description {i}") for i in range(3)
         ]
         ledger = make_ledger(tmp_path, tasks)
         report_path = tmp_path / "entropy_report.md"
@@ -469,10 +460,7 @@ class TestEntropyGCRun:
 
         content = report_path.read_text()
         # Should mention at least one issue type
-        assert any(
-            itype.value in content
-            for itype in IssueType
-        )
+        assert any(itype.value in content for itype in IssueType)
 
     def test_write_report_handles_os_error_gracefully(self, tmp_path: Path) -> None:
         """_write_report should log and not raise on OS errors."""

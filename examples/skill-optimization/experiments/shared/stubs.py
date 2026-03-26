@@ -19,12 +19,11 @@ Components stubbed here:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.core.exceptions import VeridianError
 from veridian.verify.base import BaseVerifier, VerificationResult
 
 log = logging.getLogger(__name__)
@@ -46,9 +45,9 @@ class SchemaVerifier(BaseVerifier):
 
     def __init__(
         self,
-        required_fields: Optional[list[str]] = None,
-        field_types: Optional[dict[str, type]] = None,
-        allowed_values: Optional[dict[str, list]] = None,
+        required_fields: list[str] | None = None,
+        field_types: dict[str, type] | None = None,
+        allowed_values: dict[str, list] | None = None,
         **_: Any,
     ) -> None:
         self.required_fields = required_fields or []
@@ -93,7 +92,7 @@ class BashExitCodeVerifier(BaseVerifier):
         "Verifies that bash commands completed with exit code 0. (Phase 2 stub)"
     )
 
-    def __init__(self, command: Optional[str] = None, **_: Any) -> None:
+    def __init__(self, command: str | None = None, **_: Any) -> None:
         self.command = command
 
     def verify(self, task: Task, result: TaskResult) -> VerificationResult:
@@ -124,7 +123,7 @@ class CompositeVerifier(BaseVerifier):
 
     def __init__(
         self,
-        verifiers: Optional[list[BaseVerifier]] = None,
+        verifiers: list[BaseVerifier] | None = None,
         **_: Any,
     ) -> None:
         self.verifiers: list[BaseVerifier] = verifiers or []
@@ -167,7 +166,7 @@ class AnyOfVerifier(BaseVerifier):
 
     def __init__(
         self,
-        verifiers: Optional[list[BaseVerifier]] = None,
+        verifiers: list[BaseVerifier] | None = None,
         **_: Any,
     ) -> None:
         self.verifiers: list[BaseVerifier] = verifiers or []
@@ -201,7 +200,7 @@ class LLMJudgeVerifier(BaseVerifier):
 
     def __init__(
         self,
-        criteria: Optional[list[str]] = None,
+        criteria: list[str] | None = None,
         passing_score: float = 0.7,
         model: str = "gemini/gemini-2.0-flash",
         **_: Any,
@@ -415,7 +414,7 @@ class EntropyGC:
                     ))
         return issues
 
-    def run(self, report_path: Optional[str] = None) -> list[EntropyIssue]:
+    def run(self, report_path: str | None = None) -> list[EntropyIssue]:
         """Run all checks. Optionally write a markdown report. NEVER mutates ledger."""
         all_issues = (
             self.check_stale_in_progress()

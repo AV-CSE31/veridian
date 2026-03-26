@@ -18,6 +18,7 @@ Usage::
     # Or use a callable
     mock.respond_with(lambda messages: LLMResponse(content="always this"))
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -49,12 +50,14 @@ class MockProvider(LLMProvider):
     def script_text(self, *texts: str) -> MockProvider:
         """Convenience: queue plain text responses."""
         for t in texts:
-            self._queue.append(LLMResponse(
-                content=t,
-                input_tokens=self.default_tokens,
-                output_tokens=len(t) // 4,
-                model="mock",
-            ))
+            self._queue.append(
+                LLMResponse(
+                    content=t,
+                    input_tokens=self.default_tokens,
+                    output_tokens=len(t) // 4,
+                    model="mock",
+                )
+            )
         return self
 
     def respond_when(self, contains: str, response: LLMResponse) -> MockProvider:
@@ -68,10 +71,13 @@ class MockProvider(LLMProvider):
         return self
 
     def script_veridian_result(
-        self, structured: dict[str, Any], summary: str = "done",
+        self,
+        structured: dict[str, Any],
+        summary: str = "done",
     ) -> MockProvider:
         """Convenience: script a valid veridian:result block."""
         import json
+
         payload = json.dumps({"summary": summary, "structured": structured, "artifacts": []})
         text = f"<veridian:result>\n{payload}\n</veridian:result>"
         return self.script_text(text)
@@ -98,9 +104,9 @@ class MockProvider(LLMProvider):
         # Default fallback
         return LLMResponse(
             content=(
-                '<veridian:result>\n'
+                "<veridian:result>\n"
                 '{"summary": "mock done", "structured": {}, "artifacts": []}\n'
-                '</veridian:result>'
+                "</veridian:result>"
             ),
             input_tokens=self.default_tokens,
             output_tokens=50,

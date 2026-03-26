@@ -13,6 +13,7 @@ RULES FOR ALL VERIFIERS:
    - ACTIONABLE: tell the agent what to fix and how
    - CONCISE: < 300 chars — this goes directly into the LLM context window
 """
+
 from __future__ import annotations
 
 import importlib.metadata
@@ -33,10 +34,11 @@ class VerificationResult:
     Returned by every verifier.
     If passed=False, error is injected verbatim into the next agent prompt.
     """
+
     passed: bool
-    error: str | None = None        # injected into LLM context on failure
+    error: str | None = None  # injected into LLM context on failure
     evidence: dict[str, Any] = field(default_factory=dict)
-    score: float | None = None      # 0.0–1.0; used by LLMJudgeVerifier
+    score: float | None = None  # 0.0–1.0; used by LLMJudgeVerifier
 
 
 class BaseVerifier(ABC):
@@ -44,6 +46,7 @@ class BaseVerifier(ABC):
     Abstract base for all verifiers.
     Subclasses must define class-level `id` and `description`.
     """
+
     id: ClassVar[str]
     description: ClassVar[str] = ""
 
@@ -56,14 +59,13 @@ class BaseVerifier(ABC):
         super().__init_subclass__(**kwargs)
         # Enforce that every concrete subclass declares an id
         if not getattr(cls, "id", None) and not getattr(cls, "__abstractmethods__", None):
-                raise TypeError(
-                    f"{cls.__name__} must define a class-level 'id' string"
-                )
+            raise TypeError(f"{cls.__name__} must define a class-level 'id' string")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # REGISTRY
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class VerifierRegistry:
     """

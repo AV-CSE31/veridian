@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Adversarial Evaluator Pipeline (feature/adversarial-evaluator)
+
+GAN-inspired structural separation of generator and judge for reliable AI agent
+output verification. Research basis: Anthropic harness design (March 2026) —
+self-evaluation fails ~95% of the time; adversarial tension drives quality upward.
+
+- `veridian/eval/sprint_contract.py` — `SprintContract`: pre-execution commitment
+  between generator and evaluator; deliverables + success criteria + test conditions;
+  dual-signing API (`sign_generator()` / `sign_evaluator()` / `is_signed()`);
+  `to_dict()` / `from_dict()` for provenance chain; validates threshold and
+  non-empty deliverables at construction time.
+
+- `veridian/eval/calibration.py` — `RubricCriterion`, `GradingRubric`,
+  `CalibrationProfile`; weighted evaluation rubric (weights must sum to 1.0,
+  validated eagerly at construction time); skepticism level (0.0–1.0);
+  `compute_weighted_score()` recomputes from rubric weights — never trusts LLM
+  arithmetic; `CalibrationProfile.default()` for balanced general-purpose eval.
+
+- `veridian/eval/adversarial.py` — `AdversarialEvaluator(BaseAgent)`: structurally
+  separate from generator (independent `LLMProvider`); `<veridian:eval>` XML block
+  parsing; per-criterion scoring; `EvaluationResult` with pass/fail, score,
+  criterion_scores, specific failure citations, actionable feedback (≤ 2000 chars),
+  and iteration number; raises `EvaluationError` on malformed LLM response.
+
+- `veridian/eval/pipeline.py` — `VerificationPipeline`: enforces signed contract
+  before execution; iterative evaluate loop up to `max_iterations`; returns on
+  first passing evaluation; `PipelineResult` with convergence flag, iteration count,
+  full `eval_history`, `best_score`, `final_eval`; fires lifecycle events
+  (`EvaluationStarted`, `EvaluationCompleted`, `EvaluationConverged`,
+  `EvaluationExhausted`) through optional `HookRegistry`.
+
+- `veridian/eval/prompts/evaluator.md` — adversarial evaluator system prompt.
+
+- `veridian/eval/__init__.py` — public API with `__all__`.
+
+- `veridian/core/exceptions.py` — added `EvaluationError`, `ContractViolation`
+  (captures `contract_id` + `reason`), `CalibrationError`; also added
+  `StorageError`, `StorageLockError`, `StorageConnectionError`, `EntropyError`,
+  `TracerError` (Phase 6 placeholder exceptions).
+
+- `veridian/core/events.py` — added `ContractNegotiated`, `EvaluationStarted`,
+  `EvaluationCompleted`, `EvaluationConverged`, `EvaluationExhausted` events.
+
+- `tests/unit/test_adversarial_eval.py` — 37 tests covering `SprintContract`,
+  `CalibrationProfile`, `GradingRubric`, `AdversarialEvaluator`, `VerificationPipeline`,
+  `EvaluationResult`, and exception hierarchy.
+
 ### Added — Phase 6: Observability, Storage Backends & Entropy GC
 
 #### Observability

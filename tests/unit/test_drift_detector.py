@@ -4,6 +4,7 @@ tests.unit.test_drift_detector
 DriftDetectorHook: behavioral regression detection across runs.
 Written FIRST per TDD mandate (CLAUDE.md §1.1).
 """
+
 from __future__ import annotations
 
 import json
@@ -240,18 +241,14 @@ class TestDriftDetectorHook:
 
     # ── Snapshot collection ──────────────────────────────────────────────
 
-    def test_collects_pass_counts_from_task_completed(
-        self, hook: DriftDetectorHook
-    ) -> None:
+    def test_collects_pass_counts_from_task_completed(self, hook: DriftDetectorHook) -> None:
         """Should accumulate pass count per verifier_id."""
         hook.before_run(RunStarted(run_id="r1", total_tasks=2))
         hook.after_task(_make_task_completed(verifier_id="schema"))
         hook.after_task(_make_task_completed(verifier_id="schema"))
         assert hook._verifier_pass_counts["schema"] == 2
 
-    def test_collects_fail_counts_from_task_failed(
-        self, hook: DriftDetectorHook
-    ) -> None:
+    def test_collects_fail_counts_from_task_failed(self, hook: DriftDetectorHook) -> None:
         """Should accumulate fail count per verifier_id."""
         hook.before_run(RunStarted(run_id="r1", total_tasks=2))
         hook.on_failure(_make_task_failed(verifier_id="schema"))
@@ -272,9 +269,7 @@ class TestDriftDetectorHook:
         assert len(hook._confidence_scores) == 2
         assert hook._confidence_scores[0] == pytest.approx(0.85)
 
-    def test_builds_snapshot_on_after_run(
-        self, hook: DriftDetectorHook, tmp_path: Path
-    ) -> None:
+    def test_builds_snapshot_on_after_run(self, hook: DriftDetectorHook, tmp_path: Path) -> None:
         """Should build and persist a RunSnapshot on after_run."""
         hook.before_run(RunStarted(run_id="r1", total_tasks=2))
         hook.after_task(_make_task_completed(verifier_id="schema"))
@@ -293,9 +288,7 @@ class TestDriftDetectorHook:
 
     # ── Drift detection ──────────────────────────────────────────────────
 
-    def test_detects_pass_rate_drop(
-        self, tmp_path: Path
-    ) -> None:
+    def test_detects_pass_rate_drop(self, tmp_path: Path) -> None:
         """Should detect significant pass rate degradation."""
         history_file = tmp_path / "drift_history.jsonl"
         # Pre-populate with 7 stable runs at 90% pass rate
@@ -303,49 +296,35 @@ class TestDriftDetectorHook:
             history_file,
             [_stable_snapshot(f"r_stable_{i}") for i in range(7)],
         )
-        hook = DriftDetectorHook(
-            history_file=history_file, window=5, threshold=0.15
-        )
+        hook = DriftDetectorHook(history_file=history_file, window=5, threshold=0.15)
         # Simulate a degraded run: 70% pass rate
         hook.before_run(RunStarted(run_id="r_bad", total_tasks=10))
         for i in range(7):
-            hook.after_task(_make_task_completed(
-                task_id=f"t_pass_{i}", verifier_id="schema"
-            ))
+            hook.after_task(_make_task_completed(task_id=f"t_pass_{i}", verifier_id="schema"))
         for i in range(3):
-            hook.on_failure(_make_task_failed(
-                task_id=f"t_fail_{i}", verifier_id="schema"
-            ))
+            hook.on_failure(_make_task_failed(task_id=f"t_fail_{i}", verifier_id="schema"))
         summary = _FakeSummary(done_count=7, failed_count=3, total_tasks=10)
         hook.after_run(RunCompleted(run_id="r_bad", summary=summary))
 
         report = hook.last_report
         assert report is not None
         assert report.overall_status in ("warning", "drifting")
-        pass_rate_signals = [
-            s for s in report.signals if "pass_rate" in s.metric
-        ]
+        pass_rate_signals = [s for s in report.signals if "pass_rate" in s.metric]
         assert len(pass_rate_signals) > 0
         assert pass_rate_signals[0].direction == "degraded"
 
-    def test_no_false_positive_on_stable_runs(
-        self, tmp_path: Path
-    ) -> None:
+    def test_no_false_positive_on_stable_runs(self, tmp_path: Path) -> None:
         """Should report 'stable' when current run matches baseline."""
         history_file = tmp_path / "drift_history.jsonl"
         _write_history(
             history_file,
             [_stable_snapshot(f"r_stable_{i}") for i in range(7)],
         )
-        hook = DriftDetectorHook(
-            history_file=history_file, window=5, threshold=0.15
-        )
+        hook = DriftDetectorHook(history_file=history_file, window=5, threshold=0.15)
         # Simulate a normal run: 90% pass rate (matches baseline)
         hook.before_run(RunStarted(run_id="r_ok", total_tasks=10))
         for i in range(9):
-            hook.after_task(_make_task_completed(
-                task_id=f"t_pass_{i}", verifier_id="schema"
-            ))
+            hook.after_task(_make_task_completed(task_id=f"t_pass_{i}", verifier_id="schema"))
         hook.on_failure(_make_task_failed(task_id="t_fail_0", verifier_id="schema"))
         summary = _FakeSummary(done_count=9, failed_count=1, total_tasks=10)
         hook.after_run(RunCompleted(run_id="r_ok", summary=summary))
@@ -354,53 +333,39 @@ class TestDriftDetectorHook:
         assert report is not None
         assert report.overall_status == "stable"
 
-    def test_detects_confidence_degradation(
-        self, tmp_path: Path
-    ) -> None:
+    def test_detects_confidence_degradation(self, tmp_path: Path) -> None:
         """Should detect drop in confidence scores."""
         history_file = tmp_path / "drift_history.jsonl"
         _write_history(
             history_file,
             [_stable_snapshot(f"r_{i}", confidence_mean=0.90) for i in range(7)],
         )
-        hook = DriftDetectorHook(
-            history_file=history_file, window=5, threshold=0.15
-        )
+        hook = DriftDetectorHook(history_file=history_file, window=5, threshold=0.15)
         # Simulate low-confidence run
         hook.before_run(RunStarted(run_id="r_low", total_tasks=10))
         for i in range(10):
-            hook.after_task(_make_task_completed(
-                task_id=f"t_{i}", confidence_composite=0.55
-            ))
+            hook.after_task(_make_task_completed(task_id=f"t_{i}", confidence_composite=0.55))
         summary = _FakeSummary(done_count=10, failed_count=0, total_tasks=10)
         hook.after_run(RunCompleted(run_id="r_low", summary=summary))
 
         report = hook.last_report
         assert report is not None
-        confidence_signals = [
-            s for s in report.signals if "confidence" in s.metric
-        ]
+        confidence_signals = [s for s in report.signals if "confidence" in s.metric]
         assert len(confidence_signals) > 0
         assert confidence_signals[0].direction == "degraded"
 
-    def test_detects_retry_rate_increase(
-        self, tmp_path: Path
-    ) -> None:
+    def test_detects_retry_rate_increase(self, tmp_path: Path) -> None:
         """Should detect increased retry rate."""
         history_file = tmp_path / "drift_history.jsonl"
         _write_history(
             history_file,
             [_stable_snapshot(f"r_{i}") for i in range(7)],
         )
-        hook = DriftDetectorHook(
-            history_file=history_file, window=5, threshold=0.15
-        )
+        hook = DriftDetectorHook(history_file=history_file, window=5, threshold=0.15)
         # Simulate high-retry run
         hook.before_run(RunStarted(run_id="r_retry", total_tasks=10))
         for i in range(10):
-            hook.after_task(_make_task_completed(
-                task_id=f"t_{i}", retry_count=3
-            ))
+            hook.after_task(_make_task_completed(task_id=f"t_{i}", retry_count=3))
         summary = _FakeSummary(done_count=10, failed_count=0, total_tasks=10)
         hook.after_run(RunCompleted(run_id="r_retry", summary=summary))
 
@@ -409,24 +374,20 @@ class TestDriftDetectorHook:
         retry_signals = [s for s in report.signals if "retry" in s.metric]
         assert len(retry_signals) > 0
 
-    def test_detects_token_consumption_increase(
-        self, tmp_path: Path
-    ) -> None:
+    def test_detects_token_consumption_increase(self, tmp_path: Path) -> None:
         """Should detect token usage spike (context degradation signal)."""
         history_file = tmp_path / "drift_history.jsonl"
         _write_history(
             history_file,
             [_stable_snapshot(f"r_{i}") for i in range(7)],
         )
-        hook = DriftDetectorHook(
-            history_file=history_file, window=5, threshold=0.15
-        )
+        hook = DriftDetectorHook(history_file=history_file, window=5, threshold=0.15)
         # Simulate high-token run
         hook.before_run(RunStarted(run_id="r_tokens", total_tasks=10))
         for i in range(10):
-            hook.after_task(_make_task_completed(
-                task_id=f"t_{i}", token_usage={"total_tokens": 3000}
-            ))
+            hook.after_task(
+                _make_task_completed(task_id=f"t_{i}", token_usage={"total_tokens": 3000})
+            )
         summary = _FakeSummary(done_count=10, failed_count=0, total_tasks=10)
         hook.after_run(RunCompleted(run_id="r_tokens", summary=summary))
 
@@ -435,42 +396,36 @@ class TestDriftDetectorHook:
         token_signals = [s for s in report.signals if "token" in s.metric]
         assert len(token_signals) > 0
 
-    def test_detects_failure_mode_clustering(
-        self, tmp_path: Path
-    ) -> None:
+    def test_detects_failure_mode_clustering(self, tmp_path: Path) -> None:
         """Should flag when one error dominates failures."""
         history_file = tmp_path / "drift_history.jsonl"
         _write_history(
             history_file,
             [_stable_snapshot(f"r_{i}") for i in range(7)],
         )
-        hook = DriftDetectorHook(
-            history_file=history_file, window=5, threshold=0.15
-        )
+        hook = DriftDetectorHook(history_file=history_file, window=5, threshold=0.15)
         # Simulate run where same error keeps appearing
         hook.before_run(RunStarted(run_id="r_cluster", total_tasks=10))
         for i in range(5):
             hook.after_task(_make_task_completed(task_id=f"t_pass_{i}"))
         for i in range(5):
-            hook.on_failure(_make_task_failed(
-                task_id=f"t_fail_{i}",
-                error="field 'risk_level' missing",
-            ))
+            hook.on_failure(
+                _make_task_failed(
+                    task_id=f"t_fail_{i}",
+                    error="field 'risk_level' missing",
+                )
+            )
         summary = _FakeSummary(done_count=5, failed_count=5, total_tasks=10)
         hook.after_run(RunCompleted(run_id="r_cluster", summary=summary))
 
         report = hook.last_report
         assert report is not None
-        cluster_signals = [
-            s for s in report.signals if "failure_mode" in s.metric
-        ]
+        cluster_signals = [s for s in report.signals if "failure_mode" in s.metric]
         assert len(cluster_signals) > 0
 
     # ── Persistence ──────────────────────────────────────────────────────
 
-    def test_persists_snapshot_atomically(
-        self, hook: DriftDetectorHook, tmp_path: Path
-    ) -> None:
+    def test_persists_snapshot_atomically(self, hook: DriftDetectorHook, tmp_path: Path) -> None:
         """Should persist snapshot with no temp files left behind."""
         hook.before_run(RunStarted(run_id="r1", total_tasks=1))
         hook.after_task(_make_task_completed())
@@ -481,9 +436,7 @@ class TestDriftDetectorHook:
         assert history_file.exists()
         assert not list(tmp_path.glob("*.tmp"))
 
-    def test_loads_history_from_existing_file(
-        self, tmp_path: Path
-    ) -> None:
+    def test_loads_history_from_existing_file(self, tmp_path: Path) -> None:
         """Should load and parse existing JSONL history."""
         history_file = tmp_path / "drift_history.jsonl"
         _write_history(history_file, [_stable_snapshot("r1"), _stable_snapshot("r2")])
@@ -493,9 +446,7 @@ class TestDriftDetectorHook:
         # History should be loaded
         assert len(hook._history) == 2
 
-    def test_handles_corrupted_history_gracefully(
-        self, tmp_path: Path
-    ) -> None:
+    def test_handles_corrupted_history_gracefully(self, tmp_path: Path) -> None:
         """Should skip corrupted lines and continue."""
         history_file = tmp_path / "drift_history.jsonl"
         with open(history_file, "w") as f:
@@ -524,22 +475,16 @@ class TestDriftDetectorHook:
     def test_rejects_negative_window(self, tmp_path: Path) -> None:
         """Should raise VeridianConfigError for window < 1."""
         with pytest.raises(VeridianConfigError, match="window"):
-            DriftDetectorHook(
-                history_file=tmp_path / "h.jsonl", window=-1
-            )
+            DriftDetectorHook(history_file=tmp_path / "h.jsonl", window=-1)
 
     def test_rejects_threshold_above_one(self, tmp_path: Path) -> None:
         """Should raise VeridianConfigError for threshold > 1.0."""
         with pytest.raises(VeridianConfigError, match="threshold"):
-            DriftDetectorHook(
-                history_file=tmp_path / "h.jsonl", threshold=1.5
-            )
+            DriftDetectorHook(history_file=tmp_path / "h.jsonl", threshold=1.5)
 
     # ── Report generation ────────────────────────────────────────────────
 
-    def test_generates_markdown_report(
-        self, tmp_path: Path
-    ) -> None:
+    def test_generates_markdown_report(self, tmp_path: Path) -> None:
         """Should generate a readable drift_report.md."""
         history_file = tmp_path / "drift_history.jsonl"
         report_path = tmp_path / "drift_report.md"
@@ -567,18 +512,14 @@ class TestDriftDetectorHook:
         assert "drift" in content.lower()
         assert "r_bad" in content
 
-    def test_report_includes_recommended_actions(
-        self, tmp_path: Path
-    ) -> None:
+    def test_report_includes_recommended_actions(self, tmp_path: Path) -> None:
         """Should include actionable recommendations in drift report."""
         history_file = tmp_path / "drift_history.jsonl"
         _write_history(
             history_file,
             [_stable_snapshot(f"r_{i}") for i in range(7)],
         )
-        hook = DriftDetectorHook(
-            history_file=history_file, window=5, threshold=0.15
-        )
+        hook = DriftDetectorHook(history_file=history_file, window=5, threshold=0.15)
         # Degraded run
         hook.before_run(RunStarted(run_id="r_bad", total_tasks=10))
         for i in range(6):
@@ -594,9 +535,7 @@ class TestDriftDetectorHook:
 
     # ── First run (no history) ───────────────────────────────────────────
 
-    def test_first_run_no_history_is_stable(
-        self, hook: DriftDetectorHook
-    ) -> None:
+    def test_first_run_no_history_is_stable(self, hook: DriftDetectorHook) -> None:
         """Should report stable when there's no baseline to compare against."""
         hook.before_run(RunStarted(run_id="r1", total_tasks=5))
         for i in range(5):

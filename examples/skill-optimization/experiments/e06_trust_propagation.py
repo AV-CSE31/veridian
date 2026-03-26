@@ -25,11 +25,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.ledger.ledger import TaskLedger
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
+from examples.experiments.shared.metrics import print_result, r_squared
 
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
-from examples.experiments.shared.metrics import r_squared, print_result
+from veridian.core.task import Task
+from veridian.ledger.ledger import TaskLedger
 
 
 def fit_geometric_decay(

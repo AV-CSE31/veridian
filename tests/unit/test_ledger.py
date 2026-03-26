@@ -4,6 +4,7 @@ tests.unit.test_ledger
 Unit tests for TaskLedger — state machine, atomic writes, crash recovery.
 All tests use tmp_path (pytest fixture) so no disk residue.
 """
+
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from veridian.core.task import Task, TaskPriority, TaskResult, TaskStatus
 from veridian.ledger.ledger import TaskLedger
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def ledger(tmp_path: Path) -> TaskLedger:
@@ -27,8 +29,8 @@ def make_task(**kwargs) -> Task:
 
 # ── Basic CRUD ────────────────────────────────────────────────────────────────
 
-class TestLedgerBasic:
 
+class TestLedgerBasic:
     def test_add_and_get(self, ledger):
         t = make_task(title="hello")
         count = ledger.add([t])
@@ -80,8 +82,8 @@ class TestLedgerBasic:
 
 # ── State machine ─────────────────────────────────────────────────────────────
 
-class TestLedgerStateMachine:
 
+class TestLedgerStateMachine:
     def test_claim_transitions_to_in_progress(self, ledger):
         t = make_task()
         ledger.add([t])
@@ -93,7 +95,7 @@ class TestLedgerStateMachine:
         t = make_task()
         ledger.add([t])
         ledger.claim(t.id, "runner-1")
-        ledger.claim(t.id, "runner-1")   # idempotent for same runner
+        ledger.claim(t.id, "runner-1")  # idempotent for same runner
 
     def test_double_claim_different_runner_raises(self, ledger):
         t = make_task()
@@ -158,10 +160,10 @@ class TestLedgerStateMachine:
 
 # ── get_next priority + dependency ordering ───────────────────────────────────
 
-class TestGetNext:
 
+class TestGetNext:
     def test_returns_highest_priority_first(self, ledger):
-        low  = make_task(title="low",  priority=TaskPriority.LOW)
+        low = make_task(title="low", priority=TaskPriority.LOW)
         high = make_task(title="high", priority=TaskPriority.HIGH)
         ledger.add([low, high])
         nxt = ledger.get_next()
@@ -186,15 +188,15 @@ class TestGetNext:
         assert nxt.title == "phase_b task"
 
     def test_blocks_on_unresolved_dependency(self, ledger):
-        dep  = make_task(title="dep")
+        dep = make_task(title="dep")
         child = make_task(title="child", depends_on=[dep.id])
         ledger.add([dep, child])
         # dep is PENDING, so child should be blocked
         nxt = ledger.get_next()
-        assert nxt.id == dep.id   # dep comes first
+        assert nxt.id == dep.id  # dep comes first
 
     def test_unblocks_when_dependency_done(self, ledger):
-        dep   = make_task(title="dep", priority=10)
+        dep = make_task(title="dep", priority=10)
         child = make_task(title="child", depends_on=[dep.id], priority=100)
         ledger.add([dep, child])
 
@@ -210,8 +212,8 @@ class TestGetNext:
 
 # ── Crash recovery ────────────────────────────────────────────────────────────
 
-class TestCrashRecovery:
 
+class TestCrashRecovery:
     def test_reset_in_progress_clears_stale_claims(self, ledger):
         t = make_task()
         ledger.add([t])
@@ -253,8 +255,8 @@ class TestCrashRecovery:
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
-class TestStats:
 
+class TestStats:
     def test_stats_counts(self, ledger):
         tasks = [make_task() for _ in range(5)]
         ledger.add(tasks)
@@ -270,8 +272,8 @@ class TestStats:
 
 # ── Progress log ──────────────────────────────────────────────────────────────
 
-class TestProgressLog:
 
+class TestProgressLog:
     def test_log_creates_progress_file(self, ledger, tmp_path):
         ledger.log("Run started")
         assert (tmp_path / "progress.md").exists()

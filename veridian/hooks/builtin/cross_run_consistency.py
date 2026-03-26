@@ -46,6 +46,7 @@ USAGE:
       "conflict_log_path": "conflicts.jsonl",
   })
 """
+
 from __future__ import annotations
 
 import dataclasses
@@ -66,13 +67,14 @@ log = logging.getLogger(__name__)
 @dataclass
 class ClaimConflict:
     """Represents a detected conflict between two task outputs."""
+
     task_a_id: str
     task_b_id: str
     entity_id: str | None
     field: str
     value_a: Any
     value_b: Any
-    severity: str           # "critical", "warning", "info"
+    severity: str  # "critical", "warning", "info"
     detected_at: datetime = dataclasses.field(default_factory=datetime.utcnow)
 
     def to_dict(self) -> dict[str, object]:
@@ -126,9 +128,11 @@ def _is_critical_conflict(field: str, val_a: Any, val_b: Any) -> bool:
     if field not in _CRITICAL_PAIRS:
         return False
     pair = frozenset({str(val_a).upper(), str(val_b).upper()})
-    return any(pair == frozenset({str(a).upper(), str(b).upper()})
-               for fs in _CRITICAL_PAIRS[field]
-               for a, b in [list(fs)])
+    return any(
+        pair == frozenset({str(a).upper(), str(b).upper()})
+        for fs in _CRITICAL_PAIRS[field]
+        for a, b in [list(fs)]
+    )
 
 
 class CrossRunConsistencyHook:
@@ -141,6 +145,7 @@ class CrossRunConsistencyHook:
     Writes conflicts to an optional JSONL log file.
     Raises HumanReviewRequired on critical conflicts when raise_on_critical=True.
     """
+
     id = "cross_run_consistency"
 
     def __init__(
@@ -179,7 +184,7 @@ class CrossRunConsistencyHook:
 
     def on_run_started(self, event: Any) -> None:
         """Reset claim store when a new run begins."""
-        if hasattr(event, 'run_id') and event.run_id != self._current_run_id:
+        if hasattr(event, "run_id") and event.run_id != self._current_run_id:
             self._current_run_id = event.run_id
             self._claim_store.clear()
             self._conflicts.clear()
@@ -191,8 +196,8 @@ class CrossRunConsistencyHook:
         Check claims against existing store, then register new claims.
         """
         try:
-            task = getattr(event, 'task', None)
-            if task is None or not hasattr(task, 'result') or task.result is None:
+            task = getattr(event, "task", None)
+            if task is None or not hasattr(task, "result") or task.result is None:
                 return
 
             structured = task.result.structured
@@ -201,10 +206,9 @@ class CrossRunConsistencyHook:
 
             # Skip none_found tasks if configured
             if self.ignore_none_found and any(
-                str(v).lower() in ("none_found", "not_found", "none")
-                for v in structured.values()
+                str(v).lower() in ("none_found", "not_found", "none") for v in structured.values()
             ):
-                    return
+                return
 
             entity_id = self._get_entity_id(task, structured)
             new_conflicts = self._check_and_register(task.id, entity_id, structured)
@@ -220,10 +224,7 @@ class CrossRunConsistencyHook:
                 if critical and self.raise_on_critical:
                     raise HumanReviewRequired(
                         task_id=task.id,
-                        reason=(
-                            f"Critical consistency conflict detected: "
-                            f"{critical[0].summary()}"
-                        ),
+                        reason=(f"Critical consistency conflict detected: {critical[0].summary()}"),
                     )
 
         except HumanReviewRequired:
@@ -291,15 +292,17 @@ class CrossRunConsistencyHook:
                 if norm_new != norm_old:
                     is_critical = _is_critical_conflict(claim_field, old_val, new_val)
                     severity = "critical" if is_critical else "warning"
-                    conflicts.append(ClaimConflict(
-                        task_a_id=old_task_id,
-                        task_b_id=task_id,
-                        entity_id=entity_id if entity_id != task_id else None,
-                        field=claim_field,
-                        value_a=old_val,
-                        value_b=new_val,
-                        severity=severity,
-                    ))
+                    conflicts.append(
+                        ClaimConflict(
+                            task_a_id=old_task_id,
+                            task_b_id=task_id,
+                            entity_id=entity_id if entity_id != task_id else None,
+                            field=claim_field,
+                            value_a=old_val,
+                            value_b=new_val,
+                            severity=severity,
+                        )
+                    )
             else:
                 # Register new claim
                 existing[claim_field] = (new_val, task_id)

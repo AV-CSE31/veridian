@@ -3,6 +3,7 @@ tests.unit.test_task
 ─────────────────────
 Unit tests for Task, TaskStatus state machine, TaskResult, LedgerStats.
 """
+
 from datetime import datetime
 
 import pytest
@@ -11,8 +12,8 @@ from veridian.core.task import LedgerStats, Task, TaskPriority, TaskResult, Task
 
 # ── TaskStatus state machine ──────────────────────────────────────────────────
 
-class TestTaskStatusTransitions:
 
+class TestTaskStatusTransitions:
     def test_pending_to_in_progress(self):
         assert TaskStatus.PENDING.can_transition_to(TaskStatus.IN_PROGRESS)
 
@@ -68,8 +69,8 @@ class TestTaskStatusTransitions:
 
 # ── Task dataclass ────────────────────────────────────────────────────────────
 
-class TestTask:
 
+class TestTask:
     def test_auto_id_generation(self):
         t1 = Task(title="a")
         t2 = Task(title="b")
@@ -137,8 +138,8 @@ class TestTask:
 
 # ── TaskResult ────────────────────────────────────────────────────────────────
 
-class TestTaskResult:
 
+class TestTaskResult:
     def test_roundtrip_empty(self):
         r = TaskResult(raw_output="some output")
         restored = TaskResult.from_dict(r.to_dict())
@@ -168,8 +169,8 @@ class TestTaskResult:
 
 # ── LedgerStats ───────────────────────────────────────────────────────────────
 
-class TestLedgerStats:
 
+class TestLedgerStats:
     def test_convenience_properties(self):
         s = LedgerStats(
             total=10,

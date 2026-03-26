@@ -5,6 +5,7 @@ Tests for BaseStorage ABC + LocalJSONStorage + storage interface stubs.
 
 TDD: these tests are written BEFORE the implementation.
 """
+
 from __future__ import annotations
 
 import json
@@ -32,6 +33,7 @@ class TestBaseStorageABC:
     def test_required_abstract_methods(self) -> None:
         """BaseStorage ABC must declare all required abstract methods."""
         import inspect
+
         abstract_methods = {
             name
             for name, _ in inspect.getmembers(BaseStorage, predicate=inspect.isfunction)
@@ -73,18 +75,14 @@ class TestLocalJSONStorage:
         assert retrieved.id == "t1"
         assert retrieved.title == "Test task"
 
-    def test_get_next_returns_pending_task(
-        self, storage: LocalJSONStorage, task: Task
-    ) -> None:
+    def test_get_next_returns_pending_task(self, storage: LocalJSONStorage, task: Task) -> None:
         """get_next() should return a PENDING task."""
         storage.put(task)
         next_task = storage.get_next()
         assert next_task is not None
         assert next_task.id == "t1"
 
-    def test_get_next_returns_highest_priority(
-        self, storage: LocalJSONStorage
-    ) -> None:
+    def test_get_next_returns_highest_priority(self, storage: LocalJSONStorage) -> None:
         """get_next() should return the highest-priority PENDING task first."""
         low = Task(id="low", title="Low", priority=TaskPriority.LOW)
         high = Task(id="high", title="High", priority=TaskPriority.HIGH)
@@ -96,15 +94,11 @@ class TestLocalJSONStorage:
         assert nxt is not None
         assert nxt.id == "crit"
 
-    def test_get_next_returns_none_when_empty(
-        self, storage: LocalJSONStorage
-    ) -> None:
+    def test_get_next_returns_none_when_empty(self, storage: LocalJSONStorage) -> None:
         """get_next() should return None when there are no PENDING tasks."""
         assert storage.get_next() is None
 
-    def test_complete_marks_task_done(
-        self, storage: LocalJSONStorage, task: Task
-    ) -> None:
+    def test_complete_marks_task_done(self, storage: LocalJSONStorage, task: Task) -> None:
         """complete() should set task status to DONE."""
         storage.put(task)
         result = TaskResult(raw_output="done")
@@ -112,9 +106,7 @@ class TestLocalJSONStorage:
         updated = storage.get("t1")
         assert updated.status == TaskStatus.DONE
 
-    def test_fail_marks_task_failed(
-        self, storage: LocalJSONStorage, task: Task
-    ) -> None:
+    def test_fail_marks_task_failed(self, storage: LocalJSONStorage, task: Task) -> None:
         """fail() should set task status to FAILED and store the error."""
         storage.put(task)
         storage.fail("t1", "Something went wrong")
@@ -122,9 +114,7 @@ class TestLocalJSONStorage:
         assert updated.status == TaskStatus.FAILED
         assert updated.last_error == "Something went wrong"
 
-    def test_list_all_returns_all_tasks(
-        self, storage: LocalJSONStorage
-    ) -> None:
+    def test_list_all_returns_all_tasks(self, storage: LocalJSONStorage) -> None:
         """list_all() should return every stored task."""
         t1 = Task(id="a", title="A")
         t2 = Task(id="b", title="B")
@@ -134,9 +124,7 @@ class TestLocalJSONStorage:
         ids = {t.id for t in all_tasks}
         assert ids == {"a", "b"}
 
-    def test_stats_counts_by_status(
-        self, storage: LocalJSONStorage
-    ) -> None:
+    def test_stats_counts_by_status(self, storage: LocalJSONStorage) -> None:
         """stats() should return LedgerStats with correct per-status counts."""
         storage.put(Task(id="p1", title="P"))
         t2 = Task(id="d1", title="D")
@@ -147,9 +135,7 @@ class TestLocalJSONStorage:
         assert s.by_status.get("pending", 0) >= 1
         assert s.by_status.get("done", 0) >= 1
 
-    def test_put_updates_existing_task(
-        self, storage: LocalJSONStorage, task: Task
-    ) -> None:
+    def test_put_updates_existing_task(self, storage: LocalJSONStorage, task: Task) -> None:
         """Calling put() with an existing ID should update the record."""
         storage.put(task)
         task.title = "Updated title"
@@ -164,9 +150,7 @@ class TestLocalJSONStorage:
         with pytest.raises(TaskNotFound, match="unknown-id"):
             storage.get("unknown-id")
 
-    def test_complete_raises_task_not_found(
-        self, storage: LocalJSONStorage
-    ) -> None:
+    def test_complete_raises_task_not_found(self, storage: LocalJSONStorage) -> None:
         """complete() should raise TaskNotFound for unknown IDs."""
         with pytest.raises(TaskNotFound):
             storage.complete("ghost", TaskResult(raw_output=""))
@@ -178,9 +162,7 @@ class TestLocalJSONStorage:
 
     # ── Dependency-aware scheduling ───────────────────────────────────────────
 
-    def test_get_next_skips_tasks_with_unmet_dependencies(
-        self, storage: LocalJSONStorage
-    ) -> None:
+    def test_get_next_skips_tasks_with_unmet_dependencies(self, storage: LocalJSONStorage) -> None:
         """get_next() must not return a task whose depends_on are not all DONE."""
         blocker = Task(id="blocker", title="Blocker")
         dependent = Task(id="dep", title="Dependent", depends_on=["blocker"])
@@ -206,9 +188,7 @@ class TestLocalJSONStorage:
 
     # ── Atomicity ─────────────────────────────────────────────────────────────
 
-    def test_no_partial_write_on_concurrent_access(
-        self, storage_file: Path
-    ) -> None:
+    def test_no_partial_write_on_concurrent_access(self, storage_file: Path) -> None:
         """Storage file must never be readable in a partial state."""
         storage = LocalJSONStorage(storage_file=storage_file)
         for i in range(5):
@@ -216,9 +196,7 @@ class TestLocalJSONStorage:
         assert storage_file.exists()
         assert not list(storage_file.parent.glob("*.tmp"))
 
-    def test_concurrent_writes_do_not_corrupt_file(
-        self, storage_file: Path
-    ) -> None:
+    def test_concurrent_writes_do_not_corrupt_file(self, storage_file: Path) -> None:
         """Concurrent puts from multiple threads must not corrupt storage."""
         storage = LocalJSONStorage(storage_file=storage_file)
         errors: list[Exception] = []
@@ -243,9 +221,7 @@ class TestLocalJSONStorage:
 
     # ── Implements BaseStorage ────────────────────────────────────────────────
 
-    def test_implements_base_storage_interface(
-        self, storage: LocalJSONStorage
-    ) -> None:
+    def test_implements_base_storage_interface(self, storage: LocalJSONStorage) -> None:
         """LocalJSONStorage must be a concrete subclass of BaseStorage."""
         assert isinstance(storage, BaseStorage)
 
@@ -482,6 +458,7 @@ class TestStorageAutodiscovery:
     def test_local_json_in_entry_points(self) -> None:
         """local_json entry point must resolve to LocalJSONStorage."""
         from importlib.metadata import entry_points
+
         eps = {ep.name: ep for ep in entry_points(group="veridian.storage")}
         assert "local_json" in eps, "local_json entry point not registered"
         cls = eps["local_json"].load()

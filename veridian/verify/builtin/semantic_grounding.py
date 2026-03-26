@@ -58,6 +58,7 @@ DESIGN RULES (never violate):
   - All checks are deterministic given inputs
   - Errors are specific + actionable + < 300 chars
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -71,19 +72,21 @@ from veridian.verify.base import BaseVerifier, VerificationResult
 @dataclass
 class ConsistencyRule:
     """If field A equals value V, then field B must satisfy a condition."""
+
     if_field: str
     equals: Any
     then_field: str
-    must_be_empty: bool = False          # then_field must be None / [] / ""
-    must_not_be_empty: bool = False      # then_field must be non-empty
-    must_equal: Any | None = None     # then_field must equal this value
-    must_not_equal: Any | None = None # then_field must NOT equal this value
-    must_be_in: list[Any] | None = None    # then_field must be in this list
+    must_be_empty: bool = False  # then_field must be None / [] / ""
+    must_not_be_empty: bool = False  # then_field must be non-empty
+    must_equal: Any | None = None  # then_field must equal this value
+    must_not_equal: Any | None = None  # then_field must NOT equal this value
+    must_be_in: list[Any] | None = None  # then_field must be in this list
 
 
 @dataclass
 class RangeCheck:
     """A numerical field must fall within bounds."""
+
     field: str
     min: float | None = None
     max: float | None = None
@@ -93,7 +96,8 @@ class RangeCheck:
 @dataclass
 class SummaryKeyword:
     """If summary contains keyword, structured field must satisfy condition."""
-    keyword: str                              # case-insensitive
+
+    keyword: str  # case-insensitive
     structured_field: str
     must_be_empty: bool = False
     must_not_equal: Any | None = None
@@ -108,6 +112,7 @@ class SemanticGroundingVerifier(BaseVerifier):
 
     Designed to run first in a CompositeVerifier chain.
     """
+
     id = "semantic_grounding"
     description = (
         "Checks internal consistency of structured output before domain verification. "
@@ -119,26 +124,27 @@ class SemanticGroundingVerifier(BaseVerifier):
     _BUILTIN_RULES: list[ConsistencyRule] = [
         # If decision is ALLOW/approve, there should be no violated_policies
         ConsistencyRule(
-            if_field="decision", equals="ALLOW",
-            then_field="violated_policies", must_be_empty=True
+            if_field="decision", equals="ALLOW", then_field="violated_policies", must_be_empty=True
         ),
         ConsistencyRule(
-            if_field="status", equals="compliant",
-            then_field="violated_policies", must_be_empty=True
+            if_field="status",
+            equals="compliant",
+            then_field="violated_policies",
+            must_be_empty=True,
         ),
         # If ESCALATE/FLAG, reasoning must be present
         ConsistencyRule(
-            if_field="decision", equals="ESCALATE",
-            then_field="reasoning", must_not_be_empty=True
+            if_field="decision", equals="ESCALATE", then_field="reasoning", must_not_be_empty=True
         ),
         ConsistencyRule(
-            if_field="decision", equals="REMOVE",
-            then_field="violated_policies", must_not_be_empty=True
+            if_field="decision",
+            equals="REMOVE",
+            then_field="violated_policies",
+            must_not_be_empty=True,
         ),
         # If type is none_found, no quote should be present
         ConsistencyRule(
-            if_field="clause_type", equals="none_found",
-            then_field="quote", must_be_empty=True
+            if_field="clause_type", equals="none_found", then_field="quote", must_be_empty=True
         ),
     ]
 
@@ -220,8 +226,7 @@ class SemanticGroundingVerifier(BaseVerifier):
         # 6. Required fields conditional check
         if self.required_if_not_none_found:
             none_found = any(
-                str(v).lower() in ("none_found", "none", "not_found")
-                for v in s.values()
+                str(v).lower() in ("none_found", "none", "not_found") for v in s.values()
             )
             if not none_found:
                 missing = [f for f in self.required_if_not_none_found if not s.get(f)]
@@ -248,18 +253,18 @@ class SemanticGroundingVerifier(BaseVerifier):
         val = s.get(rule.then_field)
 
         if rule.must_be_empty and val not in (None, "", [], {}):
-                return (
-                    f"When {rule.if_field}='{rule.equals}', "
-                    f"{rule.then_field} must be empty (got {repr(val)[:60]}). "
-                    f"Fix the {rule.then_field} field."
-                )
+            return (
+                f"When {rule.if_field}='{rule.equals}', "
+                f"{rule.then_field} must be empty (got {repr(val)[:60]}). "
+                f"Fix the {rule.then_field} field."
+            )
 
         if rule.must_not_be_empty and val in (None, "", [], {}):
-                return (
-                    f"When {rule.if_field}='{rule.equals}', "
-                    f"{rule.then_field} must not be empty. "
-                    f"Provide a value for {rule.then_field}."
-                )
+            return (
+                f"When {rule.if_field}='{rule.equals}', "
+                f"{rule.then_field} must not be empty. "
+                f"Provide a value for {rule.then_field}."
+            )
 
         if rule.must_equal is not None and val != rule.must_equal:
             return (
@@ -284,9 +289,7 @@ class SemanticGroundingVerifier(BaseVerifier):
 
         return None
 
-    def _check_range(
-        self, rc: RangeCheck, s: dict[str, Any], task: Task
-    ) -> str | None:
+    def _check_range(self, rc: RangeCheck, s: dict[str, Any], task: Task) -> str | None:
         """Return error string if range check violated, else None."""
         if rc.field not in s:
             return None
@@ -346,16 +349,18 @@ class SemanticGroundingVerifier(BaseVerifier):
 
         return None
 
-    def _check_builtin_summary_patterns(
-        self, summary: str, result: TaskResult
-    ) -> str | None:
+    def _check_builtin_summary_patterns(self, summary: str, result: TaskResult) -> str | None:
         """Check common summary–artifact divergence patterns."""
         if not self.check_artifacts_match_summary:
             return None
 
         file_creation_phrases = (
-            "created file", "wrote file", "generated file",
-            "saved file", "output file", "created the file",
+            "created file",
+            "wrote file",
+            "generated file",
+            "saved file",
+            "output file",
+            "created the file",
         )
         mentions_file = any(p in summary for p in file_creation_phrases)
         if mentions_file and not result.artifacts:
@@ -365,8 +370,11 @@ class SemanticGroundingVerifier(BaseVerifier):
             )
 
         no_issues_phrases = (
-            "no issues found", "no problems found", "clean document",
-            "nothing to report", "no findings",
+            "no issues found",
+            "no problems found",
+            "clean document",
+            "nothing to report",
+            "no findings",
         )
         mentions_no_issues = any(p in summary for p in no_issues_phrases)
         if mentions_no_issues:

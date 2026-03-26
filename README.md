@@ -127,6 +127,12 @@ Long-running AI agents fail not because models are incapable, but because infras
 
 **Context management** — Frozen 6-step prompt assembly. Automatic compaction at 85% token budget. System prompt and last 3 exchanges are never compacted.
 
+**`@verified` decorator** (`feature/verified-decorator`) — Lightweight decorator for wrapping any Python function with a Veridian verifier. Attach pre/post verification to existing callables without restructuring them into `Task` + `VeridianRunner` pipelines.
+
+**Sprint Contracts** (`feature/sprint-contracts`) — Pre-execution commitment protocol between agent and evaluator. `SprintContract` captures deliverables, success criteria, and test conditions; dual-signing API (`sign_generator()` / `sign_evaluator()`); `SprintContractVerifier` and `SprintContractHook` enforce the contract at runtime. Raises `ContractViolation` on breach.
+
+**Adversarial Evaluator Pipeline** (`feature/adversarial-evaluator`) — GAN-inspired structural separation of generator and judge. `AdversarialEvaluator` uses an independent `LLMProvider` to evaluate generator output against a signed `SprintContract` and a `CalibrationProfile` (weighted rubric, skepticism level). `VerificationPipeline` runs iterative evaluate loops up to `max_iterations`, fires lifecycle events (`EvaluationStarted`, `EvaluationCompleted`, `EvaluationConverged`, `EvaluationExhausted`), and returns a `PipelineResult` with full eval history.
+
 **Hooks** — Middleware system for cost tracking, rate limiting, human review gates, Slack notifications, cross-run consistency detection, and drift monitoring. Hook errors are always caught — one broken hook never kills a run.
 
 **SkillLibrary** — Extracts reusable procedures from completed tasks. Bayesian lower-bound reliability scoring. 4-gate admission control (confidence, retry count, step count, cosine dedup).

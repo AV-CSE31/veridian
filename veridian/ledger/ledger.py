@@ -9,6 +9,7 @@ RULES:
 - FileLock ensures single writer across processes.
 - reset_in_progress() MUST be called at the start of every run().
 """
+
 from __future__ import annotations
 
 import builtins
@@ -91,7 +92,8 @@ class TaskLedger:
         done_ids = {t.id for t in tasks if t.status == TaskStatus.DONE}
 
         candidates = [
-            t for t in tasks
+            t
+            for t in tasks
             if t.status == TaskStatus.PENDING
             and (phase is None or t.phase == phase)
             and (not respect_dependencies or all(dep in done_ids for dep in t.depends_on))
@@ -374,9 +376,7 @@ class TaskLedger:
         json.loads(text)
 
         # Write to temp file in same directory (required for atomic rename)
-        tmp_fd, tmp_path = tempfile.mkstemp(
-            dir=self.path.parent, suffix=".tmp", prefix="ledger_"
-        )
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=self.path.parent, suffix=".tmp", prefix="ledger_")
         try:
             with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
                 f.write(text)

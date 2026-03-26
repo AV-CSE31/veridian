@@ -4,6 +4,7 @@ veridian.agents.initializer
 InitializerAgent — validates task specs before the worker loop begins.
 Checks that required fields are present and description is clear enough.
 """
+
 from __future__ import annotations
 
 import logging
@@ -74,7 +75,8 @@ class InitializerAgent(BaseAgent):
                     ]
                     log.info(
                         "initializer.skills_injected task_id=%s count=%d",
-                        task.id, len(skills),
+                        task.id,
+                        len(skills),
                     )
             except Exception as exc:
                 log.warning("initializer.skill_query_error task_id=%s err=%s", task.id, exc)

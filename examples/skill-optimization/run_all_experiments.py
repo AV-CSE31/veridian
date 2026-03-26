@@ -116,7 +116,6 @@ def print_summary_table(results: list[ExperimentResult]) -> None:
 
 def save_results(results: list[ExperimentResult]) -> Path:
     """Save results to results/summary.json atomically."""
-    import os
     import tempfile
 
     summary = {

@@ -8,6 +8,7 @@ Registration order matters for CompositeVerifier / AnyOfVerifier:
 simpler verifiers are registered first so they are available when
 composite verifiers resolve sub-verifier IDs.
 """
+
 from __future__ import annotations
 
 from veridian.verify.base import registry

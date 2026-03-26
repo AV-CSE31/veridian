@@ -24,11 +24,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.loop.trusted_executor import OutputSanitizer
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
 from examples.experiments.shared.metrics import print_result
 
+from veridian.loop.trusted_executor import OutputSanitizer
 
 # ── Synthetic payload generators ──────────────────────────────────────────────
 

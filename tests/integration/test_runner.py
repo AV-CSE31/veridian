@@ -4,6 +4,7 @@ tests.integration.test_runner
 Integration tests for VeridianRunner and ParallelRunner.
 Full pipeline: task → execution → verification → DONE.
 """
+
 import json
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from veridian.providers.base import LLMResponse
 from veridian.providers.mock_provider import MockProvider
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def config(tmp_path: Path) -> VeridianConfig:
@@ -66,8 +68,8 @@ def make_result_response(structured: dict) -> LLMResponse:
 
 # ── Full pipeline ─────────────────────────────────────────────────────────────
 
-class TestVeridianRunnerHappyPath:
 
+class TestVeridianRunnerHappyPath:
     def test_full_pipeline_single_task_done(self, config, ledger, mock_provider, tmp_path):
         """Full pipeline: task → worker → verification → DONE."""
         task = make_task("Test task", id="t1", description="Do the thing")
@@ -126,7 +128,6 @@ class TestVeridianRunnerHappyPath:
 
 
 class TestDryRun:
-
     def test_dry_run_returns_summary_without_llm_calls(self, config, ledger, mock_provider):
         """dry_run=True assembles context but never calls provider.complete()."""
         config.dry_run = True
@@ -138,7 +139,6 @@ class TestDryRun:
 
 
 class TestAtomicWrite:
-
     def test_no_partial_write_on_concurrent_access(self, tmp_path):
         """Ledger file must never be readable in a partial state."""
         ledger = TaskLedger(
@@ -152,7 +152,6 @@ class TestAtomicWrite:
 
 
 class TestRunSummary:
-
     def test_run_summary_fields(self, config, ledger, mock_provider):
         """RunSummary includes done_count, failed_count, run_id."""
         ledger.add([make_task("t1")])
@@ -167,12 +166,13 @@ class TestRunSummary:
 
 # ── ParallelRunner ────────────────────────────────────────────────────────────
 
-class TestParallelRunner:
 
+class TestParallelRunner:
     @pytest.mark.asyncio
     async def test_parallel_runner_completes_tasks(self, config, ledger, mock_provider):
         """ParallelRunner processes tasks concurrently up to max_parallel limit."""
         from veridian.loop.parallel_runner import ParallelRunner
+
         config.max_parallel = 2
         tasks = [make_task(f"task {i}") for i in range(2)]
         ledger.add(tasks)
@@ -191,6 +191,7 @@ class TestParallelRunner:
     async def test_parallel_runner_respects_semaphore(self, config, ledger, mock_provider):
         """ParallelRunner uses asyncio.Semaphore to cap concurrency."""
         from veridian.loop.parallel_runner import ParallelRunner
+
         config.max_parallel = 1
         tasks = [make_task(f"task {i}") for i in range(2)]
         ledger.add(tasks)

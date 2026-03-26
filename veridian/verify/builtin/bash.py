@@ -11,6 +11,7 @@ The verifier runs the command independently (not checking agent bash_outputs).
 This provides a deterministic, tamper-proof verification that is completely
 separate from anything the agent may have executed.
 """
+
 from __future__ import annotations
 
 import subprocess

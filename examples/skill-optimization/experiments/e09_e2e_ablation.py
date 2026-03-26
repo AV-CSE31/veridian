@@ -26,23 +26,20 @@ It is included only if GEMINI_API_KEY is available; otherwise skipped.
 """
 from __future__ import annotations
 
-import os
 import random
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
-from veridian.hooks.builtin.cross_run_consistency import CrossRunConsistencyHook
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED, GEMINI_MODEL
-from examples.experiments.shared.metrics import f1, silent_failure_rate, print_result
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
+from examples.experiments.shared.metrics import f1, print_result
 from examples.experiments.shared.skillnet_client import SkillNetClient
 
+from veridian.core.task import Task, TaskResult, TaskStatus
+from veridian.hooks.builtin.cross_run_consistency import CrossRunConsistencyHook
+from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
 
 # ── Drift injection (reused from E-01) ────────────────────────────────────────
 

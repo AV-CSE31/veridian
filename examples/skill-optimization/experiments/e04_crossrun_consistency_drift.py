@@ -20,19 +20,16 @@ from __future__ import annotations
 
 import random
 import sys
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.hooks.builtin.cross_run_consistency import CrossRunConsistencyHook
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
 from examples.experiments.shared.metrics import auroc, print_result
 
+from veridian.core.task import Task, TaskResult, TaskStatus
+from veridian.hooks.builtin.cross_run_consistency import CrossRunConsistencyHook
 
 # ── Minimal event stub ────────────────────────────────────────────────────────
 

@@ -4,6 +4,7 @@ veridian.agents.base
 BaseAgent ABC. All agents inherit from this.
 Agents are stateless coordinators — they hold no mutable per-task state.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

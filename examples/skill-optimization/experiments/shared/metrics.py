@@ -16,10 +16,9 @@ if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     except Exception:
         pass
-from typing import Sequence
+from collections.abc import Sequence
 
 from examples.experiments.shared.config import ExperimentResult
-
 
 # ── Core metrics ──────────────────────────────────────────────────────────────
 

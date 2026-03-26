@@ -4,6 +4,7 @@ veridian.core.task
 Core domain models. Zero external dependencies.
 These are the only objects that travel through the entire system.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -17,13 +18,13 @@ from typing import Any
 # Valid state machine transitions — kept outside the Enum to avoid being
 # treated as an enum member (a Python enum ClassVar limitation in 3.11).
 _VALID_TRANSITIONS: dict[str, set[str]] = {
-    "pending":      {"in_progress", "skipped"},
-    "in_progress":  {"verifying", "failed", "pending"},   # pending = crash-reset
-    "verifying":    {"done", "failed"},
-    "failed":       {"pending", "abandoned"},              # pending = retry
-    "done":         set(),                                 # terminal
-    "abandoned":    set(),                                 # terminal
-    "skipped":      set(),                                 # terminal
+    "pending": {"in_progress", "skipped"},
+    "in_progress": {"verifying", "failed", "pending"},  # pending = crash-reset
+    "verifying": {"done", "failed"},
+    "failed": {"pending", "abandoned"},  # pending = retry
+    "done": set(),  # terminal
+    "abandoned": set(),  # terminal
+    "skipped": set(),  # terminal
 }
 
 
@@ -32,13 +33,14 @@ class TaskStatus(StrEnum):
     Task lifecycle. The ledger is the only object allowed to transition status.
     All transitions are validated at write time against _VALID_TRANSITIONS.
     """
-    PENDING     = "pending"
+
+    PENDING = "pending"
     IN_PROGRESS = "in_progress"
-    VERIFYING   = "verifying"
-    DONE        = "done"
-    FAILED      = "failed"
-    ABANDONED   = "abandoned"
-    SKIPPED     = "skipped"
+    VERIFYING = "verifying"
+    DONE = "done"
+    FAILED = "failed"
+    ABANDONED = "abandoned"
+    SKIPPED = "skipped"
 
     def can_transition_to(self, new: TaskStatus) -> bool:
         """Return True if transitioning to new status is valid."""
@@ -52,14 +54,16 @@ class TaskStatus(StrEnum):
 
 class TaskPriority(int, Enum):
     """Convenience constants. Any int 0–100 is valid."""
+
     CRITICAL = 100
-    HIGH     = 75
-    NORMAL   = 50
-    LOW      = 25
+    HIGH = 75
+    NORMAL = 50
+    LOW = 25
     DEFERRED = 0
 
 
 # ── RESULT ───────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class TaskResult:
@@ -67,9 +71,10 @@ class TaskResult:
     Evidence produced by the agent after completing a task.
     Must satisfy the task's verifier contract to trigger DONE.
     """
-    raw_output: str                                           # full LLM response
-    structured: dict[str, Any] = field(default_factory=dict) # parsed claims
-    artifacts: list[str] = field(default_factory=list)       # file paths / URLs
+
+    raw_output: str  # full LLM response
+    structured: dict[str, Any] = field(default_factory=dict)  # parsed claims
+    artifacts: list[str] = field(default_factory=list)  # file paths / URLs
 
     # Bash execution records
     bash_outputs: list[dict[str, Any]] = field(default_factory=list)
@@ -112,6 +117,7 @@ class TaskResult:
 
 # ── TASK ─────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class Task:
     """
@@ -143,10 +149,10 @@ class Task:
     result: TaskResult | None = None
     retry_count: int = 0
     max_retries: int = 3
-    last_error: str | None = None    # injected verbatim into next agent prompt
+    last_error: str | None = None  # injected verbatim into next agent prompt
 
     # ── Ownership (set by runner on claim) ────────────────────────────────────
-    claimed_by: str | None = None    # run_id
+    claimed_by: str | None = None  # run_id
 
     # ── Timestamps ────────────────────────────────────────────────────────────
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -219,12 +225,13 @@ class Task:
 
 # ── STATS ────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class LedgerStats:
     total: int = 0
     by_status: dict[str, int] = field(default_factory=dict)
-    phases: dict[str, int] = field(default_factory=dict)        # phase → pending count
-    retry_rate: float = 0.0                                      # failed / total
+    phases: dict[str, int] = field(default_factory=dict)  # phase → pending count
+    retry_rate: float = 0.0  # failed / total
     total_tokens_used: int = 0
     estimated_cost_usd: float = 0.0
 

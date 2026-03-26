@@ -26,12 +26,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task, TaskResult
-from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
 from examples.experiments.shared.metrics import f1, print_result
 from examples.experiments.shared.skillnet_client import SkillNetClient
+
+from veridian.core.task import Task, TaskResult
+from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
 
 # Static threshold: low enough to pass many skills including hallucinated ones
 STATIC_THRESHOLD = 0.60

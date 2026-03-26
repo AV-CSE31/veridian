@@ -53,6 +53,7 @@ USAGE:
 
   ledger.add(approved)
 """
+
 from __future__ import annotations
 
 import logging
@@ -66,11 +67,13 @@ log = logging.getLogger(__name__)
 
 # ── Quality Score ─────────────────────────────────────────────────────────────
 
+
 @dataclass
 class QualityScore:
     """
     Quality assessment for a single task.
     """
+
     task_id: str
     task_title: str
     specificity: float = 0.0
@@ -102,11 +105,11 @@ class QualityScore:
 # ── Per-verifier metadata requirements ───────────────────────────────────────
 
 _VERIFIER_METADATA_REQUIREMENTS: dict[str, list[str]] = {
-    "bash_exit": [],                              # no special metadata needed
+    "bash_exit": [],  # no special metadata needed
     "quote_match": ["source_file"],
-    "schema": [],                                 # verifier_config.schema required
-    "http_status": [],                            # url in verifier_config
-    "file_exists": [],                            # paths in verifier_config
+    "schema": [],  # verifier_config.schema required
+    "http_status": [],  # url in verifier_config
+    "file_exists": [],  # paths in verifier_config
     "composite": [],
     "any_of": [],
     "llm_judge": [],
@@ -141,8 +144,8 @@ class TaskQualityGate:
 
     def __init__(
         self,
-        min_score: float = 0.60,         # score below this → flagged for revision
-        fail_on_below: float = 0.35,     # score below this → hard reject
+        min_score: float = 0.60,  # score below this → flagged for revision
+        fail_on_below: float = 0.35,  # score below this → hard reject
         require_verifier_match: bool = True,
         require_success_criteria: bool = True,
         log_quality_report: bool = True,
@@ -175,9 +178,7 @@ class TaskQualityGate:
 
         return scores
 
-    def split(
-        self, scores: list[QualityScore]
-    ) -> tuple[list[QualityScore], list[QualityScore]]:
+    def split(self, scores: list[QualityScore]) -> tuple[list[QualityScore], list[QualityScore]]:
         """Split into (approved, rejected) based on thresholds."""
         approved = [s for s in scores if s.composite >= self.min_score]
         rejected = [s for s in scores if s.composite < self.fail_on_below]
@@ -220,11 +221,11 @@ class TaskQualityGate:
 
         # Composite weighted score
         score.composite = (
-            score.specificity * self.WEIGHTS["specificity"] +
-            score.verifiability * self.WEIGHTS["verifiability"] +
-            score.atomicity * self.WEIGHTS["atomicity"] +
-            score.dep_soundness * self.WEIGHTS["dep_soundness"] +
-            score.context_complete * self.WEIGHTS["context_complete"]
+            score.specificity * self.WEIGHTS["specificity"]
+            + score.verifiability * self.WEIGHTS["verifiability"]
+            + score.atomicity * self.WEIGHTS["atomicity"]
+            + score.dep_soundness * self.WEIGHTS["dep_soundness"]
+            + score.context_complete * self.WEIGHTS["context_complete"]
         )
         score.issues = issues
         return score
@@ -245,9 +246,22 @@ class TaskQualityGate:
 
         # Checks for explicit success criteria
         success_indicators = [
-            "must", "should", "verify", "ensure", "check", "confirm",
-            "output", "result", "produce", "generate", "return",
-            "pass", "succeed", "complete", "done when", "done if",
+            "must",
+            "should",
+            "verify",
+            "ensure",
+            "check",
+            "confirm",
+            "output",
+            "result",
+            "produce",
+            "generate",
+            "return",
+            "pass",
+            "succeed",
+            "complete",
+            "done when",
+            "done if",
         ]
         has_success_criterion = any(kw in desc for kw in success_indicators)
 
@@ -260,8 +274,14 @@ class TaskQualityGate:
 
         # Vagueness penalties
         vague_phrases = [
-            "do the thing", "handle it", "deal with", "take care of",
-            "work on", "improve", "update as needed", "fix it",
+            "do the thing",
+            "handle it",
+            "deal with",
+            "take care of",
+            "work on",
+            "improve",
+            "update as needed",
+            "fix it",
         ]
         if any(phrase in desc for phrase in vague_phrases):
             issues.append(
@@ -317,13 +337,13 @@ class TaskQualityGate:
         if self.require_verifier_match:
             desc = task.description.lower()
             if v_id == "bash_exit" and not any(
-                kw in desc for kw in
-                ["run", "execute", "test", "pytest", "script", "command", "compile"]
+                kw in desc
+                for kw in ["run", "execute", "test", "pytest", "script", "command", "compile"]
             ):
-                    issues.append(
-                        "verifier=bash_exit but description doesn't mention running a command."
-                    )
-                    score -= 0.15
+                issues.append(
+                    "verifier=bash_exit but description doesn't mention running a command."
+                )
+                score -= 0.15
 
         return max(0.0, score), issues
 
@@ -338,15 +358,12 @@ class TaskQualityGate:
 
         # Count action verbs that suggest multiple steps
         multi_step_patterns = [
-            r"\band\b.*\band\b",          # X and Y and Z
-            r"\d\.\s+.+\n\s*\d\.\s+",    # numbered list with 3+ items
-            r"first.+then.+finally",       # first ... then ... finally
-            r"step \d+.+step \d+",        # step 1 ... step 2
+            r"\band\b.*\band\b",  # X and Y and Z
+            r"\d\.\s+.+\n\s*\d\.\s+",  # numbered list with 3+ items
+            r"first.+then.+finally",  # first ... then ... finally
+            r"step \d+.+step \d+",  # step 1 ... step 2
         ]
-        multi_step = sum(
-            1 for p in multi_step_patterns
-            if re.search(p, desc.lower(), re.DOTALL)
-        )
+        multi_step = sum(1 for p in multi_step_patterns if re.search(p, desc.lower(), re.DOTALL))
 
         if multi_step >= 2:
             issues.append(
@@ -356,23 +373,22 @@ class TaskQualityGate:
             score -= 0.25 * min(multi_step, 3)
 
         # Check for "and" connecting independent verifiable outcomes
-        and_outcomes = len(re.findall(
-            r"(create|generate|produce|output|verify|check|ensure).+and.+"
-            r"(create|generate|produce|output|verify|check|ensure)",
-            desc.lower()
-        ))
+        and_outcomes = len(
+            re.findall(
+                r"(create|generate|produce|output|verify|check|ensure).+and.+"
+                r"(create|generate|produce|output|verify|check|ensure)",
+                desc.lower(),
+            )
+        )
         if and_outcomes >= 2:
             issues.append(
-                "Task bundles multiple verifiable outcomes. "
-                "Split into separate atomic tasks."
+                "Task bundles multiple verifiable outcomes. Split into separate atomic tasks."
             )
             score -= 0.20
 
         return max(0.0, score), issues
 
-    def _score_dep_soundness(
-        self, task: Task, all_task_ids: set[str]
-    ) -> tuple[float, list[str]]:
+    def _score_dep_soundness(self, task: Task, all_task_ids: set[str]) -> tuple[float, list[str]]:
         """
         Do all depends_on IDs exist? No self-dependency?
         Cycle detection is done at the TaskGraph level — here we check references.
@@ -403,13 +419,11 @@ class TaskQualityGate:
         required_meta = _VERIFIER_METADATA_REQUIREMENTS.get(v_id, [])
 
         missing = [
-            f for f in required_meta
-            if f not in task.metadata and f not in task.verifier_config
+            f for f in required_meta if f not in task.metadata and f not in task.verifier_config
         ]
         if missing:
             issues.append(
-                f"verifier '{v_id}' requires metadata fields {missing}. "
-                f"Add them to task.metadata."
+                f"verifier '{v_id}' requires metadata fields {missing}. Add them to task.metadata."
             )
             score -= 0.20 * len(missing)
 
@@ -424,7 +438,9 @@ class TaskQualityGate:
 
         log.info(
             "task_quality_gate: %d/%d tasks passed (avg score=%.2f)",
-            passed, total, avg,
+            passed,
+            total,
+            avg,
         )
 
         failed = [s for s in scores if not s.passed]
@@ -440,6 +456,7 @@ class TaskQualityGate:
 
 
 # ── TaskGraph: dependency cycle detection ─────────────────────────────────────
+
 
 class TaskGraph:
     """
@@ -504,6 +521,7 @@ class TaskGraph:
 
         # Kahn's algorithm
         from collections import deque
+
         queue = deque(tid for tid, deg in in_degree.items() if deg == 0)
         result = []
 

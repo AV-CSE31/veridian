@@ -3,6 +3,7 @@ veridian.agents
 ────────────────
 Agent infrastructure: BaseAgent ABC, WorkerAgent, InitializerAgent, ReviewerAgent.
 """
+
 from veridian.agents.base import BaseAgent
 from veridian.agents.initializer import InitializerAgent
 from veridian.agents.reviewer import ReviewerAgent

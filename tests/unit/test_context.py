@@ -3,6 +3,7 @@ tests.unit.test_context
 ────────────────────────
 Unit tests for TokenWindow, ContextCompactor, and ContextManager.
 """
+
 import pytest
 
 from veridian.context.compactor import ContextCompactor
@@ -12,8 +13,8 @@ from veridian.core.task import Task
 
 # ── TokenWindow ───────────────────────────────────────────────────────────────
 
-class TestTokenWindow:
 
+class TestTokenWindow:
     def test_fits_within_capacity(self):
         w = TokenWindow(capacity=1000)
         assert w.fits(500) is True
@@ -53,8 +54,8 @@ class TestTokenWindow:
 
 # ── ContextCompactor ──────────────────────────────────────────────────────────
 
-class TestContextCompactor:
 
+class TestContextCompactor:
     def test_needs_compaction_at_85_pct(self):
         w = TokenWindow(capacity=1000)
         c = ContextCompactor(w)
@@ -103,8 +104,8 @@ class TestContextCompactor:
 
 # ── ContextManager ────────────────────────────────────────────────────────────
 
-class TestContextManager:
 
+class TestContextManager:
     @pytest.fixture
     def manager(self) -> ContextManager:
         return ContextManager(window=TokenWindow(capacity=8000))
@@ -140,9 +141,7 @@ class TestContextManager:
         """[RETRY ERROR] block appears in user message when attempt > 0."""
         task.last_error = "schema field missing"
         messages = manager.build_worker_context(task, run_id="r1", attempt=1)
-        user_text = " ".join(
-            m["content"] for m in messages if m.get("role") == "user"
-        )
+        user_text = " ".join(m["content"] for m in messages if m.get("role") == "user")
         assert "schema field missing" in user_text
         assert "[RETRY ERROR]" in user_text
 
@@ -152,9 +151,7 @@ class TestContextManager:
         messages = manager.build_worker_context(task, run_id="r1", attempt=0)
         # Only check user messages — the system prompt may mention RETRY ERROR
         # as instructions but the actual block marker only appears on retry
-        user_text = " ".join(
-            m["content"] for m in messages if m.get("role") == "user"
-        )
+        user_text = " ".join(m["content"] for m in messages if m.get("role") == "user")
         assert "[RETRY ERROR]" not in user_text
 
     def test_output_format_block_always_included(self, manager, task):

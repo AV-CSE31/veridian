@@ -5,6 +5,7 @@ Tests for VeridianTracer — OTel GenAI v1.37+ tracing with JSONL fallback.
 
 TDD: these tests are written BEFORE the implementation.
 """
+
 from __future__ import annotations
 
 import json
@@ -29,9 +30,7 @@ class TestVeridianTracerJSONLFallback:
     def tracer(self, trace_file: Path) -> VeridianTracer:
         return VeridianTracer(trace_file=trace_file, use_otel=False)
 
-    def test_record_event_writes_to_jsonl(
-        self, tracer: VeridianTracer, trace_file: Path
-    ) -> None:
+    def test_record_event_writes_to_jsonl(self, tracer: VeridianTracer, trace_file: Path) -> None:
         """Should append a JSON line to trace_file on record_event."""
         tracer.start_trace(run_id="run-001")
         tracer.record_event("task_started", {"veridian.task.id": "t1"})
@@ -83,9 +82,7 @@ class TestVeridianTracerJSONLFallback:
         assert "task_start" in event_types
         assert "task_end" in event_types
 
-    def test_trace_task_records_task_id(
-        self, tracer: VeridianTracer, trace_file: Path
-    ) -> None:
+    def test_trace_task_records_task_id(self, tracer: VeridianTracer, trace_file: Path) -> None:
         """Task events should carry veridian.task.id attribute."""
         tracer.start_trace(run_id="run-001")
         with tracer.trace_task(task_id="task-99", task_title="Test"):
@@ -121,9 +118,7 @@ class TestVeridianTracerJSONLFallback:
         assert "gen_ai.system" in attrs
         assert "veridian.task.id" in attrs
 
-    def test_every_event_has_timestamp(
-        self, tracer: VeridianTracer, trace_file: Path
-    ) -> None:
+    def test_every_event_has_timestamp(self, tracer: VeridianTracer, trace_file: Path) -> None:
         """Every written event must have a timestamp field."""
         tracer.start_trace(run_id="run-001")
         tracer.record_event("custom", {})
@@ -134,9 +129,7 @@ class TestVeridianTracerJSONLFallback:
             event = json.loads(line)
             assert "timestamp" in event, f"Missing timestamp in: {event}"
 
-    def test_every_event_has_run_id(
-        self, tracer: VeridianTracer, trace_file: Path
-    ) -> None:
+    def test_every_event_has_run_id(self, tracer: VeridianTracer, trace_file: Path) -> None:
         """Every event must carry the run_id set in start_trace."""
         tracer.start_trace(run_id="run-007")
         tracer.record_event("custom", {})
@@ -162,9 +155,7 @@ class TestVeridianTracerJSONLFallback:
         event_types = [e["event_type"] for e in events]
         assert "important_event" in event_types
 
-    def test_concurrent_trace_safety(
-        self, trace_file: Path
-    ) -> None:
+    def test_concurrent_trace_safety(self, trace_file: Path) -> None:
         """Multiple threads writing events must not corrupt the JSONL file."""
         tracer = VeridianTracer(trace_file=trace_file, use_otel=False)
         tracer.start_trace(run_id="run-concurrent")
@@ -192,9 +183,7 @@ class TestVeridianTracerJSONLFallback:
         for line in lines:
             json.loads(line)  # must not raise
 
-    def test_no_partial_writes(
-        self, tracer: VeridianTracer, trace_file: Path
-    ) -> None:
+    def test_no_partial_writes(self, tracer: VeridianTracer, trace_file: Path) -> None:
         """No temp files should remain after recording events."""
         tracer.start_trace(run_id="run-001")
         tracer.record_event("ev", {})
@@ -202,9 +191,7 @@ class TestVeridianTracerJSONLFallback:
 
         assert not list(trace_file.parent.glob("*.tmp"))
 
-    def test_trace_task_records_duration(
-        self, tracer: VeridianTracer, trace_file: Path
-    ) -> None:
+    def test_trace_task_records_duration(self, tracer: VeridianTracer, trace_file: Path) -> None:
         """task_end event should include a duration_ms field."""
         tracer.start_trace(run_id="run-001")
         with tracer.trace_task(task_id="t1", task_title="Timed task"):
@@ -254,9 +241,7 @@ class TestVeridianTracerEdgePaths:
     def trace_file(self, tmp_path: Path) -> Path:
         return tmp_path / "trace.jsonl"
 
-    def test_append_adds_newline_when_file_has_no_trailing_newline(
-        self, trace_file: Path
-    ) -> None:
+    def test_append_adds_newline_when_file_has_no_trailing_newline(self, trace_file: Path) -> None:
         """When trace_file exists without trailing newline, one should be added."""
         trace_file.write_bytes(b'{"event_type":"existing"}')  # no trailing newline
         tracer = VeridianTracer(trace_file=trace_file, use_otel=False)
@@ -378,9 +363,7 @@ class TestVeridianTracerOTelEnabled:
     def trace_file(self, tmp_path: Path) -> Path:
         return tmp_path / "trace.jsonl"
 
-    def test_otel_span_created_when_sdk_available(
-        self, trace_file: Path
-    ) -> None:
+    def test_otel_span_created_when_sdk_available(self, trace_file: Path) -> None:
         """When OTel SDK is present and use_otel=True, spans should be created."""
         mock_tracer = MagicMock()
         mock_span = MagicMock()
@@ -392,9 +375,7 @@ class TestVeridianTracerOTelEnabled:
             tracer.start_trace(run_id="run-otel")
             tracer.end_trace()
 
-    def test_jsonl_fallback_when_otel_export_raises(
-        self, trace_file: Path
-    ) -> None:
+    def test_jsonl_fallback_when_otel_export_raises(self, trace_file: Path) -> None:
         """When OTel span.add_event raises, JSONL fallback must still capture event."""
         failing_span = MagicMock()
         failing_span.add_event.side_effect = RuntimeError("OTel export failed")

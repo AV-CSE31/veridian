@@ -11,6 +11,7 @@ Usage:
         "timeout_seconds": 10,
     }
 """
+
 from __future__ import annotations
 
 from typing import ClassVar
@@ -29,8 +30,7 @@ class HttpStatusVerifier(BaseVerifier):
 
     id: ClassVar[str] = "http_status"
     description: ClassVar[str] = (
-        "Make an HTTP GET request and verify the response status code "
-        "is in the expected list."
+        "Make an HTTP GET request and verify the response status code is in the expected list."
     )
 
     def __init__(
@@ -97,8 +97,11 @@ class HttpStatusVerifier(BaseVerifier):
                 },
             )
 
-        expected_str = str(self.expected_statuses[0]) if len(self.expected_statuses) == 1 \
+        expected_str = (
+            str(self.expected_statuses[0])
+            if len(self.expected_statuses) == 1
             else str(self.expected_statuses)
+        )
         return VerificationResult(
             passed=False,
             error=(

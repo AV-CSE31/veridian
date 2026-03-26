@@ -14,7 +14,6 @@ import json
 import logging
 import random
 from pathlib import Path
-from typing import Any, Optional
 
 from examples.experiments.shared.config import DATA_DIR, RANDOM_SEED
 
@@ -38,8 +37,8 @@ class SkillNetClient:
 
     def __init__(
         self,
-        skills_path: Optional[Path] = None,
-        queries_path: Optional[Path] = None,
+        skills_path: Path | None = None,
+        queries_path: Path | None = None,
         seed: int = RANDOM_SEED,
     ) -> None:
         self._skills_path = skills_path or _SKILLS_PATH
@@ -73,7 +72,7 @@ class SkillNetClient:
 
     def list_skills(
         self,
-        domain: Optional[str] = None,
+        domain: str | None = None,
         limit: int = 100,
     ) -> list[dict]:
         """Return skills, optionally filtered by domain."""
@@ -95,7 +94,7 @@ class SkillNetClient:
         self,
         text: str,
         limit: int = 10,
-        domain: Optional[str] = None,
+        domain: str | None = None,
     ) -> list[dict]:
         """Semantic search stub — returns a random subset of domain skills."""
         self._ensure_loaded()
@@ -107,8 +106,8 @@ class SkillNetClient:
 
     def get_queries(
         self,
-        distribution: Optional[str] = None,
-        limit: Optional[int] = None,
+        distribution: str | None = None,
+        limit: int | None = None,
     ) -> list[dict]:
         """Return queries filtered by distribution ('in_dist' | 'ood' | None)."""
         self._ensure_loaded()

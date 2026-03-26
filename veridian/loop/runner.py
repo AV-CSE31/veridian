@@ -20,6 +20,7 @@ dry_run=True:
   - Assemble context, log what would run, return RunSummary(dry_run=True)
   - Never calls provider.complete()
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -56,6 +57,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class RunSummary:
     """Final report returned by VeridianRunner.run()."""
+
     run_id: str = ""
     done_count: int = 0
     failed_count: int = 0
@@ -201,7 +203,10 @@ class VeridianRunner:
 
         log.info(
             "runner.complete run_id=%s done=%d failed=%d duration=%.1fs",
-            run_id, summary.done_count, summary.failed_count, summary.duration_seconds,
+            run_id,
+            summary.done_count,
+            summary.failed_count,
+            summary.duration_seconds,
         )
         return summary
 
@@ -222,7 +227,9 @@ class VeridianRunner:
             except Exception as exc:
                 log.error(
                     "runner.task_error task_id=%s err=%s",
-                    task.id, exc, exc_info=True,
+                    task.id,
+                    exc,
+                    exc_info=True,
                 )
                 summary.failed_count += 1
                 summary.errors.append(str(exc))
@@ -279,7 +286,8 @@ class VeridianRunner:
         else:
             updated = self.ledger.mark_failed(task.id, error_msg or "Verification failed")
             self.hooks.fire(
-                "on_failure", TaskFailed(run_id=run_id, task=updated, error=error_msg or ""),
+                "on_failure",
+                TaskFailed(run_id=run_id, task=updated, error=error_msg or ""),
             )
             if updated.status == TaskStatus.ABANDONED:
                 summary.abandoned_count += 1
@@ -293,6 +301,7 @@ class VeridianRunner:
             try:
                 import veridian.verify.builtin  # noqa: F401,PLC0415 — triggers registration
                 from veridian.verify.base import registry  # noqa: PLC0415
+
                 self._verifier_registry = registry
             except Exception:
                 return True, ""
@@ -308,6 +317,7 @@ class VeridianRunner:
 
     def _setup_signal_handler(self) -> None:
         """Register SIGINT handler to set shutdown flag (no mid-task exit)."""
+
         def _handler(signum: int, frame: object) -> None:
             log.warning("runner.sigint_received — will stop after current task")
             self._shutdown = True

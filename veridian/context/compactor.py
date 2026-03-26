@@ -7,6 +7,7 @@ RULES (from CLAUDE.md §2.4):
   - Trigger at 85% capacity
   - Never drop: system prompt, last 3 exchanges, current task block
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,8 +19,8 @@ __all__ = ["ContextCompactor"]
 
 log = logging.getLogger(__name__)
 
-_COMPACTION_THRESHOLD = 0.85   # trigger at 85% capacity
-_MIN_KEEP_EXCHANGES = 3        # always keep last 3 exchanges (6 messages)
+_COMPACTION_THRESHOLD = 0.85  # trigger at 85% capacity
+_MIN_KEEP_EXCHANGES = 3  # always keep last 3 exchanges (6 messages)
 _SYSTEM_ROLES = {"system"}
 
 
@@ -47,9 +48,7 @@ class ContextCompactor:
         """Return True when the token window is ≥ 85% full."""
         return self.window.pct_used >= _COMPACTION_THRESHOLD
 
-    def compact(
-        self, messages: list[dict[str, str]]
-    ) -> list[dict[str, str]]:
+    def compact(self, messages: list[dict[str, str]]) -> list[dict[str, str]]:
         """
         Remove middle messages while preserving system, task block, and last
         3 exchanges. Returns the compacted list.
@@ -63,7 +62,7 @@ class ContextCompactor:
         if len(non_system) <= keep_tail + 1:
             return messages
 
-        head = non_system[:1]       # task block
+        head = non_system[:1]  # task block
         tail = non_system[-keep_tail:]
 
         dropped = len(non_system) - len(head) - len(tail)
@@ -72,6 +71,8 @@ class ContextCompactor:
 
         log.info(
             "context.compacted dropped=%d system=%d kept=%d",
-            dropped, len(system_msgs), len(head) + len(tail),
+            dropped,
+            len(system_msgs),
+            len(head) + len(tail),
         )
         return system_msgs + head + tail

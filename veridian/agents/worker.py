@@ -9,6 +9,7 @@ Loop contract (CLAUDE.md §6):
   - Result regex: <veridian:result>\\s*(\\{.*?\\})\\s*</veridian:result>  (DOTALL)
   - Never hardcode max_turns — always read from VeridianConfig
 """
+
 from __future__ import annotations
 
 import json
@@ -89,7 +90,10 @@ class WorkerAgent(BaseAgent):
 
             log.debug(
                 "worker.turn task_id=%s turn=%d/%d finish=%s",
-                task.id, turn + 1, max_turns, response.finish_reason,
+                task.id,
+                turn + 1,
+                max_turns,
+                response.finish_reason,
             )
 
             # Check for result block
@@ -100,9 +104,7 @@ class WorkerAgent(BaseAgent):
                     structured = data.get("structured", {})
                     if not isinstance(structured, dict):
                         structured = {}
-                    log.info(
-                        "worker.result_found task_id=%s turn=%d", task.id, turn + 1
-                    )
+                    log.info("worker.result_found task_id=%s turn=%d", task.id, turn + 1)
                     return TaskResult(
                         raw_output=raw_output,
                         structured=structured,
@@ -126,9 +128,7 @@ class WorkerAgent(BaseAgent):
             if not has_bash and not match:
                 messages.append({"role": "user", "content": _NUDGE_MESSAGE})
 
-        log.warning(
-            "worker.max_turns_exceeded task_id=%s turns=%d", task.id, max_turns
-        )
+        log.warning("worker.max_turns_exceeded task_id=%s turns=%d", task.id, max_turns)
         return TaskResult(raw_output=raw_output, structured=structured)
 
     def _build_initial_messages(

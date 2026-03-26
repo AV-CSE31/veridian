@@ -5,6 +5,7 @@ BaseHook ABC. All hooks inherit from this.
 All lifecycle methods default to no-op — subclasses override only what they need.
 Priority is a ClassVar[int]; lower numbers run earlier.
 """
+
 from __future__ import annotations
 
 from typing import Any, ClassVar

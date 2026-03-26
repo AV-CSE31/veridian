@@ -4,6 +4,7 @@ veridian.hooks.registry
 HookRegistry — maintains ordered hook list and fires events safely.
 fire() wraps every hook call in try/except; one broken hook never kills a run.
 """
+
 from __future__ import annotations
 
 import logging

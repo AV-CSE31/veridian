@@ -4,6 +4,7 @@ veridian.hooks.builtin.cost_guard
 CostGuardHook — halts the run when cumulative token cost exceeds max_cost_usd.
 Priority 50.
 """
+
 from __future__ import annotations
 
 import logging
@@ -63,7 +64,9 @@ class CostGuardHook(BaseHook):
             if pct >= self.warn_at_pct:
                 log.warning(
                     "cost_guard.warning current=$%.4f limit=$%.2f pct=%.0f%%",
-                    self._current_cost, self.max_cost_usd, pct * 100,
+                    self._current_cost,
+                    self.max_cost_usd,
+                    pct * 100,
                 )
 
     @property

@@ -3,6 +3,7 @@ veridian.loop.parallel_runner
 ──────────────────────────────
 ParallelRunner — async task execution with bounded concurrency via asyncio.Semaphore.
 """
+
 from __future__ import annotations
 
 import asyncio

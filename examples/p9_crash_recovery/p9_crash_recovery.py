@@ -160,7 +160,7 @@ def main() -> None:
         ledger = TaskLedger(path=ledger_path, progress_file=str(progress_path))
         ledger.add(tasks)
         print(f"[OK] {TOTAL_TASKS} migration tasks loaded into ledger")
-        print(f"     Phases: extract (10), transform (25), load (15)")
+        print("     Phases: extract (10), transform (25), load (15)")
 
         # Phase 2: Process tasks 1-24 (normal operation, pre-crash)
         print()
@@ -288,8 +288,8 @@ def main() -> None:
             f"completed {summary.done_count} tasks in {resume_duration:.2f}s"
         )
         print(
-            f"     Runner called reset_in_progress() again at startup "
-            f"(idempotent -- 0 tasks reset, none were IN_PROGRESS)"
+            "     Runner called reset_in_progress() again at startup "
+            "(idempotent -- 0 tasks reset, none were IN_PROGRESS)"
         )
 
         # Phase 7: Final report
@@ -310,8 +310,8 @@ def main() -> None:
             + final_stats.by_status.get("abandoned", 0)
         )
         print(f"  Failed / Abandoned                 : {failed}")
-        print(f"  Tasks wasted on restart            : 0 (resumed from task 25, not from task 1)")
-        print(f"  Ledger integrity                   : [OK] Verified")
+        print("  Tasks wasted on restart            : 0 (resumed from task 25, not from task 1)")
+        print("  Ledger integrity                   : [OK] Verified")
         print(f"  Resume time                        : {resume_duration:.2f}s")
 
         if all_done:

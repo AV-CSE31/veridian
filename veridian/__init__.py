@@ -43,8 +43,15 @@ from veridian.core.events import (
     CircuitBreakerClosed,
     CircuitBreakerOpened,
     ContextCompacted,
+    ContractNegotiated,
+    ContractSigned,
+    ContractViolated,
     CostGuardTriggered,
     CostWarning,
+    EvaluationCompleted,
+    EvaluationConverged,
+    EvaluationExhausted,
+    EvaluationStarted,
     HumanReviewRequested,
     HumanReviewResumed,
     RateLimitHit,
@@ -67,8 +74,12 @@ from veridian.core.events import (
 from veridian.core.events import RunAborted as RunAbortedEvent
 from veridian.core.exceptions import (
     BlockedCommand,
+    CalibrationError,
     ContextWindowExceeded,
+    ContractNotFound,
+    ContractViolation,
     CostLimitExceeded,
+    EvaluationError,
     ExecutorError,
     ExecutorTimeout,
     HumanReviewRequired,
@@ -98,6 +109,9 @@ from veridian.core.task import (
     TaskResult,
     TaskStatus,
 )
+
+# ── Decorator ──────────────────────────────────────────────────────────────────
+from veridian.decorator import verified
 
 # ── Ledger ─────────────────────────────────────────────────────────────────────
 from veridian.ledger.ledger import TaskLedger
@@ -132,6 +146,7 @@ def __getattr__(name: str) -> object:
             RunSummary,
             VeridianRunner,
         )
+
         globals()["VeridianRunner"] = VeridianRunner
         globals()["VeridianConfig"] = VeridianConfig
         globals()["RunSummary"] = RunSummary
@@ -139,12 +154,14 @@ def __getattr__(name: str) -> object:
 
     if name == "ParallelRunner":
         from veridian.loop.parallel_runner import ParallelRunner  # noqa: PLC0415
+
         globals()["ParallelRunner"] = ParallelRunner
         return ParallelRunner
 
     if name in ("InitializerAgent", "WorkerAgent"):
         from veridian.agents.initializer import InitializerAgent  # noqa: PLC0415
         from veridian.agents.worker import WorkerAgent  # noqa: PLC0415
+
         globals()["InitializerAgent"] = InitializerAgent
         globals()["WorkerAgent"] = WorkerAgent
         return globals()[name]
@@ -152,34 +169,43 @@ def __getattr__(name: str) -> object:
     if name in ("BaseHook", "HookRegistry"):
         from veridian.hooks.base import BaseHook  # noqa: PLC0415
         from veridian.hooks.registry import HookRegistry  # noqa: PLC0415
+
         globals()["BaseHook"] = BaseHook
         globals()["HookRegistry"] = HookRegistry
         return globals()[name]
 
-    if name in ("LoggingHook", "CostGuardHook", "HumanReviewHook",
-                "RateLimitHook", "SlackNotifyHook"):
+    if name in (
+        "LoggingHook",
+        "CostGuardHook",
+        "HumanReviewHook",
+        "RateLimitHook",
+        "SlackNotifyHook",
+    ):
         import veridian.hooks.builtin as _hooks  # noqa: PLC0415
+
         return getattr(_hooks, name)
 
     if name == "CrossRunConsistencyHook":
         from veridian.hooks.builtin.cross_run_consistency import (  # noqa: PLC0415
             CrossRunConsistencyHook,
         )
+
         globals()["CrossRunConsistencyHook"] = CrossRunConsistencyHook
         return CrossRunConsistencyHook
 
     if name == "VeridianTracer":
         from veridian.observability.tracer import VeridianTracer  # noqa: PLC0415
+
         globals()["VeridianTracer"] = VeridianTracer
         return VeridianTracer
 
     if name == "EntropyGC":
         from veridian.entropy.gc import EntropyGC  # noqa: PLC0415
+
         globals()["EntropyGC"] = EntropyGC
         return EntropyGC
 
-    if name in ("SemanticGroundingVerifier", "ConfidenceScore",
-                "SelfConsistencyVerifier"):
+    if name in ("SemanticGroundingVerifier", "ConfidenceScore", "SelfConsistencyVerifier"):
         from veridian.verify.builtin.confidence import (  # noqa: PLC0415
             ConfidenceScore,
             SelfConsistencyVerifier,
@@ -187,6 +213,7 @@ def __getattr__(name: str) -> object:
         from veridian.verify.builtin.semantic_grounding import (  # noqa: PLC0415
             SemanticGroundingVerifier,
         )
+
         globals()["SemanticGroundingVerifier"] = SemanticGroundingVerifier
         globals()["ConfidenceScore"] = ConfidenceScore
         globals()["SelfConsistencyVerifier"] = SelfConsistencyVerifier
@@ -198,9 +225,61 @@ def __getattr__(name: str) -> object:
             OutputSanitizer,
             TrustedExecutor,
         )
+
         globals()["TrustedExecutor"] = TrustedExecutor
         globals()["OutputSanitizer"] = OutputSanitizer
         globals()["BashOutput"] = BashOutput
+        return globals()[name]
+
+    if name in (
+        "SprintContract",
+        "ContractRegistry",
+        "SprintContractVerifier",
+        "SprintContractHook",
+    ):
+        from veridian.contracts import (  # noqa: PLC0415
+            ContractRegistry,
+            SprintContract,
+            SprintContractHook,
+            SprintContractVerifier,
+        )
+
+        globals()["SprintContract"] = SprintContract
+        globals()["ContractRegistry"] = ContractRegistry
+        globals()["SprintContractVerifier"] = SprintContractVerifier
+        globals()["SprintContractHook"] = SprintContractHook
+        return globals()[name]
+
+    if name in (
+        "AdversarialEvaluator",
+        "EvaluationResult",
+        "CalibrationProfile",
+        "GradingRubric",
+        "RubricCriterion",
+        "PipelineResult",
+        "VerificationPipeline",
+    ):
+        from veridian.eval.adversarial import (  # noqa: PLC0415
+            AdversarialEvaluator,
+            EvaluationResult,
+        )
+        from veridian.eval.calibration import (  # noqa: PLC0415
+            CalibrationProfile,
+            GradingRubric,
+            RubricCriterion,
+        )
+        from veridian.eval.pipeline import PipelineResult, VerificationPipeline  # noqa: PLC0415
+
+        for _n, _v in [
+            ("AdversarialEvaluator", AdversarialEvaluator),
+            ("EvaluationResult", EvaluationResult),
+            ("CalibrationProfile", CalibrationProfile),
+            ("GradingRubric", GradingRubric),
+            ("RubricCriterion", RubricCriterion),
+            ("PipelineResult", PipelineResult),
+            ("VerificationPipeline", VerificationPipeline),
+        ]:
+            globals()[_n] = _v
         return globals()[name]
 
     raise AttributeError(f"module 'veridian' has no attribute {name!r}")
@@ -209,50 +288,119 @@ def __getattr__(name: str) -> object:
 __all__ = [
     # Version
     "__version__",
-
     # Core models
-    "Task", "TaskStatus", "TaskResult", "TaskPriority", "LedgerStats",
-
+    "Task",
+    "TaskStatus",
+    "TaskResult",
+    "TaskPriority",
+    "LedgerStats",
     # Events
     "VeridianEvent",
-    "RunStarted", "RunCompleted", "RunAbortedEvent",
-    "TaskClaimed", "TaskCompleted", "TaskFailed", "TaskAbandoned", "TaskSkipped",
-    "VerificationPassed", "VerificationFailed",
-    "CircuitBreakerOpened", "CircuitBreakerClosed",
-    "CostGuardTriggered", "CostWarning",
-    "RateLimitHit", "RetryScheduled",
-    "HumanReviewRequested", "HumanReviewResumed",
-    "SLAWarning", "SLABreached",
+    "RunStarted",
+    "RunCompleted",
+    "RunAbortedEvent",
+    "TaskClaimed",
+    "TaskCompleted",
+    "TaskFailed",
+    "TaskAbandoned",
+    "TaskSkipped",
+    "VerificationPassed",
+    "VerificationFailed",
+    "CircuitBreakerOpened",
+    "CircuitBreakerClosed",
+    "CostGuardTriggered",
+    "CostWarning",
+    "RateLimitHit",
+    "RetryScheduled",
+    "HumanReviewRequested",
+    "HumanReviewResumed",
+    "SLAWarning",
+    "SLABreached",
     "ContextCompacted",
-
+    "ContractSigned",
+    "ContractViolated",
+    "ContractNegotiated",
+    "EvaluationStarted",
+    "EvaluationCompleted",
+    "EvaluationConverged",
+    "EvaluationExhausted",
     # Exceptions
-    "VeridianError", "VeridianConfigError", "InvalidTransition", "LedgerCorrupted",
-    "TaskNotFound", "TaskAlreadyClaimed",
-    "VerificationError", "VerifierNotFound",
-    "ProviderError", "ProviderRateLimited", "ContextWindowExceeded",
-    "ExecutorError", "ExecutorTimeout", "BlockedCommand",
-    "CostLimitExceeded", "HumanReviewRequired", "RunAborted",
-
+    "VeridianError",
+    "VeridianConfigError",
+    "InvalidTransition",
+    "LedgerCorrupted",
+    "TaskNotFound",
+    "TaskAlreadyClaimed",
+    "VerificationError",
+    "VerifierNotFound",
+    "ProviderError",
+    "ProviderRateLimited",
+    "ContextWindowExceeded",
+    "ExecutorError",
+    "ExecutorTimeout",
+    "BlockedCommand",
+    "CostLimitExceeded",
+    "HumanReviewRequired",
+    "RunAborted",
+    "ContractViolation",
+    "ContractNotFound",
+    "EvaluationError",
+    "CalibrationError",
     # Quality gate
-    "TaskQualityGate", "TaskGraph", "QualityScore",
-
+    "TaskQualityGate",
+    "TaskGraph",
+    "QualityScore",
     # Ledger
     "TaskLedger",
-
     # Verification
-    "BaseVerifier", "VerificationResult", "verifier_registry",
-
+    "BaseVerifier",
+    "VerificationResult",
+    "verifier_registry",
     # Providers
-    "LLMProvider", "LLMResponse", "Message",
-    "LiteLLMProvider", "CircuitBreaker", "MockProvider",
+    "LLMProvider",
+    "LLMResponse",
+    "Message",
+    "LiteLLMProvider",
+    "CircuitBreaker",
+    "MockProvider",
+
+    # Decorator
+    "verified",
 
     # Lazy-loaded (via __getattr__)
-    "VeridianRunner", "VeridianConfig", "RunSummary", "ParallelRunner",
-    "InitializerAgent", "WorkerAgent",
-    "BaseHook", "HookRegistry",
-    "LoggingHook", "CostGuardHook", "HumanReviewHook",
-    "RateLimitHook", "SlackNotifyHook", "CrossRunConsistencyHook",
-    "VeridianTracer", "EntropyGC",
-    "SemanticGroundingVerifier", "ConfidenceScore", "SelfConsistencyVerifier",
-    "TrustedExecutor", "OutputSanitizer", "BashOutput",
+    "VeridianRunner",
+    "VeridianConfig",
+    "RunSummary",
+    "ParallelRunner",
+    "InitializerAgent",
+    "WorkerAgent",
+    "BaseHook",
+    "HookRegistry",
+    "LoggingHook",
+    "CostGuardHook",
+    "HumanReviewHook",
+    "RateLimitHook",
+    "SlackNotifyHook",
+    "CrossRunConsistencyHook",
+    "VeridianTracer",
+    "EntropyGC",
+    "SemanticGroundingVerifier",
+    "ConfidenceScore",
+    "SelfConsistencyVerifier",
+    "TrustedExecutor",
+    "OutputSanitizer",
+    "BashOutput",
+    # Sprint Contract Protocol
+    "SprintContract",
+    "ContractRegistry",
+    "SprintContractVerifier",
+    "SprintContractHook",
+    # Adversarial Evaluator Pipeline
+    "AdversarialEvaluator",
+    "EvaluationResult",
+    "CalibrationProfile",
+    "GradingRubric",
+    "RubricCriterion",
+    "PipelineResult",
+    "VerificationPipeline",
 ]

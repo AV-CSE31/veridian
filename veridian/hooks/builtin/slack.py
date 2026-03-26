@@ -4,6 +4,7 @@ veridian.hooks.builtin.slack
 SlackNotifyHook — posts run lifecycle events to a Slack incoming webhook.
 Priority 50.  No-ops silently when webhook_url is not configured.
 """
+
 from __future__ import annotations
 
 import logging
@@ -46,8 +47,7 @@ class SlackNotifyHook(BaseHook):
                 done = getattr(summary, "done_count", "?")
                 failed = getattr(summary, "failed_count", "?")
                 self._post(
-                    f":white_check_mark: Run `{run_id}` complete — "
-                    f"{done} done, {failed} failed"
+                    f":white_check_mark: Run `{run_id}` complete — {done} done, {failed} failed"
                 )
             else:
                 self._post(f":white_check_mark: Run `{run_id}` complete")
@@ -65,6 +65,7 @@ class SlackNotifyHook(BaseHook):
             return
         try:
             import httpx  # noqa: PLC0415
+
             httpx.post(
                 self.webhook_url,
                 json={"text": text},

@@ -17,7 +17,6 @@ from pathlib import Path
 from veridian.core.events import RunCompleted, RunStarted, TaskCompleted, TaskFailed
 from veridian.hooks.builtin.drift_detector import DriftDetectorHook
 
-
 # ── Fake objects (same pattern as test suite) ────────────────────────────────
 
 
