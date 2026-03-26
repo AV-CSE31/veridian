@@ -127,11 +127,11 @@ Long-running AI agents fail not because models are incapable, but because infras
 
 **Context management** — Frozen 6-step prompt assembly. Automatic compaction at 85% token budget. System prompt and last 3 exchanges are never compacted.
 
-**`@verified` decorator** (`feature/verified-decorator`) — Lightweight decorator for wrapping any Python function with a Veridian verifier. Attach pre/post verification to existing callables without restructuring them into `Task` + `VeridianRunner` pipelines.
+**`@verified` decorator** — Wrap any Python function with deterministic verification. No restructuring into `Task` + `VeridianRunner` needed.
 
-**Sprint Contracts** (`feature/sprint-contracts`) — Pre-execution commitment protocol between agent and evaluator. `SprintContract` captures deliverables, success criteria, and test conditions; dual-signing API (`sign_generator()` / `sign_evaluator()`); `SprintContractVerifier` and `SprintContractHook` enforce the contract at runtime. Raises `ContractViolation` on breach.
+**Sprint Contracts** — Pre-execution commitment protocol between agent and evaluator. HMAC-SHA256 signed. Raises `ContractViolation` on breach.
 
-**Adversarial Evaluator Pipeline** (`feature/adversarial-evaluator`) — GAN-inspired structural separation of generator and judge. `AdversarialEvaluator` uses an independent `LLMProvider` to evaluate generator output against a signed `SprintContract` and a `CalibrationProfile` (weighted rubric, skepticism level). `VerificationPipeline` runs iterative evaluate loops up to `max_iterations`, fires lifecycle events (`EvaluationStarted`, `EvaluationCompleted`, `EvaluationConverged`, `EvaluationExhausted`), and returns a `PipelineResult` with full eval history.
+**Adversarial Evaluator** — GAN-inspired structural separation of generator and judge. Independent LLM evaluates output against signed contracts with calibrated rubrics.
 
 **Hooks** — Middleware system for cost tracking, rate limiting, human review gates, Slack notifications, cross-run consistency detection, and drift monitoring. Hook errors are always caught — one broken hook never kills a run.
 
@@ -168,15 +168,29 @@ pip install veridian-ai[all]         # Everything
 git clone https://github.com/AV-CSE31/veridian
 cd veridian
 pip install -e ".[dev]"
-pytest -q   # 408 tests
+pytest -q   # 570+ tests
 ```
 
 ---
 
 ## Quick Start
 
+### Hello World — verify a function in 3 lines
+
 ```python
-from veridian import TaskLedger, Task, VeridianRunner, LiteLLMProvider
+from veridian import verified
+
+@verified(verifier="schema", config={"required_fields": ["answer"]})
+def classify(text: str) -> dict:
+    return {"answer": "ALLOW", "reasoning": "Content is safe."}
+
+result = classify("hello world")  # passes verification automatically
+```
+
+### Full pipeline — tasks with crash recovery
+
+```python
+from veridian import TaskLedger, Task, VeridianRunner, MockProvider
 
 ledger = TaskLedger("ledger.json")
 ledger.add([
@@ -188,8 +202,10 @@ ledger.add([
     )
 ])
 
-runner = VeridianRunner(ledger=ledger, provider=LiteLLMProvider())
+# Kill this at any point. Re-run. Resumes exactly where it left off.
+runner = VeridianRunner(ledger=ledger, provider=MockProvider())
 summary = runner.run()
+print(f"Done: {summary.done_count}, Failed: {summary.failed_count}")
 ```
 
 ---
@@ -261,25 +277,41 @@ If you're building agents that make decisions people depend on, Veridian is the 
 
 ## Roadmap
 
-### v1.0.0
+### Where we are
 
-- **Phase 6** ✅ — Observability (OTel GenAI v1.37+, JSONL fallback, FastAPI SSE dashboard :7474), storage backends (LocalJSON, Redis, Postgres), EntropyGC (9 consistency checks)
-- **Phase 7** — Full CLI (`init`, `run`, `status`, `gc`, `reset`, `retry`, `report`) via Typer + Rich
-- **Phase 8** — Secrets provider abstraction + IdentityGuard hook
-- **Phase 9** — Adaptive Safety + Anomaly Detection + Crypto Audit Chain
+| Milestone | Status |
+|-----------|--------|
+| Core verification engine | ✅ Shipped |
+| 10 built-in verifiers + plugin system | ✅ Shipped |
+| Crash-safe atomic ledger | ✅ Shipped |
+| Hook system + drift detection | ✅ Shipped |
+| Bayesian SkillLibrary | ✅ Shipped |
+| Sprint Contracts + Adversarial Eval | ✅ Shipped |
+| `@verified` decorator | ✅ Shipped |
+| Observability + Storage backends | ✅ Shipped |
+| Full CLI | 🔨 In progress |
 
-### Post v1.0
+### Where we're heading
 
-| Feature | Description |
-|---------|-------------|
-| **MCP Skill Server** | Expose SkillLibrary via MCP — works with Claude Code, Cursor, Windsurf |
-| **Proactive Scheduler** | Cron/interval/event-driven autonomous runs |
-| **Tiered Memory** | Working/long-term/cold memory with aging policies |
-| **Hierarchical Skills** | Nested skill composition from verified sub-skills |
-| **Cross-Agent Sharing** | Federated skill exchange via MCP protocol |
-| **Policy Engine** | Declarative rules for execution, cost limits, approvals |
-| **Multi-Agent Orchestration** | Agent-to-agent delegation, shared context pools |
-| **Distributed Execution** | Horizontal scaling with distributed locking |
+**v0.2.0 — Foundation Safety**
+- CLI with Rich output
+- Secrets management + identity guard
+- Evolution safety monitor
+
+**v0.3.0 — Inter-Agent Safety**
+- Agent-to-agent handoff verification
+- Adaptive verification thresholds
+- Real-time behavioral anomaly detection
+
+**v1.0.0 — Production Release**
+- Cryptographic audit chain
+- Compliance report generation
+- MCP Skill Server (Claude Code, Cursor, Windsurf integration)
+
+**Beyond v1.0**
+- Federated trust across organizations
+- Safety-aware self-evolution
+- Chain-of-thought auditing
 
 ---
 
