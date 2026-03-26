@@ -123,6 +123,13 @@ python_version = "3.11"
 strict = true
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# FastAPI's dynamic @app.get() decorators are not typed in the stubs;
+# disabling this check only for the dashboard avoids version-skew between
+# mypy releases that use [misc] vs [untyped-decorator] for the same error.
+module = "veridian.observability.dashboard"
+disallow_untyped_decorators = false
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

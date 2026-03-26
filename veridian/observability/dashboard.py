@@ -85,7 +85,7 @@ class VeridianDashboard:
                         last_pos = fh.tell()
                 await asyncio.sleep(0.5)
 
-        @app.get("/events")  # type: ignore[misc]
+        @app.get("/events")
         async def events() -> StreamingResponse:
             """SSE endpoint streaming live trace events."""
             return StreamingResponse(
@@ -94,12 +94,12 @@ class VeridianDashboard:
                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
             )
 
-        @app.get("/health")  # type: ignore[misc]
+        @app.get("/health")
         async def health() -> dict[str, str]:
             """Health check endpoint."""
             return {"status": "ok", "port": str(self._port)}
 
-        @app.get("/")  # type: ignore[misc]
+        @app.get("/")
         async def index() -> dict[str, Any]:
             """Dashboard info."""
             return {
