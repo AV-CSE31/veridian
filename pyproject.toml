@@ -97,6 +97,10 @@ self_consistency   = "veridian.verify.builtin.confidence:SelfConsistencyVerifier
 # Third-party hooks auto-discovered via this entry point.
 [project.entry-points."veridian.hooks"]
 
+# Storage backends auto-discovered via this entry point.
+[project.entry-points."veridian.storage"]
+local_json = "veridian.storage.local_json:LocalJSONStorage"
+
 [tool.hatch.build.targets.wheel]
 packages = ["veridian"]
 
@@ -129,7 +133,15 @@ path = "veridian/__init__.py"
 
 [tool.coverage.run]
 source = ["veridian"]
-omit = ["veridian/cli/*", "tests/*"]
+omit = [
+    "veridian/cli/*",
+    "tests/*",
+    # Optional backends require external services (Redis, Postgres, FastAPI/uvicorn)
+    # These are covered by integration tests that need running service dependencies.
+    "veridian/storage/redis_backend.py",
+    "veridian/storage/postgres_backend.py",
+    "veridian/observability/dashboard.py",
+]
 
 [tool.coverage.report]
 exclude_lines = [

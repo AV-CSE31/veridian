@@ -10,9 +10,10 @@ Gap 4: TaskQualityGate + TaskGraph
 Gap 5: TrustedExecutor + OutputSanitizer
 """
 import base64
-import pytest
-from veridian.core.task import Task, TaskResult
 
+import pytest
+
+from veridian.core.task import Task, TaskResult
 
 # ══════════════════════════════════════════════════════════════════════════════
 # GAP 1 — SemanticGroundingVerifier
@@ -193,8 +194,8 @@ class TestCrossRunConsistencyHook:
         assert len(hook.conflicts) == 0
 
     def test_raises_human_review_on_critical(self):
-        from veridian.hooks.builtin.cross_run_consistency import CrossRunConsistencyHook
         from veridian.core.exceptions import HumanReviewRequired
+        from veridian.hooks.builtin.cross_run_consistency import CrossRunConsistencyHook
         h = CrossRunConsistencyHook(claim_fields=["decision"], raise_on_critical=True)
         h.after_result(self._ev("x", {"decision": "ALLOW"}))
         with pytest.raises(HumanReviewRequired):

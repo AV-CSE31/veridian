@@ -4,15 +4,15 @@ tests.unit.test_agents
 Unit tests for BaseAgent, WorkerAgent, InitializerAgent, ReviewerAgent.
 """
 import json
+
 import pytest
 
 from veridian.agents.base import BaseAgent
 from veridian.agents.worker import WorkerAgent
 from veridian.core.config import VeridianConfig
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.providers.mock_provider import MockProvider
+from veridian.core.task import Task, TaskResult
 from veridian.providers.base import LLMResponse
-
+from veridian.providers.mock_provider import MockProvider
 
 # ── BaseAgent ─────────────────────────────────────────────────────────────────
 

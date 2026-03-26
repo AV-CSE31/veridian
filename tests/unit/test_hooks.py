@@ -11,7 +11,6 @@ from veridian.core.task import Task, TaskResult, TaskStatus
 from veridian.hooks.base import BaseHook
 from veridian.hooks.registry import HookRegistry
 
-
 # ── BaseHook ──────────────────────────────────────────────────────────────────
 
 class TestBaseHook:
@@ -200,6 +199,31 @@ class TestCostGuardHook:
         assert "2" in str(exc_info.value)  # current cost visible
         assert "1" in str(exc_info.value)  # limit visible
 
+    def test_after_task_no_op_when_task_missing(self):
+        """after_task with no task attribute should return early without error."""
+        from veridian.hooks.builtin.cost_guard import CostGuardHook
+        hook = CostGuardHook(max_cost_usd=10.0)
+        event_no_task = type("FakeEvent", (), {})()
+        hook.after_task(event_no_task)  # must not raise
+
+    def test_after_task_no_op_when_result_missing(self):
+        """after_task with task but no result should return early."""
+        from veridian.hooks.builtin.cost_guard import CostGuardHook
+        hook = CostGuardHook(max_cost_usd=10.0)
+        task_no_result = Task(title="t1")
+        event = TaskCompleted(run_id="r1", task=task_no_result)
+        hook.after_task(event)  # must not raise
+
+    def test_after_task_logs_warning_when_near_budget(self):
+        """after_task should log a warning when cost exceeds warn_at_pct threshold."""
+        from veridian.hooks.builtin.cost_guard import CostGuardHook
+        hook = CostGuardHook(max_cost_usd=1.0, cost_per_token=0.001, warn_at_pct=0.5)
+        task = Task(title="t1")
+        task.result = TaskResult(raw_output="done", token_usage={"total_tokens": 600})
+        event = TaskCompleted(run_id="r1", task=task)
+        hook.after_task(event)  # should log but not raise
+        assert hook.current_cost == pytest.approx(0.6)
+
 
 # ── HumanReviewHook ───────────────────────────────────────────────────────────
 
@@ -255,3 +279,30 @@ class TestSlackNotifyHook:
     def test_priority_is_50(self):
         from veridian.hooks.builtin.slack import SlackNotifyHook
         assert SlackNotifyHook.priority == 50
+
+
+# ── Exception coverage ─────────────────────────────────────────────────────────
+
+class TestDriftDetectedException:
+
+    def test_drift_detected_stores_attributes(self):
+        """DriftDetected should store metric, magnitude, and direction."""
+        from veridian.core.exceptions import DriftDetected
+        exc = DriftDetected(metric="latency", magnitude=0.25, direction="up")
+        assert exc.metric == "latency"
+        assert exc.magnitude == 0.25
+        assert exc.direction == "up"
+        assert "latency" in str(exc)
+        assert "up" in str(exc)
+
+
+class TestVeridianEventToDict:
+
+    def test_to_dict_returns_serialisable_dict(self):
+        """VeridianEvent.to_dict() should return a dict with standard keys."""
+        from veridian.core.events import RunStarted
+        ev = RunStarted(run_id="r1", event_type="run_started")
+        d = ev.to_dict()
+        assert d["run_id"] == "r1"
+        assert d["event_type"] == "run_started"
+        assert "ts" in d
