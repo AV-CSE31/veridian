@@ -2,15 +2,12 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from veridian.core.task import Task, TaskStatus
 from veridian.ledger.ledger import TaskLedger
 
 app = typer.Typer(
@@ -112,7 +109,7 @@ def status(
 @app.command(name="list")
 def list_tasks(
     ledger: str = LEDGER_OPT,
-    status_filter: Optional[str] = typer.Option(
+    status_filter: str | None = typer.Option(
         None, "--status", "-s", help="Filter by status (pending, done, failed, etc.)",
     ),
 ) -> None:
@@ -144,7 +141,7 @@ def list_tasks(
         table.add_row(
             t.id,
             t.title,
-            f"[{status_style}]{t.status.value if hasattr(t.status, 'value') else t.status}[/{status_style}]",
+            f"[{status_style}]{t.status.value}[/{status_style}]",
             t.verifier_id,
             str(t.retry_count),
         )
@@ -178,7 +175,7 @@ def gc(
 
     for issue in issues:
         table.add_row(
-            issue.issue_type.value if hasattr(issue.issue_type, "value") else str(issue.issue_type),
+            issue.issue_type.value,
             issue.task_id,
             issue.detail,
         )
@@ -293,12 +290,12 @@ def run(
         try:
             from veridian.providers.litellm_provider import LiteLLMProvider
             provider = LiteLLMProvider(model=config.model)
-        except ImportError:
+        except ImportError as exc:
             console.print(
                 "[red]Error:[/red] LLM provider not installed. "
                 "Run: pip install veridian-ai[llm]"
             )
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from exc
 
     runner_inst = VeridianRunner(
         ledger=led,
