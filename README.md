@@ -146,13 +146,23 @@ pip install veridian-ai
 pip install veridian-ai[llm]
 ```
 
+### Optional extras
+
+```bash
+pip install veridian-ai[dashboard]   # FastAPI SSE dashboard (port 7474)
+pip install veridian-ai[otel]        # OpenTelemetry exporter
+pip install veridian-ai[redis]       # RedisStorage backend
+pip install veridian-ai[postgres]    # PostgresStorage backend
+pip install veridian-ai[all]         # Everything
+```
+
 ### From source
 
 ```bash
 git clone https://github.com/AV-CSE31/veridian
 cd veridian
 pip install -e ".[dev]"
-pytest -q   # 298 tests
+pytest -q   # 408 tests
 ```
 
 ---
@@ -222,9 +232,9 @@ summary = runner.run()
 | `loop/` | ✅ | VeridianRunner, ParallelRunner |
 | `providers/` | ✅ | LiteLLM + MockProvider |
 | `skills/` | ✅ | Bayesian SkillLibrary |
-| `storage/` | 🔲 | LocalJSON, Redis, Postgres — Phase 6 |
-| `observability/` | 🔲 | OTel tracer, dashboard — Phase 6 |
-| `entropy/` | 🔲 | EntropyGC (9 checks) — Phase 6 |
+| `storage/` | ✅ | LocalJSON, Redis, Postgres — `BaseStorage` ABC + 3 backends |
+| `observability/` | ✅ | OTel GenAI v1.37+ tracer, JSONL fallback, FastAPI dashboard :7474 |
+| `entropy/` | ✅ | EntropyGC — 9 read-only consistency checks, atomic report |
 | `cli/` | 🔲 | Full CLI — Phase 7 |
 
 ---
@@ -247,10 +257,10 @@ If you're building agents that make decisions people depend on, Veridian is the 
 
 ### v1.0.0
 
-- **Phase 6** — Observability (OTel GenAI v1.37+, JSONL fallback, FastAPI dashboard), storage backends (LocalJSON, Redis, Postgres), EntropyGC
+- **Phase 6** ✅ — Observability (OTel GenAI v1.37+, JSONL fallback, FastAPI SSE dashboard :7474), storage backends (LocalJSON, Redis, Postgres), EntropyGC (9 consistency checks)
 - **Phase 7** — Full CLI (`init`, `run`, `status`, `gc`, `reset`, `retry`, `report`) via Typer + Rich
-- **Phase 2+** — Verification policy templates for common domains
-- **Phase 3+** — Secrets provider abstraction + IdentityGuard hook
+- **Phase 8** — Secrets provider abstraction + IdentityGuard hook
+- **Phase 9** — Adaptive Safety + Anomaly Detection + Crypto Audit Chain
 
 ### Post v1.0
 
