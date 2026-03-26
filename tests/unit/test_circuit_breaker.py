@@ -3,12 +3,9 @@ tests.unit.test_circuit_breaker
 ────────────────────────────────
 Tests for the circuit breaker and retry resilience layer in LiteLLMProvider.
 """
-import pytest
 import time
-from unittest.mock import patch, MagicMock
 
-from veridian.providers.litellm_provider import CircuitBreaker, CBState
-from veridian.core.exceptions import ProviderError, ProviderRateLimited
+from veridian.providers.litellm_provider import CBState, CircuitBreaker
 
 
 class TestCircuitBreaker:
@@ -113,8 +110,8 @@ class TestMockProvider:
     """Verify MockProvider behaviour used in all other tests."""
 
     def test_script_responses_in_order(self):
-        from veridian.providers.mock_provider import MockProvider
         from veridian.providers.base import LLMResponse, Message
+        from veridian.providers.mock_provider import MockProvider
 
         mock = MockProvider()
         mock.script([
@@ -126,8 +123,8 @@ class TestMockProvider:
         assert mock.complete(msgs).content == "second"
 
     def test_script_harness_result(self):
-        from veridian.providers.mock_provider import MockProvider
         from veridian.providers.base import Message
+        from veridian.providers.mock_provider import MockProvider
 
         mock = MockProvider()
         mock.script_veridian_result({"status": "compliant"}, summary="ok")
@@ -136,8 +133,8 @@ class TestMockProvider:
         assert "compliant" in resp.content
 
     def test_call_count(self):
-        from veridian.providers.mock_provider import MockProvider
         from veridian.providers.base import Message
+        from veridian.providers.mock_provider import MockProvider
 
         mock = MockProvider()
         msgs = [Message(role="user", content="x")]
@@ -146,8 +143,8 @@ class TestMockProvider:
         assert mock.call_count == 2
 
     def test_reset(self):
+        from veridian.providers.base import LLMResponse, Message
         from veridian.providers.mock_provider import MockProvider
-        from veridian.providers.base import Message, LLMResponse
 
         mock = MockProvider()
         mock.script([LLMResponse(content="x")])

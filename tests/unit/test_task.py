@@ -3,13 +3,11 @@ tests.unit.test_task
 ─────────────────────
 Unit tests for Task, TaskStatus state machine, TaskResult, LedgerStats.
 """
-import pytest
 from datetime import datetime
 
-from veridian.core.task import (
-    Task, TaskStatus, TaskResult, TaskPriority, LedgerStats
-)
+import pytest
 
+from veridian.core.task import LedgerStats, Task, TaskPriority, TaskResult, TaskStatus
 
 # ── TaskStatus state machine ──────────────────────────────────────────────────
 

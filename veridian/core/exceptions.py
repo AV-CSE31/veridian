@@ -100,3 +100,29 @@ class DriftDetected(VeridianError):
 
 class RunAborted(VeridianError):
     """Runner was externally aborted (e.g. SIGINT, dry_run assertion)."""
+
+
+# ── Storage ────────────────────────────────────────────────────────────────────
+
+class StorageError(VeridianError):
+    """A storage backend operation failed."""
+
+
+class StorageLockError(StorageError):
+    """Could not acquire distributed lock on the storage backend."""
+
+
+class StorageConnectionError(StorageError):
+    """Could not connect to the storage backend."""
+
+
+# ── Entropy / GC ──────────────────────────────────────────────────────────────
+
+class EntropyError(VeridianError):
+    """EntropyGC encountered an unexpected error during a consistency check."""
+
+
+# ── Observability ─────────────────────────────────────────────────────────────
+
+class TracerError(VeridianError):
+    """VeridianTracer encountered an error initialising or emitting a trace event."""

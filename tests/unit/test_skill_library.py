@@ -6,11 +6,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
-import tempfile
 import uuid
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -22,7 +19,6 @@ from veridian.skills.extractor import SkillExtractor
 from veridian.skills.library import SkillLibrary
 from veridian.skills.models import Skill, SkillCandidate, SkillStep
 from veridian.skills.store import SkillStore
-
 
 # ── Test helpers ───────────────────────────────────────────────────────────────
 

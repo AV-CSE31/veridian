@@ -23,14 +23,15 @@ from veridian.core.exceptions import VeridianConfigError
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import BaseVerifier, VerificationResult
 
-
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
 def make_task(**kwargs: Any) -> Task:
     return Task(title="test", **kwargs)
 
 
-def make_result(structured: dict[str, Any] = None, raw: str = "", artifacts: list[str] = None) -> TaskResult:
+def make_result(
+    structured: dict[str, Any] = None, raw: str = "", artifacts: list[str] = None
+) -> TaskResult:
     return TaskResult(
         raw_output=raw,
         structured=structured or {},
@@ -45,12 +46,12 @@ def make_result(structured: dict[str, Any] = None, raw: str = "", artifacts: lis
 class TestBashExitCodeVerifier:
 
     @pytest.fixture
-    def pass_verifier(self) -> "BashExitCodeVerifier":  # type: ignore[name-defined]
+    def pass_verifier(self) -> Any:
         from veridian.verify.builtin.bash import BashExitCodeVerifier
         return BashExitCodeVerifier(command="python -c \"import sys; sys.exit(0)\"")
 
     @pytest.fixture
-    def fail_verifier(self) -> "BashExitCodeVerifier":  # type: ignore[name-defined]
+    def fail_verifier(self) -> Any:
         from veridian.verify.builtin.bash import BashExitCodeVerifier
         return BashExitCodeVerifier(command="python -c \"import sys; sys.exit(1)\"")
 
@@ -96,6 +97,24 @@ class TestBashExitCodeVerifier:
         )
         result = v.verify(make_task(), make_result())
         assert result.passed is False
+
+    def test_config_validation_rejects_non_positive_timeout(self) -> None:
+        """timeout_seconds <= 0 should raise VeridianConfigError."""
+        from veridian.verify.builtin.bash import BashExitCodeVerifier
+        with pytest.raises(VeridianConfigError, match="timeout_seconds"):
+            BashExitCodeVerifier(command="echo hi", timeout_seconds=0)
+
+    def test_fails_when_command_times_out(self) -> None:
+        """Should return failed result when command exceeds timeout."""
+        import subprocess
+        from unittest.mock import patch
+
+        from veridian.verify.builtin.bash import BashExitCodeVerifier
+        v = BashExitCodeVerifier(command="sleep 10", timeout_seconds=1)
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("sleep 10", 1)):
+            result = v.verify(make_task(), make_result())
+        assert result.passed is False
+        assert result.error is not None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -273,6 +292,7 @@ class TestHttpStatusVerifier:
     def test_fails_gracefully_on_connection_error(self) -> None:
         """Connection errors should return failed result, not raise."""
         import httpx
+
         from veridian.verify.builtin.http import HttpStatusVerifier
         v = HttpStatusVerifier(url="https://unreachable.example.com")
         with patch("httpx.get", side_effect=httpx.ConnectError("Connection refused")):
@@ -408,6 +428,22 @@ class TestCompositeVerifier:
         v = CompositeVerifier(verifiers=[_AlwaysPass(), _AlwaysPass(), _AlwaysPass()])
         result = v.verify(make_task(), make_result())
         assert result.passed is True
+
+    def test_dict_verifier_resolved_from_registry(self) -> None:
+        """CompositeVerifier should resolve dict items via the verifier registry."""
+        from veridian.verify.base import registry
+        from veridian.verify.builtin.composite import CompositeVerifier
+        # Register our test verifier so it can be looked up
+        registry.register(_AlwaysPass)
+        v = CompositeVerifier(verifiers=[{"id": "_test_pass"}])
+        result = v.verify(make_task(), make_result())
+        assert result.passed is True
+
+    def test_invalid_verifier_type_raises_config_error(self) -> None:
+        """Non-BaseVerifier, non-dict items must raise VeridianConfigError."""
+        from veridian.verify.builtin.composite import CompositeVerifier
+        with pytest.raises(VeridianConfigError, match="must be a BaseVerifier"):
+            CompositeVerifier(verifiers=["not_a_verifier"])
 
 
 # ══════════════════════════════════════════════════════════════════════════════

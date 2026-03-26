@@ -4,13 +4,13 @@ tests.unit.test_ledger
 Unit tests for TaskLedger — state machine, atomic writes, crash recovery.
 All tests use tmp_path (pytest fixture) so no disk residue.
 """
-import pytest
 from pathlib import Path
 
-from veridian.core.exceptions import InvalidTransition, TaskNotFound, TaskAlreadyClaimed
-from veridian.core.task import Task, TaskResult, TaskStatus, TaskPriority
-from veridian.ledger.ledger import TaskLedger
+import pytest
 
+from veridian.core.exceptions import InvalidTransition, TaskAlreadyClaimed, TaskNotFound
+from veridian.core.task import Task, TaskPriority, TaskResult, TaskStatus
+from veridian.ledger.ledger import TaskLedger
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 

@@ -13,7 +13,6 @@ from typing import Any
 import pytest
 
 from veridian.core.events import (
-    DriftWarning,
     RunCompleted,
     RunStarted,
     TaskCompleted,
@@ -22,12 +21,10 @@ from veridian.core.events import (
 from veridian.core.exceptions import VeridianConfigError
 from veridian.hooks.builtin.drift_detector import (
     DriftDetectorHook,
-    DriftReport,
     DriftSignal,
     RunSnapshot,
 )
 from veridian.hooks.registry import HookRegistry
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

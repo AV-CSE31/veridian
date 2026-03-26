@@ -5,11 +5,10 @@ Unit tests for TokenWindow, ContextCompactor, and ContextManager.
 """
 import pytest
 
-from veridian.context.window import TokenWindow
 from veridian.context.compactor import ContextCompactor
 from veridian.context.manager import ContextManager
-from veridian.core.task import Task, TaskStatus
-
+from veridian.context.window import TokenWindow
+from veridian.core.task import Task
 
 # ── TokenWindow ───────────────────────────────────────────────────────────────
 

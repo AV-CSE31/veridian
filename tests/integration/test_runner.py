@@ -5,16 +5,16 @@ Integration tests for VeridianRunner and ParallelRunner.
 Full pipeline: task → execution → verification → DONE.
 """
 import json
-import pytest
 from pathlib import Path
 
+import pytest
+
 from veridian.core.config import VeridianConfig
-from veridian.core.task import Task, TaskResult, TaskStatus
+from veridian.core.task import Task, TaskStatus
 from veridian.ledger.ledger import TaskLedger
 from veridian.loop.runner import RunSummary, VeridianRunner
 from veridian.providers.base import LLMResponse
 from veridian.providers.mock_provider import MockProvider
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
