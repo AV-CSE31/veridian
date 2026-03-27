@@ -39,6 +39,8 @@ __author__ = "Veridian contributors"
 __license__ = "MIT"
 
 # ── Core domain models ─────────────────────────────────────────────────────────
+# ── A7: Budget primitives ──────────────────────────────────────────────────────
+from veridian.budget import Budget, BudgetState
 from veridian.core.events import (
     CircuitBreakerClosed,
     CircuitBreakerOpened,
@@ -74,6 +76,7 @@ from veridian.core.events import (
 from veridian.core.events import RunAborted as RunAbortedEvent
 from veridian.core.exceptions import (
     BlockedCommand,
+    BudgetExceeded,
     CalibrationError,
     ContextWindowExceeded,
     ContractNotFound,
@@ -110,11 +113,27 @@ from veridian.core.task import (
     TaskStatus,
 )
 
+# ── A3: Cost tracking ──────────────────────────────────────────────────────────
+from veridian.cost import (
+    BUILTIN_PRICING,
+    CostEntry,
+    CostTracker,
+    ModelPricing,
+    compute_cost,
+)
+
 # ── Decorator ──────────────────────────────────────────────────────────────────
 from veridian.decorator import verified
 
 # ── Ledger ─────────────────────────────────────────────────────────────────────
 from veridian.ledger.ledger import TaskLedger
+
+# ── A2: OTel OTLP exporter ─────────────────────────────────────────────────────
+from veridian.observability.otlp_exporter import (
+    OTLPConfig,
+    VerificationSpan,
+    configure_otlp_tracer,
+)
 
 # ── Providers ──────────────────────────────────────────────────────────────────
 from veridian.providers.base import LLMProvider, LLMResponse, Message
@@ -282,6 +301,43 @@ def __getattr__(name: str) -> object:
             globals()[_n] = _v
         return globals()[name]
 
+    if name in (
+        "AgentRecorder",
+        "RecordedRun",
+        "ReplayAssertion",
+        "ReplayResult",
+        "Replayer",
+    ):
+        from veridian.testing.recorder import AgentRecorder, RecordedRun  # noqa: PLC0415
+        from veridian.testing.replayer import (  # noqa: PLC0415
+            ReplayAssertion,
+            Replayer,
+            ReplayResult,
+        )
+
+        globals()["AgentRecorder"] = AgentRecorder
+        globals()["RecordedRun"] = RecordedRun
+        globals()["ReplayAssertion"] = ReplayAssertion
+        globals()["ReplayResult"] = ReplayResult
+        globals()["Replayer"] = Replayer
+        return globals()[name]
+
+    if name in ("ActionConfig", "ActionResult", "run_action"):
+        from veridian.gh_action import ActionConfig, ActionResult, run_action  # noqa: PLC0415
+
+        globals()["ActionConfig"] = ActionConfig
+        globals()["ActionResult"] = ActionResult
+        globals()["run_action"] = run_action
+        return globals()[name]
+
+    if name == "EmbeddingGroundingVerifier":
+        from veridian.verify.builtin.embedding_grounding import (  # noqa: PLC0415
+            EmbeddingGroundingVerifier,
+        )
+
+        globals()["EmbeddingGroundingVerifier"] = EmbeddingGroundingVerifier
+        return EmbeddingGroundingVerifier
+
     raise AttributeError(f"module 'veridian' has no attribute {name!r}")
 
 
@@ -363,10 +419,22 @@ __all__ = [
     "LiteLLMProvider",
     "CircuitBreaker",
     "MockProvider",
-
     # Decorator
     "verified",
-
+    # A2: OTel OTLP exporter
+    "OTLPConfig",
+    "VerificationSpan",
+    "configure_otlp_tracer",
+    # A3: Cost tracking
+    "BUILTIN_PRICING",
+    "CostEntry",
+    "CostTracker",
+    "ModelPricing",
+    "compute_cost",
+    # A7: Budget primitives
+    "Budget",
+    "BudgetState",
+    "BudgetExceeded",
     # Lazy-loaded (via __getattr__)
     "VeridianRunner",
     "VeridianConfig",
@@ -403,4 +471,16 @@ __all__ = [
     "RubricCriterion",
     "PipelineResult",
     "VerificationPipeline",
+    # A4: Testing / replay
+    "AgentRecorder",
+    "RecordedRun",
+    "ReplayAssertion",
+    "ReplayResult",
+    "Replayer",
+    # A5: GitHub Action
+    "ActionConfig",
+    "ActionResult",
+    "run_action",
+    # A6: Embedding grounding verifier
+    "EmbeddingGroundingVerifier",
 ]

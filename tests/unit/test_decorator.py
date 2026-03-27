@@ -14,6 +14,7 @@ Coverage:
 - Provenance tokens are generated
 - Custom metadata is stored
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -73,7 +74,6 @@ class AlwaysFailVerifier(BaseVerifier):
 
 
 class TestZeroConfig:
-
     def test_bare_decorator_sync(self):
         """@verified (no parens) works on a sync function."""
 
@@ -130,7 +130,6 @@ class TestZeroConfig:
 
 
 class TestExplicitVerifiers:
-
     def test_verifier_instance_list(self):
         """Accepts list of BaseVerifier instances."""
 
@@ -162,6 +161,7 @@ class TestExplicitVerifiers:
         """Unknown verifier ID is skipped with a warning, not a crash."""
 
         with caplog.at_level(logging.WARNING, logger="veridian.decorator"):
+
             @verified(verifiers=["nonexistent_verifier_xyz"])
             def fn() -> str:
                 return "ok"
@@ -178,7 +178,6 @@ class TestExplicitVerifiers:
 
 
 class TestSyncAsync:
-
     def test_sync_function_executes(self):
         @verified(verifiers=[AlwaysPassVerifier()])
         def add(a: int, b: int) -> int:
@@ -224,7 +223,6 @@ class TestSyncAsync:
 
 
 class TestOnFailRaise:
-
     def test_raises_verification_error_on_failure(self):
         @verified(verifiers=[AlwaysFailVerifier()], on_fail="raise")
         def fn() -> str:
@@ -278,7 +276,6 @@ class TestOnFailRaise:
 
 
 class TestOnFailLog:
-
     def test_does_not_raise_on_failure(self):
         @verified(verifiers=[AlwaysFailVerifier()], on_fail="log")
         def fn() -> str:
@@ -320,7 +317,6 @@ class TestOnFailLog:
 
 
 class TestOnFailRetry:
-
     def test_retries_and_succeeds(self):
         """Function fails once, then succeeds — should return correct value."""
         call_count = [0]
@@ -403,7 +399,6 @@ class TestOnFailRetry:
 
 
 class TestLedgerIntegration:
-
     def test_ledger_entry_created_on_success(self, ledger: TaskLedger):
         @verified(verifiers=[AlwaysPassVerifier()], ledger=ledger)
         def fn() -> str:
@@ -478,7 +473,6 @@ class TestLedgerIntegration:
 
 
 class TestProvenanceTokens:
-
     def test_provenance_token_in_result(self, ledger: TaskLedger):
         @verified(verifiers=[AlwaysPassVerifier()], ledger=ledger)
         def fn() -> str:
@@ -530,7 +524,6 @@ class TestProvenanceTokens:
 
 
 class TestMetadata:
-
     def test_metadata_stored_in_task(self, ledger: TaskLedger):
         @verified(
             verifiers=[AlwaysPassVerifier()],
@@ -574,7 +567,6 @@ class TestMetadata:
 
 
 class TestBuiltinDecoratorVerifiers:
-
     def _task(self) -> Task:
         return Task(title="test", metadata={})
 
@@ -637,7 +629,6 @@ class TestBuiltinDecoratorVerifiers:
 
 
 class TestMakeTaskResult:
-
     def test_string_value(self):
         tr = _make_task_result("hello")
         assert tr.raw_output == "hello"
@@ -665,7 +656,6 @@ class TestMakeTaskResult:
 
 
 class TestResolveVerifiers:
-
     def test_none_returns_defaults(self):
         result = _resolve_verifiers(None, str)
         ids = [v.id for v in result]
@@ -693,7 +683,6 @@ class TestResolveVerifiers:
 
 
 class TestInvalidConfig:
-
     def test_invalid_on_fail_raises_value_error(self):
         with pytest.raises(ValueError, match="on_fail"):
             verified(on_fail="invalid")

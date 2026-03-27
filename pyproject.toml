@@ -93,6 +93,7 @@ any_of       = "veridian.verify.builtin.any_of:AnyOfVerifier"
 llm_judge    = "veridian.verify.builtin.llm_judge:LLMJudgeVerifier"
 semantic_grounding = "veridian.verify.builtin.semantic_grounding:SemanticGroundingVerifier"
 self_consistency   = "veridian.verify.builtin.confidence:SelfConsistencyVerifier"
+embedding_grounding = "veridian.verify.builtin.embedding_grounding:EmbeddingGroundingVerifier"
 
 # Third-party hooks auto-discovered via this entry point.
 [project.entry-points."veridian.hooks"]

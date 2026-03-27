@@ -23,6 +23,7 @@ Usage::
     async def my_agent(task: str) -> str:
         return result
 """
+
 from __future__ import annotations
 
 import functools
@@ -133,10 +134,7 @@ class TypeCheckVerifier(BaseVerifier):
         if not passes:
             return VerificationResult(
                 passed=False,
-                error=(
-                    f"Expected return type {expected.__name__}, "
-                    f"got {type(val).__name__}"
-                ),
+                error=(f"Expected return type {expected.__name__}, got {type(val).__name__}"),
             )
         return VerificationResult(passed=True)
 
@@ -265,9 +263,7 @@ def _execute_sync(
             raise
 
         task_result = _make_task_result(return_value)
-        provenance = _generate_provenance(
-            func.__name__, task.id, timestamp, repr(return_value)
-        )
+        provenance = _generate_provenance(func.__name__, task.id, timestamp, repr(return_value))
         task_result.structured["_provenance_token"] = provenance
 
         # Run verifiers
@@ -280,8 +276,14 @@ def _execute_sync(
 
         # Verification failed
         _handle_failure(
-            _ledger, task, task_result, func.__name__,
-            fail_errors, on_fail, max_retries, attempt,
+            _ledger,
+            task,
+            task_result,
+            func.__name__,
+            fail_errors,
+            on_fail,
+            max_retries,
+            attempt,
         )
 
         if on_fail in ("raise", "retry") and attempt >= max_retries:
@@ -335,9 +337,7 @@ async def _execute_async(
             raise
 
         task_result = _make_task_result(return_value)
-        provenance = _generate_provenance(
-            func.__name__, task.id, timestamp, repr(return_value)
-        )
+        provenance = _generate_provenance(func.__name__, task.id, timestamp, repr(return_value))
         task_result.structured["_provenance_token"] = provenance
 
         all_passed, fail_errors = _run_verifiers(verifiers_list, task, task_result)
@@ -348,8 +348,14 @@ async def _execute_async(
             return return_value
 
         _handle_failure(
-            _ledger, task, task_result, func.__name__,
-            fail_errors, on_fail, max_retries, attempt,
+            _ledger,
+            task,
+            task_result,
+            func.__name__,
+            fail_errors,
+            on_fail,
+            max_retries,
+            attempt,
         )
 
         if on_fail == "log":
@@ -374,11 +380,13 @@ def _run_verifiers(
             vr = verifier.verify(task, task_result)
         except Exception as exc:
             vr = VerificationResult(passed=False, error=f"Verifier {verifier.id!r} raised: {exc}")
-        ver_summary.append({
-            "verifier": getattr(verifier, "id", "?"),
-            "passed": vr.passed,
-            "error": vr.error,
-        })
+        ver_summary.append(
+            {
+                "verifier": getattr(verifier, "id", "?"),
+                "passed": vr.passed,
+                "error": vr.error,
+            }
+        )
         if not vr.passed:
             all_passed = False
             if vr.error:
@@ -404,14 +412,13 @@ def _handle_failure(
     if on_fail == "raise":
         ledger.submit_result(task.id, task_result)
         ledger.mark_failed(task.id, error=error_msg)
-        raise VerificationError(
-            f"@verified: {func_name!r} failed verification — {error_msg}"
-        )
+        raise VerificationError(f"@verified: {func_name!r} failed verification — {error_msg}")
 
     if on_fail == "log":
         log.warning(
             "@verified: %r failed verification (logged, not raised) — %s",
-            func_name, error_msg,
+            func_name,
+            error_msg,
         )
         ledger.submit_result(task.id, task_result)
         ledger.mark_failed(task.id, error=error_msg)
@@ -427,7 +434,10 @@ def _handle_failure(
             )
         log.info(
             "@verified: retry %d/%d for %r — %s",
-            attempt, max_retries, func_name, error_msg,
+            attempt,
+            max_retries,
+            func_name,
+            error_msg,
         )
         # Reset for next attempt: mark failed, then reset back to PENDING
         ledger.submit_result(task.id, task_result)
@@ -503,6 +513,7 @@ def verified(
         )
 
         if inspect.iscoroutinefunction(fn):
+
             @functools.wraps(fn)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 return await _execute_async(fn, args, kwargs, **common)

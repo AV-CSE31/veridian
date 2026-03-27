@@ -1,4 +1,5 @@
 """Veridian CLI — Rich-based terminal interface for managing agent verification runs."""
+
 from __future__ import annotations
 
 import json
@@ -37,9 +38,11 @@ def _load_ledger(ledger_path: str) -> TaskLedger:
 # veridian --version
 # ---------------------------------------------------------------------------
 
+
 def _version_callback(value: bool) -> None:
     if value:
         from veridian import __version__
+
         console.print(f"veridian {__version__}")
         raise typer.Exit()
 
@@ -47,7 +50,11 @@ def _version_callback(value: bool) -> None:
 @app.callback()
 def main(
     version: bool = typer.Option(
-        False, "--version", "-V", callback=_version_callback, is_eager=True,
+        False,
+        "--version",
+        "-V",
+        callback=_version_callback,
+        is_eager=True,
         help="Show version and exit.",
     ),
 ) -> None:
@@ -57,6 +64,7 @@ def main(
 # ---------------------------------------------------------------------------
 # veridian init
 # ---------------------------------------------------------------------------
+
 
 @app.command()
 def init(
@@ -76,6 +84,7 @@ def init(
 # ---------------------------------------------------------------------------
 # veridian status
 # ---------------------------------------------------------------------------
+
 
 @app.command()
 def status(
@@ -106,11 +115,15 @@ def status(
 # veridian list
 # ---------------------------------------------------------------------------
 
+
 @app.command(name="list")
 def list_tasks(
     ledger: str = LEDGER_OPT,
     status_filter: str | None = typer.Option(
-        None, "--status", "-s", help="Filter by status (pending, done, failed, etc.)",
+        None,
+        "--status",
+        "-s",
+        help="Filter by status (pending, done, failed, etc.)",
     ),
 ) -> None:
     """List tasks in the ledger."""
@@ -153,6 +166,7 @@ def list_tasks(
 # veridian gc
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def gc(
     ledger: str = LEDGER_OPT,
@@ -187,6 +201,7 @@ def gc(
 # veridian reset
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def reset(
     ledger: str = LEDGER_OPT,
@@ -206,6 +221,7 @@ def reset(
 # ---------------------------------------------------------------------------
 # veridian skip
 # ---------------------------------------------------------------------------
+
 
 @app.command()
 def skip(
@@ -233,6 +249,7 @@ def skip(
 # veridian retry
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def retry(
     ledger: str = LEDGER_OPT,
@@ -257,6 +274,7 @@ def retry(
 # ---------------------------------------------------------------------------
 # veridian run
 # ---------------------------------------------------------------------------
+
 
 @app.command()
 def run(
@@ -289,11 +307,11 @@ def run(
     else:
         try:
             from veridian.providers.litellm_provider import LiteLLMProvider
+
             provider = LiteLLMProvider(model=config.model)
         except ImportError as exc:
             console.print(
-                "[red]Error:[/red] LLM provider not installed. "
-                "Run: pip install veridian-ai[llm]"
+                "[red]Error:[/red] LLM provider not installed. Run: pip install veridian-ai[llm]"
             )
             raise typer.Exit(code=1) from exc
 

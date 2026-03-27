@@ -196,6 +196,34 @@ class VeridianTracer:
         # JSONL: always record (this is the guaranteed path)
         self._append_event(TraceEvent(event_type=event_type, run_id=self._run_id, attributes=attrs))
 
+    def trace_verification(self, span: Any) -> None:
+        """
+        Record a single verification step as a ``verification_step`` event.
+
+        The *span* argument must be a ``VerificationSpan`` from
+        ``veridian.observability.otlp_exporter`` (accepted as ``Any`` to avoid
+        a circular import).  It must expose a ``to_dict()`` method returning
+        OTel-namespaced attributes:
+
+        - ``veridian.verification.verifier_id``
+        - ``veridian.verification.passed``
+        - ``veridian.verification.confidence``    (optional)
+        - ``veridian.verification.provenance_hash`` (optional)
+        - ``veridian.verification.error``          (on failure)
+        """
+        attrs = span.to_dict()
+
+        # OTel child span (best-effort)
+        if self._otel_tracer is not None and self._otel_span is not None:
+            with contextlib.suppress(Exception):
+                child = self._otel_tracer.start_span("veridian.verification", attributes=attrs)
+                child.end()
+
+        # JSONL — always guaranteed
+        self._append_event(
+            TraceEvent(event_type="verification_step", run_id=self._run_id, attributes=attrs)
+        )
+
     # ── Internal ──────────────────────────────────────────────────────────────
 
     def _append_event(self, event: TraceEvent) -> None:

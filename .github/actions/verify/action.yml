@@ -1,0 +1,81 @@
+name: "Veridian Verify"
+description: "Run Veridian verification against agent outputs. Blocks merge on verification failure."
+author: "Veridian contributors"
+
+branding:
+  icon: "check-circle"
+  color: "green"
+
+inputs:
+  verifier:
+    description: "Verifier ID to run (e.g. not_empty, schema, bash_exit)"
+    required: false
+    default: "not_empty"
+
+  agent-output:
+    description: "The agent output text to verify"
+    required: false
+    default: ""
+
+  task:
+    description: "Task description (used for verifier context)"
+    required: false
+    default: "Agent output verification"
+
+  fail-on-error:
+    description: "Exit with status 1 when verification fails (set to false to continue)"
+    required: false
+    default: "true"
+
+  output-path:
+    description: "Path to write the JSON verification result file"
+    required: false
+    default: "veridian_action_result.json"
+
+  python-version:
+    description: "Python version to use"
+    required: false
+    default: "3.11"
+
+outputs:
+  passed:
+    description: "Whether verification passed (true/false)"
+    value: ${{ steps.verify.outputs.passed }}
+
+  error:
+    description: "Verification error message if failed, empty string if passed"
+    value: ${{ steps.verify.outputs.error }}
+
+  result-path:
+    description: "Path to the JSON result file"
+    value: ${{ inputs.output-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Set up Python"
+      uses: "actions/setup-python@v5"
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: "Install Veridian"
+      shell: bash
+      run: |
+        pip install veridian-ai --quiet
+
+    - name: "Run Verification"
+      id: verify
+      shell: bash
+      env:
+        VERIDIAN_VERIFIER: ${{ inputs.verifier }}
+        VERIDIAN_AGENT_OUTPUT: ${{ inputs.agent-output }}
+        VERIDIAN_TASK: ${{ inputs.task }}
+        VERIDIAN_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+        VERIDIAN_OUTPUT_PATH: ${{ inputs.output-path }}
+      run: |
+        python -m veridian.gh_action
+        # Extract outputs from result file
+        PASSED=$(python -c "import json; d=json.load(open('${{ inputs.output-path }}')); print(str(d['passed']).lower())")
+        ERROR=$(python -c "import json; d=json.load(open('${{ inputs.output-path }}')); print(d.get('error') or '')")
+        echo "passed=${PASSED}" >> "$GITHUB_OUTPUT"
+        echo "error=${ERROR}" >> "$GITHUB_OUTPUT"

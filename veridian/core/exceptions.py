@@ -167,3 +167,26 @@ class EntropyError(VeridianError):
 
 class TracerError(VeridianError):
     """VeridianTracer encountered an error initialising or emitting a trace event."""
+
+
+# ── Budget ─────────────────────────────────────────────────────────────────────
+
+
+class BudgetExceeded(VeridianError):
+    """A Budget limit (tokens, cost, or wall-clock) was exceeded.
+
+    Attributes
+    ----------
+    limit_type : str
+        One of ``"tokens"``, ``"cost_usd"``, or ``"wall_clock_seconds"``.
+    current : float
+        The current value that triggered the limit.
+    limit : float
+        The configured limit that was exceeded.
+    """
+
+    def __init__(self, limit_type: str, current: float, limit: float) -> None:
+        self.limit_type = limit_type
+        self.current = current
+        self.limit = limit
+        super().__init__(f"Budget exceeded: {limit_type} current={current:.4g} > limit={limit:.4g}")
