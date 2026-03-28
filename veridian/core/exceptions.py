@@ -169,6 +169,45 @@ class TracerError(VeridianError):
     """VeridianTracer encountered an error initialising or emitting a trace event."""
 
 
+# ── Tool Safety ──────────────────────────────────────────────────────────────
+
+
+class ToolSafetyViolation(VeridianError):
+    """Agent-generated code failed static safety analysis."""
+
+    def __init__(self, violations: list[str]) -> None:
+        self.violations = violations
+        summary = "; ".join(violations[:3])
+        if len(violations) > 3:
+            summary += f" (+{len(violations) - 3} more)"
+        super().__init__(f"Tool safety violations: {summary}")
+
+
+# ── Memory Integrity ─────────────────────────────────────────────────────────
+
+
+class MemoryIntegrityViolation(VeridianError):
+    """Memory update failed integrity checks (contradiction, bias, tampering)."""
+
+    def __init__(self, violations: list[str]) -> None:
+        self.violations = violations
+        summary = "; ".join(violations[:3])
+        if len(violations) > 3:
+            summary += f" (+{len(violations) - 3} more)"
+        super().__init__(f"Memory integrity violations: {summary}")
+
+
+# ── Verifier Integrity ───────────────────────────────────────────────────────
+
+
+class VerifierIntegrityError(VeridianError):
+    """Verifier chain was tampered with during a run."""
+
+    def __init__(self, detail: str) -> None:
+        self.detail = detail
+        super().__init__(f"Verifier integrity compromised: {detail}")
+
+
 # ── Budget ─────────────────────────────────────────────────────────────────────
 
 

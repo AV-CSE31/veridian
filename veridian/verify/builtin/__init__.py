@@ -25,11 +25,15 @@ from veridian.verify.builtin.http import HttpStatusVerifier
 
 # ── LLM-based (last — never standalone) ──────────────────────────────────────
 from veridian.verify.builtin.llm_judge import LLMJudgeVerifier
+from veridian.verify.builtin.memory_integrity import MemoryIntegrityVerifier
 from veridian.verify.builtin.quote import QuoteMatchVerifier
 from veridian.verify.builtin.schema import SchemaVerifier
 from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
 
-# Register all 10 with the global registry
+# ── Phase 6b — Safety verifiers ──────────────────────────────────────────────
+from veridian.verify.builtin.tool_safety import ToolSafetyVerifier
+
+# Register all 12 with the global registry
 registry.register_many(
     BashExitCodeVerifier,
     QuoteMatchVerifier,
@@ -41,6 +45,8 @@ registry.register_many(
     CompositeVerifier,
     AnyOfVerifier,
     LLMJudgeVerifier,
+    ToolSafetyVerifier,
+    MemoryIntegrityVerifier,
 )
 
 __all__ = [
@@ -54,4 +60,6 @@ __all__ = [
     "CompositeVerifier",
     "AnyOfVerifier",
     "LLMJudgeVerifier",
+    "ToolSafetyVerifier",
+    "MemoryIntegrityVerifier",
 ]
