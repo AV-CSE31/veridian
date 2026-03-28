@@ -76,6 +76,7 @@ Long-running AI agents fail not because models are incapable, but because infras
               │  bash_exit · schema · quote_match · http_status       │
               │  file_exists · composite · any_of · semantic_grounding│
               │  self_consistency · llm_judge (always gated)          │
+              │  tool_safety · memory_integrity (Phase 6b)            │
               └──────────────────────┬───────────────────────────────┘
                                      │
               ┌──────────────────────▼───────────────────────────────┐
@@ -108,6 +109,12 @@ Long-running AI agents fail not because models are incapable, but because infras
     └─────────────────────────────────────────────────────────────────┘
 
     ┌─────────────────────────────────────────────────────────────────┐
+    ┌─────────────────────────────────────────────────────────────────┐
+    │               Verifier Integrity Checker                        │
+    │  SHA-256 fingerprint at run start · tamper detection at run end  │
+    └─────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────────┐
     │                    Security Layer                                │
     │  TrustedExecutor: 5-layer ACI injection defense                  │
     │  OutputSanitizer · Provenance tokens · Quarantine logging        │
@@ -119,7 +126,7 @@ Long-running AI agents fail not because models are incapable, but because infras
 
 ## Key Features
 
-**Verification** — 10 built-in verifiers (bash exit code, schema validation, quote matching, HTTP status, file existence, semantic grounding, self-consistency, composite AND/OR chains, LLM judge). Write custom verifiers by extending `BaseVerifier`. Plugin autodiscovery via entry-points.
+**Verification** — 12 built-in verifiers (bash exit code, schema validation, quote matching, HTTP status, file existence, semantic grounding, self-consistency, composite AND/OR chains, LLM judge, tool safety, memory integrity). Write custom verifiers by extending `BaseVerifier`. Plugin autodiscovery via entry-points.
 
 **Crash safety** — Atomic ledger with `os.replace()`. Kill the process at any point, re-run, and it resumes exactly where it left off. Zero duplicate work.
 
@@ -136,6 +143,8 @@ Long-running AI agents fail not because models are incapable, but because infras
 **Hooks** — Middleware system for cost tracking, rate limiting, human review gates, Slack notifications, cross-run consistency detection, and drift monitoring. Hook errors are always caught — one broken hook never kills a run.
 
 **SkillLibrary** — Extracts reusable procedures from completed tasks. Bayesian lower-bound reliability scoring. 4-gate admission control (confidence, retry count, step count, cosine dedup).
+
+**Anti-misevolution safety** — `ToolSafetyVerifier` uses AST-based static analysis to block eval/exec, shell injection, and blocked imports in agent-generated code. `MemoryIntegrityVerifier` detects reward hacking, prompt injection, and numeric drift in memory updates. `VerifierIntegrityChecker` SHA-256 fingerprints the verification chain to detect mid-run tampering.
 
 **Security** — `TrustedExecutor` applies 5-layer injection detection to every command output before it reaches agent context. `IdentityGuard` scrubs secrets from all output surfaces.
 
@@ -168,7 +177,7 @@ pip install veridian-ai[all]         # Everything
 git clone https://github.com/AV-CSE31/veridian
 cd veridian
 pip install -e ".[dev]"
-pytest -q   # 570+ tests
+pytest -q   # 741 tests
 ```
 
 ---
@@ -224,6 +233,8 @@ print(f"Done: {summary.done_count}, Failed: {summary.failed_count}")
 | `semantic_grounding` | Cross-field consistency, range checks | Hallucination detection |
 | `self_consistency` | Generate N times, check agreement | High-stakes decisions |
 | `llm_judge` | LLM evaluation (always inside composite) | Subjective quality |
+| `tool_safety` | AST-based static analysis on generated code | Agent code generation |
+| `memory_integrity` | Validates memory updates for bias/tampering | Skill/memory updates |
 
 ---
 
@@ -247,7 +258,7 @@ print(f"Done: {summary.done_count}, Failed: {summary.failed_count}")
 |---------|--------|-------------|
 | `core/` | ✅ | Task, events, exceptions, quality gate, config |
 | `ledger/` | ✅ | Atomic ledger, crash recovery, progress log |
-| `verify/` | ✅ | 10 verifiers + plugin registry |
+| `verify/` | ✅ | 12 verifiers + integrity checker + plugin registry |
 | `hooks/` | ✅ | 7 built-in hooks (including drift detection) |
 | `agents/` | ✅ | Initializer, Worker, Reviewer agents |
 | `context/` | ✅ | Frozen 6-step assembly, 85% compaction |
@@ -256,8 +267,11 @@ print(f"Done: {summary.done_count}, Failed: {summary.failed_count}")
 | `skills/` | ✅ | Bayesian SkillLibrary |
 | `storage/` | ✅ | LocalJSON, Redis, Postgres — `BaseStorage` ABC + 3 backends |
 | `observability/` | ✅ | OTel GenAI v1.37+ tracer, JSONL fallback, FastAPI dashboard :7474 |
+| `contracts/` | ✅ | Sprint contracts + HMAC signing |
+| `eval/` | ✅ | Adversarial evaluator + calibration pipeline |
+| `testing/` | ✅ | Recorder/replayer for deterministic test replay |
 | `entropy/` | ✅ | EntropyGC — 9 read-only consistency checks, atomic report |
-| `cli/` | 🔲 | Full CLI — Phase 7 |
+| `cli/` | ✅ | Typer + Rich CLI (init, run, status, gc, reset, retry, skip, report) |
 
 ---
 
@@ -282,52 +296,57 @@ If you're building agents that make decisions people depend on, Veridian is the 
 | Milestone | Status |
 |-----------|--------|
 | Core verification engine | ✅ Shipped |
-| 10 built-in verifiers + plugin system | ✅ Shipped |
+| 12 built-in verifiers + plugin system | ✅ Shipped |
 | Crash-safe atomic ledger | ✅ Shipped |
 | Hook system + drift detection | ✅ Shipped |
 | Bayesian SkillLibrary | ✅ Shipped |
 | Sprint Contracts + Adversarial Eval | ✅ Shipped |
 | `@verified` decorator | ✅ Shipped |
 | Observability + Storage backends | ✅ Shipped |
-| Full CLI | 🔨 In progress |
+| Anti-misevolution safety (Tool Safety, Memory Integrity, Verifier Integrity) | ✅ Shipped |
+| CLI with Typer + Rich | ✅ Shipped |
+| v0.2.0 Tier A quick-wins (config validation, path traversal guard) | ✅ Shipped |
 
 ### Where we're heading
 
 **v0.2.0 — Foundation Safety**
-- CLI with Rich output
+- Evolution safety monitor + behavioral fingerprinting
+- Sandbox isolation + canary tasks
 - Secrets management + identity guard
-- Evolution safety monitor
 
 **v0.3.0 — Inter-Agent Safety**
 - Agent-to-agent handoff verification
-- Adaptive verification thresholds
-- Real-time behavioral anomaly detection
+- Skill quarantine + contamination blast radius
+- Adaptive verification thresholds + anomaly detection
 
-**v1.0.0 — Production Release**
-- Cryptographic audit chain
-- Compliance report generation
+**v1.0.0 — Production Release (EU AI Act ready)**
+- Cryptographic audit chain + compliance reports
 - MCP Skill Server (Claude Code, Cursor, Windsurf integration)
+- Federated trust across organizations
 
 **Beyond v1.0**
-- Federated trust across organizations
 - Safety-aware self-evolution
 - Chain-of-thought auditing
+- Research frontier: Impossible Trilemma experiments
 
 ---
 
 ## Comparison
 
-| Feature | Veridian | LangGraph | AutoGen | OpenAI Agents SDK |
-|---------|----------|-----------|---------|------------------|
+| Feature | Veridian | LangGraph | AutoGen | CrewAI |
+|---------|----------|-----------|---------|--------|
 | Crash-safe atomic ledger | ✅ | — | — | — |
-| Deterministic verification | ✅ | — | — | — |
+| Deterministic verification (12 verifiers) | ✅ | — | — | — |
+| Anti-misevolution safety gates | ✅ | — | — | — |
+| Verifier integrity (anti-eval-hacking) | ✅ | — | — | — |
 | Semantic grounding | ✅ | — | — | — |
 | Cross-run consistency | ✅ | — | — | — |
 | Agent drift detection | ✅ | — | — | — |
 | ACI injection defense | ✅ | — | — | — |
-| Context compaction | ✅ | ⚠️ | — | ⚠️ |
+| Context compaction | ✅ | ⚠️ | — | — |
 | Bayesian skill memory | ✅ | — | — | — |
-| Provider agnostic | ✅ | ✅ | ✅ | — |
+| Sprint contracts + adversarial eval | ✅ | — | — | — |
+| Provider agnostic | ✅ | ✅ | ✅ | ✅ |
 | Plugin autodiscovery | ✅ | — | — | — |
 
 ---
