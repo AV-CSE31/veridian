@@ -302,3 +302,48 @@ class EvaluationExhausted(VeridianEvent):
     task_id: str = ""
     max_iterations: int = 0
     best_score: float = 0.0
+
+
+# ── Evolution Safety (Phase 7b) ──────────────────────────────────────────────
+
+
+@dataclass
+class MisevolutionWarningEvent(VeridianEvent):
+    """Fired when EvolutionMonitorHook detects a misevolution pathway signal."""
+
+    event_type: str = "evolution.misevolution_warning"
+    pathway: str = ""
+    metric: str = ""
+    baseline_value: float = 0.0
+    current_value: float = 0.0
+    severity: str = ""  # "warning" | "significant"
+
+
+@dataclass
+class FingerprintDivergence(VeridianEvent):
+    """Fired when BehavioralFingerprintHook detects significant fingerprint shift."""
+
+    event_type: str = "evolution.fingerprint_divergence"
+    cosine_similarity: float = 0.0
+    threshold: float = 0.0
+    dimensions_changed: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CanaryRegressionEvent(VeridianEvent):
+    """Fired when canary task suite detects a regression."""
+
+    event_type: str = "evolution.canary_regression"
+    failed_canaries: list[str] = field(default_factory=list)
+    total_canaries: int = 0
+    regression_rate: float = 0.0
+
+
+@dataclass
+class EvolutionVerdict(VeridianEvent):
+    """Fired when evolution sandbox produces UPGRADE / HOLD / ROLLBACK verdict."""
+
+    event_type: str = "evolution.verdict"
+    recommendation: str = ""  # "upgrade" | "hold" | "rollback"
+    confidence: float = 0.0
+    reason: str = ""

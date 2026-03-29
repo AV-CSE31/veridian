@@ -23,16 +23,27 @@ Research basis: Anthropic harness design (March 2026) — self-evaluation fails
 
 from veridian.eval.adversarial import AdversarialEvaluator, EvaluationResult
 from veridian.eval.calibration import CalibrationProfile, GradingRubric, RubricCriterion
+from veridian.eval.canary import CanaryReport, CanaryResult, CanarySuite, CanaryTask
+from veridian.eval.comparator import ComparisonResult, EvolutionComparator
 from veridian.eval.pipeline import PipelineResult, VerificationPipeline
+from veridian.eval.sandbox import EvolutionSandbox, SandboxResult
 from veridian.eval.sprint_contract import SprintContract
 
 __all__ = [
     "AdversarialEvaluator",
     "CalibrationProfile",
+    "CanaryReport",
+    "CanaryResult",
+    "CanarySuite",
+    "CanaryTask",
+    "ComparisonResult",
     "EvaluationResult",
+    "EvolutionComparator",
+    "EvolutionSandbox",
     "GradingRubric",
     "PipelineResult",
     "RubricCriterion",
+    "SandboxResult",
     "SprintContract",
     "VerificationPipeline",
 ]

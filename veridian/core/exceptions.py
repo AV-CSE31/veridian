@@ -420,3 +420,37 @@ class PolicyValidationError(PolicyError):
 
 class DashboardError(VeridianError):
     """Dashboard data layer encountered an unexpected error."""
+
+
+# ── Evolution Safety (Phase 7b) ──────────────────────────────────────────────
+
+
+class MisevolutionDetected(VeridianError):
+    """EvolutionMonitorHook: agent misevolution pathway triggered."""
+
+    def __init__(self, pathway: str, metric: str, severity: str) -> None:
+        self.pathway = pathway
+        self.metric = metric
+        self.severity = severity
+        super().__init__(
+            f"Misevolution detected — pathway={pathway}, metric={metric}, severity={severity}"
+        )
+
+
+class CanaryRegressionError(VeridianError):
+    """Canary task suite detected a regression — evolution blocked."""
+
+    def __init__(self, failed_canaries: list[str]) -> None:
+        self.failed_canaries = failed_canaries
+        summary = ", ".join(failed_canaries[:5])
+        if len(failed_canaries) > 5:
+            summary += f" (+{len(failed_canaries) - 5} more)"
+        super().__init__(f"Canary regression: previously passing tasks now fail: {summary}")
+
+
+class EvolutionBlockedError(VeridianError):
+    """Evolution sandbox recommends ROLLBACK — upgrade blocked."""
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(f"Evolution blocked: {reason}")

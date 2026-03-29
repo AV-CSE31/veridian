@@ -99,6 +99,8 @@ memory_integrity    = "veridian.verify.builtin.memory_integrity:MemoryIntegrityV
 
 # Third-party hooks auto-discovered via this entry point.
 [project.entry-points."veridian.hooks"]
+evolution_monitor      = "veridian.hooks.builtin.evolution_monitor:EvolutionMonitorHook"
+behavioral_fingerprint = "veridian.hooks.builtin.behavioral_fingerprint:BehavioralFingerprintHook"
 
 # Storage backends auto-discovered via this entry point.
 [project.entry-points."veridian.storage"]

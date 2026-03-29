@@ -3,6 +3,8 @@ docs/
 # Internal engineering docs (IP protected)
 AGENTS.md
 CLAUDE.md
+ONBOARDING.md
+CHANGELOG.md
 
 # Secrets / credentials
 .env
@@ -65,5 +67,3 @@ Thumbs.db
 # Distribution
 *.tar.gz
 *.whl
-AGENTS.md
-CLAUDE.md

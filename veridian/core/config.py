@@ -68,3 +68,11 @@ class VeridianConfig:
     drift_history_file: str | None = None  # None = disabled
     drift_window: int = 10  # runs to compare against
     drift_threshold: float = 0.15  # minimum change magnitude to flag
+
+    # ── Evolution safety (opt-in, Phase 7b) ──────────────────────────────────
+    evolution_monitor_file: str | None = None  # None = disabled
+    evolution_safety_threshold: float = 0.10  # per-pathway max degradation
+    evolution_refusal_baseline: float = 0.95  # expected safety refusal rate
+    fingerprint_history_file: str | None = None  # None = disabled
+    fingerprint_similarity_threshold: float = 0.85  # cosine below this = alert
+    canary_suite_path: str | None = None  # None = disabled
