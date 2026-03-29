@@ -48,6 +48,10 @@ entropy_report.md
 conflicts.jsonl
 quarantine.jsonl
 
+# Claude Code / agent metadata (never commit)
+.claude/
+.auto-memory/
+
 # IDE
 .idea/
 .vscode/
