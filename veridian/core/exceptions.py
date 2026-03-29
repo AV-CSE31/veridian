@@ -229,3 +229,194 @@ class BudgetExceeded(VeridianError):
         self.current = current
         self.limit = limit
         super().__init__(f"Budget exceeded: {limit_type} current={current:.4g} > limit={limit:.4g}")
+
+
+# ── Knowledge Graph ────────────────────────────────────────────────────────────
+
+
+class KnowledgeGraphError(VeridianError):
+    """Knowledge graph operation failed."""
+
+
+# ── Saga / Distributed Transactions ───────────────────────────────────────────
+
+
+class SagaError(VeridianError):
+    """Saga orchestration or step execution failed."""
+
+
+class SagaRollbackError(SagaError):
+    """One or more compensating transactions failed during saga rollback."""
+
+    def __init__(self, failed_compensations: list[str]) -> None:
+        self.failed_compensations = failed_compensations
+        super().__init__(
+            f"Saga rollback failed for steps: {', '.join(failed_compensations)}"
+        )
+
+
+# ── Checkpoint ─────────────────────────────────────────────────────────────────
+
+
+class CheckpointError(VeridianError):
+    """Checkpoint save or restore operation failed."""
+
+
+# ── Pipeline ───────────────────────────────────────────────────────────────────
+
+
+class PipelineError(VeridianError):
+    """Verification pipeline configuration or execution error."""
+
+
+# ── Consensus ──────────────────────────────────────────────────────────────────
+
+
+class ConsensusError(VeridianError):
+    """Multi-model consensus verification error."""
+
+
+# ── Self-Improving ─────────────────────────────────────────────────────────────
+
+
+class SelfImprovingError(VeridianError):
+    """Self-improving verifier framework encountered an error."""
+
+
+# ── Identity / PKI ────────────────────────────────────────────────────────────
+
+
+class PKIError(VeridianError):
+    """Agent identity or cryptographic operation failed."""
+
+
+class SignatureVerificationError(PKIError):
+    """Ed25519 signature verification failed — message may be tampered."""
+
+    def __init__(self, agent_id: str, reason: str = "") -> None:
+        self.agent_id = agent_id
+        msg = f"Signature verification failed for agent '{agent_id}'"
+        if reason:
+            msg += f": {reason}"
+        super().__init__(msg)
+
+
+class KeyRotationError(PKIError):
+    """Key rotation operation failed (e.g. agent not found or already rotated)."""
+
+
+class AgentIdentityNotFound(PKIError):
+    """Agent ID not found in the identity registry."""
+
+    def __init__(self, agent_id: str) -> None:
+        self.agent_id = agent_id
+        super().__init__(f"Agent identity not found: '{agent_id}'")
+
+
+# ── Natural Language Policy ────────────────────────────────────────────────────
+
+
+class NLPolicyError(VeridianError):
+    """Natural language policy interface encountered an error."""
+
+
+class PolicyActivationRequired(NLPolicyError):
+    """Policy draft must be reviewed and activated before use."""
+
+    def __init__(self, draft_id: str) -> None:
+        self.draft_id = draft_id
+        super().__init__(f"Policy draft '{draft_id}' requires human review before activation.")
+
+
+class PolicyNotFound(NLPolicyError):
+    """Policy draft or active policy not found."""
+
+    def __init__(self, policy_id: str) -> None:
+        self.policy_id = policy_id
+        super().__init__(f"Policy not found: '{policy_id}'")
+
+
+# ── Explanation Engine ─────────────────────────────────────────────────────────
+
+
+class ExplanationError(VeridianError):
+    """Verification explanation engine encountered an error."""
+
+
+# ── EU AI Act Compliance ───────────────────────────────────────────────────────
+
+
+class ComplianceError(VeridianError):
+    """EU AI Act compliance checker encountered an error."""
+
+
+class ComplianceGapError(ComplianceError):
+    """Required compliance articles are not covered by active verifiers."""
+
+    def __init__(self, uncovered: list[str]) -> None:
+        self.uncovered = uncovered
+        articles = ", ".join(uncovered)
+        super().__init__(f"Compliance gaps detected — uncovered articles: {articles}")
+
+
+# ── Audit ─────────────────────────────────────────────────────────────────────
+
+
+class AuditIntegrityError(VeridianError):
+    """Cryptographic audit chain integrity check failed — chain was tampered with."""
+
+    def __init__(self, detail: str) -> None:
+        self.detail = detail
+        super().__init__(f"Audit chain integrity violated: {detail}")
+
+
+# ── Multi-Agent Handoff ───────────────────────────────────────────────────────
+
+
+class HandoffVerificationFailed(VeridianError):
+    """Agent handoff blocked: verification checkpoint failed at the boundary."""
+
+    def __init__(self, task_id: str, reason: str) -> None:
+        self.task_id = task_id
+        self.reason = reason
+        super().__init__(f"Handoff blocked for task {task_id!r}: {reason}")
+
+
+class HandoffIntegrityError(VeridianError):
+    """HandoffPacket HMAC or checksum validation failed — packet was tampered with."""
+
+    def __init__(self, detail: str) -> None:
+        self.detail = detail
+        super().__init__(f"Handoff packet integrity check failed: {detail}")
+
+
+# ── Policy Engine ─────────────────────────────────────────────────────────────
+
+
+class PolicyError(VeridianError):
+    """Base class for all policy engine errors."""
+
+
+class PolicyCompilationError(PolicyError):
+    """YAML/JSON policy definition failed to compile to a Python verifier."""
+
+    def __init__(self, policy_id: str, reason: str) -> None:
+        self.policy_id = policy_id
+        self.reason = reason
+        super().__init__(f"Policy {policy_id!r} compilation failed: {reason}")
+
+
+class PolicyValidationError(PolicyError):
+    """Policy YAML/JSON syntax or semantic validation failed."""
+
+    def __init__(self, field: str, reason: str) -> None:
+        self.field = field
+        self.reason = reason
+        super().__init__(f"Policy validation error in field {field!r}: {reason}")
+
+
+# ── Dashboard ─────────────────────────────────────────────────────────────────
+
+
+class DashboardError(VeridianError):
+    """Dashboard data layer encountered an unexpected error."""
