@@ -12,7 +12,7 @@ CHANGELOG.md
 *.key
 *.pem
 *.p12
-secrets/
+/secrets/
 
 # Python
 __pycache__/

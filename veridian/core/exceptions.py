@@ -454,3 +454,26 @@ class EvolutionBlockedError(VeridianError):
     def __init__(self, reason: str) -> None:
         self.reason = reason
         super().__init__(f"Evolution blocked: {reason}")
+
+
+# ── Secrets Management (Phase 8) ────────────────────────────────────────────
+
+
+class SecretsProviderError(VeridianError):
+    """Secrets provider operation failed."""
+
+
+class SecretNotFound(SecretsProviderError):
+    """Required secret key not available from provider."""
+
+    def __init__(self, secret_ref: str) -> None:
+        self.secret_ref = secret_ref
+        super().__init__(f"Secret not found: {secret_ref!r}")
+
+
+class SecretRotationFailed(SecretsProviderError):
+    """Secret rotation check failed — credentials may be stale."""
+
+    def __init__(self, detail: str) -> None:
+        self.detail = detail
+        super().__init__(f"Secret rotation failed: {detail}")

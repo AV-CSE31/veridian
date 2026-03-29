@@ -76,3 +76,7 @@ class VeridianConfig:
     fingerprint_history_file: str | None = None  # None = disabled
     fingerprint_similarity_threshold: float = 0.85  # cosine below this = alert
     canary_suite_path: str | None = None  # None = disabled
+
+    # ── Secrets management (opt-in, Phase 8) ─────────────────────────────
+    secrets_env_prefix: str = "VERIDIAN_"  # prefix for EnvSecretsProvider
+    identity_guard_enabled: bool = True  # enable IdentityGuardHook
