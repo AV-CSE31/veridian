@@ -102,6 +102,8 @@ memory_integrity    = "veridian.verify.builtin.memory_integrity:MemoryIntegrityV
 evolution_monitor      = "veridian.hooks.builtin.evolution_monitor:EvolutionMonitorHook"
 behavioral_fingerprint = "veridian.hooks.builtin.behavioral_fingerprint:BehavioralFingerprintHook"
 identity_guard         = "veridian.hooks.builtin.identity_guard:IdentityGuardHook"
+adaptive_safety        = "veridian.hooks.builtin.adaptive_safety:AdaptiveSafetyHook"
+anomaly_detector       = "veridian.hooks.builtin.anomaly_detector:AnomalyDetectorHook"
 
 # Secrets providers auto-discovered via this entry point.
 [project.entry-points."veridian.secrets"]

@@ -4,6 +4,8 @@ veridian.hooks.builtin
 Built-in hooks shipped with Veridian.
 """
 
+from veridian.hooks.builtin.adaptive_safety import AdaptiveSafetyHook
+from veridian.hooks.builtin.anomaly_detector import AnomalyDetectorHook
 from veridian.hooks.builtin.behavioral_fingerprint import BehavioralFingerprintHook
 from veridian.hooks.builtin.cost_guard import CostGuardHook
 from veridian.hooks.builtin.cross_run_consistency import CrossRunConsistencyHook
@@ -18,11 +20,13 @@ from veridian.hooks.builtin.slack import SlackNotifyHook
 __all__ = [
     "LoggingHook",
     "IdentityGuardHook",
+    "AdaptiveSafetyHook",
     "CostGuardHook",
     "HumanReviewHook",
     "RateLimitHook",
     "SlackNotifyHook",
     "CrossRunConsistencyHook",
+    "AnomalyDetectorHook",
     "EvolutionMonitorHook",
     "BehavioralFingerprintHook",
     "DriftDetectorHook",
