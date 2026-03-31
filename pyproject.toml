@@ -45,6 +45,10 @@ dependencies = [
     "tiktoken>=0.7",
     # Environment config
     "python-dotenv>=1.0",
+    # Knowledge graph
+    "networkx>=3.2",
+    # Agent identity (Ed25519)
+    "cryptography>=42.0",
 ]
 
 [project.optional-dependencies]

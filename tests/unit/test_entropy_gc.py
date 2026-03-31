@@ -81,9 +81,9 @@ class TestCheckStaleInProgress:
         ledger.claim("t1", runner_id="crashed-run")
         # Force the updated_at to look old
         task = ledger.get("t1")
-        from datetime import datetime, timedelta
+        from datetime import UTC, datetime, timedelta
 
-        task.updated_at = datetime.utcnow() - timedelta(hours=2)
+        task.updated_at = datetime.now(tz=UTC) - timedelta(hours=2)
         data = ledger._read_raw()  # type: ignore[attr-defined]
         data["tasks"][task.id]["updated_at"] = task.updated_at.isoformat()
         ledger._write_raw(data)  # type: ignore[attr-defined]
@@ -108,9 +108,9 @@ class TestCheckStaleInProgress:
         ledger = make_ledger(tmp_path, [Task(id="t1", title="Stale")])
         ledger.claim("t1", runner_id="old-run")
         task = ledger.get("t1")
-        from datetime import datetime, timedelta
+        from datetime import UTC, datetime, timedelta
 
-        task.updated_at = datetime.utcnow() - timedelta(hours=2)
+        task.updated_at = datetime.now(tz=UTC) - timedelta(hours=2)
         data = ledger._read_raw()  # type: ignore[attr-defined]
         data["tasks"][task.id]["updated_at"] = task.updated_at.isoformat()
         ledger._write_raw(data)  # type: ignore[attr-defined]
@@ -369,9 +369,9 @@ class TestCheckProgressStall:
         ledger.mark_failed("t1", "error")
         # Manually backdate updated_at
         task = ledger.get("t1")
-        from datetime import datetime, timedelta
+        from datetime import UTC, datetime, timedelta
 
-        task.updated_at = datetime.utcnow() - timedelta(hours=25)
+        task.updated_at = datetime.now(tz=UTC) - timedelta(hours=25)
         data = ledger._read_raw()  # type: ignore[attr-defined]
         data["tasks"][task.id]["updated_at"] = task.updated_at.isoformat()
         ledger._write_raw(data)  # type: ignore[attr-defined]

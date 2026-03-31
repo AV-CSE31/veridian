@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum, StrEnum
 from typing import Any
 
@@ -155,8 +155,8 @@ class Task:
     claimed_by: str | None = None  # run_id
 
     # ── Timestamps ────────────────────────────────────────────────────────────
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
     # ── Domain payload ────────────────────────────────────────────────────────
     metadata: dict[str, Any] = field(default_factory=dict)

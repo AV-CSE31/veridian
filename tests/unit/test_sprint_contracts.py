@@ -18,7 +18,7 @@ Coverage targets:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -142,9 +142,9 @@ class TestSprintContractCreate:
         assert c1.contract_id != c2.contract_id
 
     def test_created_at_is_set(self):
-        before = datetime.utcnow()
+        before = datetime.now(tz=UTC)
         c = SprintContract.create(task_id="t", deliverables=["D"], success_criteria=["S"])
-        after = datetime.utcnow()
+        after = datetime.now(tz=UTC)
         assert before <= c.created_at <= after
 
 
@@ -158,9 +158,9 @@ class TestSprintContractSigning:
 
     def test_sign_sets_signed_at(self):
         c = SprintContract.create(task_id="t", deliverables=["D"], success_criteria=["S"])
-        before = datetime.utcnow()
+        before = datetime.now(tz=UTC)
         c.sign()
-        after = datetime.utcnow()
+        after = datetime.now(tz=UTC)
         assert before <= c.signed_at <= after  # type: ignore[operator]
 
     def test_sign_returns_self_for_chaining(self):

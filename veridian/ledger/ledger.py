@@ -19,7 +19,7 @@ import logging
 import os
 import tempfile
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -207,7 +207,7 @@ class TaskLedger:
 
             self._transition(task, TaskStatus.IN_PROGRESS)
             task.claimed_by = runner_id
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
             self._write_raw(data)
 
@@ -221,7 +221,7 @@ class TaskLedger:
             task = Task.from_dict(data["tasks"][task_id])
             self._transition(task, TaskStatus.VERIFYING)
             task.result = result
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
             self._write_raw(data)
         return task
@@ -234,10 +234,10 @@ class TaskLedger:
             task = Task.from_dict(data["tasks"][task_id])
             self._transition(task, TaskStatus.DONE)
             result.verified = True
-            result.verified_at = datetime.utcnow()
+            result.verified_at = datetime.now(tz=UTC)
             task.result = result
             task.claimed_by = None
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
             self._write_raw(data)
         self.log(f"[DONE] {task_id} — {task.title[:60]}")
@@ -256,7 +256,7 @@ class TaskLedger:
             task.retry_count += 1
             task.last_error = error
             task.claimed_by = None
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(tz=UTC)
 
             self._transition(task, TaskStatus.FAILED)
 
@@ -277,7 +277,7 @@ class TaskLedger:
             task = Task.from_dict(data["tasks"][task_id])
             self._transition(task, TaskStatus.SKIPPED)
             task.last_error = reason
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
             self._write_raw(data)
         return task
@@ -299,7 +299,7 @@ class TaskLedger:
                     continue
                 task_dict["status"] = "pending"
                 task_dict["claimed_by"] = None
-                task_dict["updated_at"] = datetime.utcnow().isoformat()
+                task_dict["updated_at"] = datetime.now(tz=UTC).isoformat()
                 reset += 1
             if reset:
                 self._write_raw(data)
@@ -325,7 +325,7 @@ class TaskLedger:
                     continue
                 task_dict["status"] = "pending"
                 task_dict["last_error"] = None
-                task_dict["updated_at"] = datetime.utcnow().isoformat()
+                task_dict["updated_at"] = datetime.now(tz=UTC).isoformat()
                 reset += 1
             if reset:
                 self._write_raw(data)
@@ -338,7 +338,7 @@ class TaskLedger:
         Append a timestamped entry to progress.md.
         Agents read this on startup for fast orientation.
         """
-        ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        ts = datetime.now(tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
         line = f"[{ts}] [{level}] {message}\n"
         with open(self.progress_path, "a", encoding="utf-8") as f:
             f.write(line)
@@ -368,7 +368,7 @@ class TaskLedger:
         Validates JSON round-trip before renaming.
         """
         data["schema_version"] = SCHEMA_VERSION
-        data["updated_at"] = datetime.utcnow().isoformat()
+        data["updated_at"] = datetime.now(tz=UTC).isoformat()
 
         text = json.dumps(data, indent=2, ensure_ascii=False)
 

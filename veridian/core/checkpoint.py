@@ -34,7 +34,7 @@ import os
 import tempfile
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -60,7 +60,7 @@ class Checkpoint:
     task_state: dict[str, Any]
     verification_history: list[dict[str, Any]] = field(default_factory=list)
     agent_context: dict[str, Any] = field(default_factory=dict)
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(tz=UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -78,7 +78,7 @@ class Checkpoint:
             task_state=d.get("task_state", {}),
             verification_history=d.get("verification_history", []),
             agent_context=d.get("agent_context", {}),
-            created_at=d.get("created_at", datetime.utcnow().isoformat()),
+            created_at=d.get("created_at", datetime.now(tz=UTC).isoformat()),
         )
 
 

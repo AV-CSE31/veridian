@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, ClassVar
 
 from veridian.core.task import Task, TaskResult, TaskStatus
@@ -344,7 +344,7 @@ class EntropyGC:
 
     def check_stale_in_progress(self) -> list[EntropyIssue]:
         """Return IN_PROGRESS tasks stuck longer than stale_threshold."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
         issues = []
         for task in self.ledger.list(status=TaskStatus.IN_PROGRESS):
             age = now - task.updated_at
@@ -436,7 +436,7 @@ class EntropyGC:
 
         lines = [
             "# Entropy Report\n",
-            f"Generated: {datetime.utcnow().isoformat()}Z\n",
+            f"Generated: {datetime.now(tz=UTC).isoformat()}Z\n",
             f"Total issues: {len(issues)}\n\n",
         ]
         by_type: dict[str, list[EntropyIssue]] = {}

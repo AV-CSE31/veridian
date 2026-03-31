@@ -36,7 +36,7 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from veridian.core.exceptions import ContractNotFound, ContractViolation
@@ -73,7 +73,7 @@ class SprintContract:
     acceptance_threshold: float = 0.8  # 0.0–1.0; result score must meet this
 
     # ── Provenance ────────────────────────────────────────────────────────────
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     signed_at: datetime | None = None
     signature: str | None = None  # HMAC-SHA256 hex digest
 
@@ -157,7 +157,7 @@ class SprintContract:
         key = secret.encode() if secret else b"veridian-sprint-contract"
         sig = _hmac.new(key, self._canonical_bytes(), hashlib.sha256).hexdigest()
         self.signature = sig
-        self.signed_at = datetime.utcnow()
+        self.signed_at = datetime.now(tz=UTC)
         log.debug(
             "contract.signed contract_id=%s task_id=%s",
             self.contract_id,
@@ -194,7 +194,7 @@ class SprintContract:
             {
                 "agent": agent,
                 "note": note,
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(tz=UTC).isoformat(),
             }
         )
 

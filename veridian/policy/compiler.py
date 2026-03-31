@@ -223,7 +223,7 @@ class PolicyCompiler:
     def _parse_yaml(self, text: str) -> Policy:
         """Parse YAML/JSON text into a Policy object."""
         try:
-            import yaml  # type: ignore[import-untyped]
+            import yaml  # type: ignore[import-untyped,unused-ignore]
 
             raw = yaml.safe_load(text)
         except Exception as exc:

@@ -8,7 +8,7 @@ Hooks receive strongly-typed events — no dict key typos, full IDE autocomplete
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ class VeridianEvent:
 
     event_type: str = ""
     run_id: str = ""
-    ts: datetime = field(default_factory=datetime.utcnow)
+    ts: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:

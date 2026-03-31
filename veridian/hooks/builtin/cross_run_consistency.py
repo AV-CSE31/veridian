@@ -53,7 +53,7 @@ import dataclasses
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from veridian.core.exceptions import HumanReviewRequired
@@ -75,7 +75,7 @@ class ClaimConflict:
     value_a: Any
     value_b: Any
     severity: str  # "critical", "warning", "info"
-    detected_at: datetime = dataclasses.field(default_factory=datetime.utcnow)
+    detected_at: datetime = dataclasses.field(default_factory=lambda: datetime.now(tz=UTC))
 
     def to_dict(self) -> dict[str, object]:
         return {

@@ -58,7 +58,7 @@ def _yaml_policy(content: str) -> str:
     return content
 
 
-SIMPLE_POLICY_YAML = """
+SIMPLE_POLICY_YAML = r"""
 policy_id: test_no_email
 version: "1.0"
 description: "Reject outputs containing email addresses"

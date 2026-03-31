@@ -78,7 +78,7 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 log = logging.getLogger(__name__)
 
@@ -287,7 +287,7 @@ class OutputSanitizer:
         """Append quarantine event to JSONL log."""
         try:
             entry = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(tz=UTC).isoformat(),
                 "task_id": task_id,
                 "cmd": cmd[:200],
                 "reason": reason,

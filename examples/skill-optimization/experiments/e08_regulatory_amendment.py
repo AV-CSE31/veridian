@@ -24,7 +24,7 @@ import os
 import random
 import sys
 import tempfile
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -52,7 +52,7 @@ def _force_stale_timestamps(
 ) -> None:
     """Directly modify ledger JSON to set status=in_progress and updated_at to the past."""
     data = json.loads(ledger_path.read_text(encoding="utf-8"))
-    old_time = (datetime.utcnow() - timedelta(minutes=minutes_ago)).isoformat()
+    old_time = (datetime.now(tz=UTC) - timedelta(minutes=minutes_ago)).isoformat()
     for tid in task_ids:
         if tid in data["tasks"]:
             data["tasks"][tid]["status"] = "in_progress"
