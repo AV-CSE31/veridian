@@ -65,7 +65,8 @@ class RegulatoryGraph:
                 f"Node '{node_id}' not found in the knowledge graph. "
                 f"Available node count: {self.node_count}."
             )
-        return self._graph.nodes[node_id]["data"]
+        node: RegNode = self._graph.nodes[node_id]["data"]
+        return node
 
     def get_edges(self, node_id: str) -> list[RegEdge]:
         """Return all outgoing RegEdges from node_id."""
@@ -110,7 +111,8 @@ class RegulatoryGraph:
         or None if no path exists.
         """
         try:
-            return nx.shortest_path(self._graph, source=source, target=target)
+            path: list[str] = nx.shortest_path(self._graph, source=source, target=target)
+            return path
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             return None
 
@@ -161,11 +163,13 @@ class RegulatoryGraph:
 
     @property
     def node_count(self) -> int:
-        return self._graph.number_of_nodes()
+        count: int = self._graph.number_of_nodes()
+        return count
 
     @property
     def edge_count(self) -> int:
-        return self._graph.number_of_edges()
+        count: int = self._graph.number_of_edges()
+        return count
 
     def __repr__(self) -> str:
         return (

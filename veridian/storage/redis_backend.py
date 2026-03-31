@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 from veridian.core.exceptions import StorageLockError, TaskNotFound
 from veridian.core.task import LedgerStats, Task, TaskResult, TaskStatus
@@ -94,7 +94,7 @@ class RedisStorage(BaseStorage):
         raw = self._r.get(self._task_key(task_id))
         if raw is None:
             raise TaskNotFound(f"Task '{task_id}' not found in Redis.")
-        return Task.from_dict(json.loads(raw))
+        return Task.from_dict(json.loads(cast(str, raw)))
 
     def get_next(self) -> Task | None:
         """
@@ -110,12 +110,12 @@ class RedisStorage(BaseStorage):
         try:
             done_set = self._get_done_ids()
             # Iterate from highest priority downward
-            candidates = self._r.zrevrange(self._queue_key(), 0, -1)
+            candidates: list[Any] = cast(list[Any], self._r.zrevrange(self._queue_key(), 0, -1))
             for task_id in candidates:
                 raw = self._r.get(self._task_key(task_id))
                 if raw is None:
                     continue
-                task_dict: dict[str, Any] = json.loads(raw)
+                task_dict: dict[str, Any] = json.loads(cast(str, raw))
                 if task_dict.get("status") != TaskStatus.PENDING.value:
                     self._r.zrem(self._queue_key(), task_id)
                     continue
@@ -137,7 +137,7 @@ class RedisStorage(BaseStorage):
         raw = self._r.get(self._task_key(task_id))
         if raw is None:
             raise TaskNotFound(f"Task '{task_id}' not found in Redis.")
-        task = Task.from_dict(json.loads(raw))
+        task = Task.from_dict(json.loads(cast(str, raw)))
         task.status = TaskStatus.DONE
         task.result = result
         self._r.set(self._task_key(task_id), json.dumps(task.to_dict()))
@@ -148,7 +148,7 @@ class RedisStorage(BaseStorage):
         raw = self._r.get(self._task_key(task_id))
         if raw is None:
             raise TaskNotFound(f"Task '{task_id}' not found in Redis.")
-        task = Task.from_dict(json.loads(raw))
+        task = Task.from_dict(json.loads(cast(str, raw)))
         task.status = TaskStatus.FAILED
         task.last_error = error
         self._r.set(self._task_key(task_id), json.dumps(task.to_dict()))
@@ -162,7 +162,7 @@ class RedisStorage(BaseStorage):
         for key in keys:
             raw = self._r.get(key)
             if raw:
-                tasks.append(Task.from_dict(json.loads(raw)))
+                tasks.append(Task.from_dict(json.loads(cast(str, raw))))
         return tasks
 
     def stats(self) -> LedgerStats:

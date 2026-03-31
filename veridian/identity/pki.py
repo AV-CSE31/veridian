@@ -101,7 +101,8 @@ class AgentKeyPair:
         """Sign a message. Returns 64-byte Ed25519 signature."""
         _require_crypto()
         private_key = Ed25519PrivateKey.from_private_bytes(self.private_key_bytes)
-        return private_key.sign(message)
+        sig: bytes = private_key.sign(message)
+        return sig
 
     def verify(self, message: bytes, signature: bytes) -> None:
         """

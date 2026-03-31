@@ -126,7 +126,7 @@ class PolicySpec:
     def from_yaml(cls, yaml_str: str) -> PolicySpec:
         """Parse a YAML string into a PolicySpec."""
         try:
-            import yaml  # type: ignore[import]
+            import yaml  # type: ignore[import-untyped]
         except ImportError:
             # Fallback: minimal YAML parser for simple cases
             return cls._parse_yaml_minimal(yaml_str)
@@ -303,7 +303,8 @@ class PolicyStore:
             return {}
         try:
             with open(self._path) as f:
-                return json.load(f)
+                result: dict[str, Any] = json.load(f)
+                return result
         except (json.JSONDecodeError, OSError):
             return {}
 
