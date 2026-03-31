@@ -1,6 +1,10 @@
-# Veridian
+<p align="center">
+  <img src="logo.png" alt="Veridian" width="200">
+</p>
 
-**Deterministic verification infrastructure for autonomous AI agents.**
+<h1 align="center">Veridian</h1>
+
+<p align="center"><strong>Deterministic verification infrastructure for autonomous AI agents.</strong></p>
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
