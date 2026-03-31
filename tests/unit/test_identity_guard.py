@@ -6,15 +6,11 @@ TDD: RED phase.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, ClassVar
-from unittest.mock import patch
+from typing import Any
 
-import pytest
-
-from veridian.core.exceptions import SecretNotFound, SecretRotationFailed, VeridianConfigError
+from veridian.core.exceptions import SecretNotFound, SecretRotationFailed
 from veridian.hooks.builtin.identity_guard import IdentityGuardHook
 from veridian.secrets.base import SecretsProvider
-
 
 # ── Fake secrets provider ────────────────────────────────────────────────────
 

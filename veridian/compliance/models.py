@@ -12,10 +12,9 @@ ComplianceReport — result of a compliance check run.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import Enum, StrEnum
 from typing import Any
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EU AI ACT ARTICLE ENUM
@@ -121,7 +120,7 @@ class ArticleMapping:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class ComplianceStatus(str, Enum):
+class ComplianceStatus(StrEnum):
     """Coverage status for a single article."""
 
     COVERED = "covered"
@@ -145,7 +144,7 @@ class ComplianceReport:
     covered: list[EUAIActArticle]
     gaps: list[EUAIActArticle]
     generated_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
 
     @property
@@ -180,7 +179,7 @@ class ComplianceReport:
         return cls(
             covered=[EUAIActArticle(v) for v in d.get("covered", [])],
             gaps=[EUAIActArticle(v) for v in d.get("gaps", [])],
-            generated_at=d.get("generated_at", datetime.now(timezone.utc).isoformat()),
+            generated_at=d.get("generated_at", datetime.now(UTC).isoformat()),
         )
 
     # ── Human-readable report ─────────────────────────────────────────────────

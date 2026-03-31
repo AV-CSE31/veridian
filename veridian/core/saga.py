@@ -18,11 +18,11 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-from veridian.core.exceptions import SagaError, SagaRollbackError
+from veridian.core.exceptions import SagaError
 
 log = logging.getLogger(__name__)
 

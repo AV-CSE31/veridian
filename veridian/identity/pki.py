@@ -25,11 +25,12 @@ from veridian.core.exceptions import (
     PKIError,
     SignatureVerificationError,
 )
-from veridian.identity.models import AgentIdentity, CertificateChain, SignedMessage
+from veridian.identity.models import AgentIdentity, SignedMessage
 
 log = logging.getLogger(__name__)
 
 try:
+    from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives.asymmetric.ed25519 import (
         Ed25519PrivateKey,
         Ed25519PublicKey,
@@ -40,7 +41,6 @@ try:
         PrivateFormat,
         PublicFormat,
     )
-    from cryptography.exceptions import InvalidSignature
 
     _CRYPTO_AVAILABLE = True
 except ImportError:  # pragma: no cover

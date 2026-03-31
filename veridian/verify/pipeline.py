@@ -41,7 +41,7 @@ import asyncio
 import logging
 import time
 from collections.abc import AsyncGenerator, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from veridian.core.exceptions import PipelineError

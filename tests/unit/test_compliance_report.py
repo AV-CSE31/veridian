@@ -7,15 +7,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from veridian.observability.compliance_report import (
-    ComplianceReport,
-    ComplianceStandard,
     ComplianceReportGenerator,
+    ComplianceStandard,
 )
 from veridian.observability.proof_chain import ProofChain, ProofEntry
-
 
 # ── ComplianceStandard ──────────────────────────────────────────────────────
 

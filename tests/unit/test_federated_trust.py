@@ -5,15 +5,12 @@ TDD: RED phase.
 
 from __future__ import annotations
 
-import pytest
-
 from veridian.mcp.trust import (
     FederatedTrustManager,
     OrgTrustRecord,
     SkillProvenance,
     TrustDecision,
 )
-
 
 # ── OrgTrustRecord ──────────────────────────────────────────────────────────
 

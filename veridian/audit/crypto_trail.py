@@ -19,7 +19,7 @@ import json
 import os
 import tempfile
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -124,7 +124,7 @@ class AuditChain(BaseModel):
     model_config = ConfigDict(frozen=False)
 
     chain_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     entries: list[AuditEntry] = Field(default_factory=list)
 
     @property
@@ -184,7 +184,7 @@ def make_audit_entry(
     All hashes are computed at construction; the entry is frozen after creation.
     """
     entry_id = str(uuid.uuid4())
-    timestamp_utc = datetime.now(timezone.utc)
+    timestamp_utc = datetime.now(UTC)
     data_hash = _hash_data(data)
     entry_hash = _hash_entry_content(
         entry_id, task_id, timestamp_utc, event_type, data_hash, previous_hash

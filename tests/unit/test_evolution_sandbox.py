@@ -7,15 +7,9 @@ TDD: RED phase.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
-
-import pytest
-
-from veridian.eval.comparator import EvolutionComparator, ComparisonResult
+from veridian.eval.comparator import EvolutionComparator
 from veridian.eval.sandbox import EvolutionSandbox, SandboxResult
 from veridian.hooks.builtin.drift_detector import RunSnapshot
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

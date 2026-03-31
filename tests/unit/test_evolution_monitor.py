@@ -14,14 +14,12 @@ from typing import Any
 
 import pytest
 
-from veridian.core.exceptions import MisevolutionDetected, VeridianConfigError
+from veridian.core.exceptions import VeridianConfigError
 from veridian.hooks.builtin.evolution_monitor import (
     EvolutionMonitorHook,
     EvolutionSafetyReport,
     MisevolutionWarning,
-    PathwayMetrics,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -350,7 +348,7 @@ class TestEvolutionMonitorPersistence:
         hook.after_run(_FakeRunCompleted(summary=_FakeSummary()))
 
         assert history_file.exists()
-        lines = [l for l in history_file.read_text().strip().split("\n") if l.strip()]
+        lines = [line for line in history_file.read_text().strip().split("\n") if line.strip()]
         assert len(lines) >= 1
         data = json.loads(lines[-1])
         assert "run_id" in data

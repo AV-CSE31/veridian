@@ -19,11 +19,12 @@ import logging
 import os
 import tempfile
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from veridian.core.exceptions import NLPolicyError, PolicyNotFound
 
@@ -145,7 +146,6 @@ class PolicySpec:
     @classmethod
     def _parse_yaml_minimal(cls, yaml_str: str) -> PolicySpec:
         """Minimal YAML parser for the PolicySpec subset (no PyYAML dep)."""
-        import re
 
         rule_id = ""
         description = ""
@@ -231,7 +231,7 @@ class PolicyDraft:
     status: PolicyStatus = PolicyStatus.PENDING_REVIEW
     rejection_reason: str = ""
     created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
 
     def approve(self) -> None:
@@ -263,7 +263,7 @@ class PolicyDraft:
             spec=PolicySpec.from_dict(d["spec"]),
             status=PolicyStatus(d.get("status", "pending_review")),
             rejection_reason=d.get("rejection_reason", ""),
-            created_at=d.get("created_at", datetime.now(timezone.utc).isoformat()),
+            created_at=d.get("created_at", datetime.now(UTC).isoformat()),
         )
 
 

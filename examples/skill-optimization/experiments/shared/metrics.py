@@ -6,16 +6,15 @@ numpy is used only when available for AUROC (degrades gracefully otherwise).
 """
 from __future__ import annotations
 
+import contextlib
 import math
 import statistics
 import sys
 
 # Force UTF-8 on Windows so hypothesis strings with >= symbols print correctly
 if hasattr(sys.stdout, "reconfigure"):
-    try:
+    with contextlib.suppress(Exception):
         sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
 from collections.abc import Sequence
 
 from examples.experiments.shared.config import ExperimentResult

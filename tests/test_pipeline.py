@@ -6,22 +6,19 @@ Tests for F3.5 — Streaming Verification Pipeline.
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import BaseVerifier, VerificationResult
 from veridian.verify.pipeline import (
-    PipelineStage,
-    VerificationPipeline,
-    PipelineResult,
     PipelineConfig,
+    PipelineResult,
+    PipelineStage,
     StageResult,
+    VerificationPipeline,
 )
-
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -217,7 +214,7 @@ class TestVerificationPipeline:
         p.add_stage(PipelineStage("s2", LogVerifier("s2", False)))
         p.add_stage(PipelineStage("s3", LogVerifier("s3", True)))
 
-        pr = p.run(make_task(), make_result())
+        p.run(make_task(), make_result())
         assert "s1" in log
         assert "s2" in log
         assert "s3" in log

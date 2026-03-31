@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import pytest
 
-from veridian.core.exceptions import PolicyCompilationError, PolicyValidationError
+from veridian.core.exceptions import PolicyCompilationError
 from veridian.core.task import Task, TaskResult
+from veridian.policy.compiler import PolicyCompiler
 from veridian.policy.engine import PolicyEngine
 from veridian.policy.models import (
     BUILTIN_POLICIES,
@@ -25,9 +26,7 @@ from veridian.policy.models import (
     PolicyRule,
     PolicySeverity,
 )
-from veridian.policy.compiler import PolicyCompiler
 from veridian.verify.base import BaseVerifier, VerificationResult
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures

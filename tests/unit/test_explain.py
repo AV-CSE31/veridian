@@ -7,11 +7,7 @@ verification decision, with detail levels and structured evidence links.
 
 from __future__ import annotations
 
-import pytest
-
-from veridian.core.exceptions import ExplanationError
 from veridian.core.task import Task, TaskResult
-from veridian.verify.base import VerificationResult
 from veridian.explain.engine import (
     Evidence,
     EvidenceType,
@@ -19,7 +15,7 @@ from veridian.explain.engine import (
     ExplanationDetail,
     ExplanationEngine,
 )
-
+from veridian.verify.base import VerificationResult
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 

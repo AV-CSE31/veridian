@@ -14,7 +14,7 @@ Features:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, ClassVar
 
@@ -101,9 +101,7 @@ def _parse_verdict(response: str) -> bool:
     """Extract PASS/FAIL from model response. Default to FAIL on ambiguity."""
     normalized = response.strip().upper()
     # Check for PASS anywhere in the response (first match wins)
-    if "PASS" in normalized:
-        return True
-    return False
+    return "PASS" in normalized
 
 
 class ConsensusVerifier(BaseVerifier):

@@ -17,7 +17,7 @@ from __future__ import annotations
 import csv
 import io
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -28,7 +28,6 @@ from veridian.dashboard.data_layer import (
     VerificationRecord,
     VerifierStats,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures
@@ -50,7 +49,7 @@ def _rec(
         task_id=task_id,
         verifier_id=verifier_id,
         agent_id=agent_id,
-        timestamp=datetime(2026, 1, 1, 12 + offset_hours, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 1, 1, 12 + offset_hours, 0, 0, tzinfo=UTC),
         passed=passed,
         error=error,
         response_time_ms=response_time_ms,
@@ -121,11 +120,11 @@ class TestComplianceDashboard:
     def test_pass_rate_since_filters_by_time(self) -> None:
         dash = ComplianceDashboard()
         # 3 old passed
-        for i in range(3):
+        for _i in range(3):
             dash.add_record(_rec(passed=True, offset_hours=0))
         # 2 new failed
-        cutoff = datetime(2026, 1, 1, 14, 0, 0, tzinfo=timezone.utc)
-        for i in range(2):
+        cutoff = datetime(2026, 1, 1, 14, 0, 0, tzinfo=UTC)
+        for _i in range(2):
             dash.add_record(_rec(passed=False, offset_hours=3))
         rate_recent = dash.pass_rate(since=cutoff)
         assert abs(rate_recent - 0.0) < 1e-9  # only failures after cutoff

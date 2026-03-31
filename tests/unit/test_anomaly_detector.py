@@ -8,15 +8,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-import pytest
-
 from veridian.hooks.builtin.anomaly_detector import (
     AnomalyDetectorHook,
     AnomalyReport,
     AnomalySignal,
     AnomalyType,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -5,15 +5,8 @@ TDD: RED phase.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
-
-import pytest
-
-from veridian.core.exceptions import VeridianConfigError
-from veridian.mcp.server import MCPSkillServer, SkillRequest, SkillResponse, ToolDefinition
+from veridian.mcp.server import MCPSkillServer, SkillRequest, SkillResponse
 from veridian.skills.models import Skill, SkillStep
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -12,11 +12,10 @@ from __future__ import annotations
 
 import pytest
 
-from veridian.core.exceptions import VeridianConfigError, VerifierIntegrityError
+from veridian.core.exceptions import VerifierIntegrityError
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import BaseVerifier, VerificationResult, VerifierRegistry
 from veridian.verify.integrity import VerifierIntegrityChecker
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -19,10 +19,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 import tempfile
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -225,7 +224,7 @@ class DeadLetterQueue:
             task_id=task.id,
             task_data=task,
             failure_reason=failure_reason,
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             retry_count=retry_count,
             triage_category=category,
             extra=extra or {},

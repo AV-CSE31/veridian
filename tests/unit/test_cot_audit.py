@@ -5,15 +5,12 @@ TDD: RED phase.
 
 from __future__ import annotations
 
-import pytest
-
 from veridian.observability.cot_audit import (
-    CoTAuditResult,
-    CoTAuditor,
     AlignmentViolation,
+    CoTAuditor,
+    CoTAuditResult,
     ViolationType,
 )
-
 
 # ── Construction ─────────────────────────────────────────────────────────────
 

@@ -11,15 +11,13 @@ from unittest.mock import MagicMock
 import pytest
 
 from veridian.core.task import Task, TaskResult
-from veridian.verify.base import VerificationResult
+from veridian.providers.base import LLMProvider, LLMResponse, Message
 from veridian.verify.builtin.consensus import (
+    AgreementStrategy,
+    ConsensusResult,
     ConsensusVerifier,
     ModelVote,
-    ConsensusResult,
-    AgreementStrategy,
 )
-from veridian.providers.base import LLMProvider, LLMResponse, Message
-
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 

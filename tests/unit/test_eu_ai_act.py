@@ -9,18 +9,17 @@ from __future__ import annotations
 
 import pytest
 
-from veridian.core.exceptions import ComplianceError, ComplianceGapError
+from veridian.compliance.eu_ai_act import (
+    ComplianceChecker,
+    EUAIActCompliancePack,
+)
 from veridian.compliance.models import (
     ArticleMapping,
     ComplianceReport,
     ComplianceStatus,
     EUAIActArticle,
 )
-from veridian.compliance.eu_ai_act import (
-    EUAIActCompliancePack,
-    ComplianceChecker,
-)
-
+from veridian.core.exceptions import ComplianceError, ComplianceGapError
 
 # ── EUAIActArticle ────────────────────────────────────────────────────────────
 

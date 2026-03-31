@@ -20,8 +20,9 @@ from __future__ import annotations
 import hashlib
 import hmac
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Callable
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -65,7 +66,7 @@ class HandoffPacket(BaseModel):
     verification_history: list[dict[str, Any]]
     context_summary: str = ""
     constraints: list[str] = Field(default_factory=list)
-    timestamp_utc: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp_utc: datetime = Field(default_factory=lambda: datetime.now(UTC))
     hmac_token: str  # hex-encoded, 64 chars (SHA-256)
 
 
@@ -172,7 +173,7 @@ class HandoffProtocol:
                     "event": "handoff_blocked",
                     "task_id": task.id,
                     "source_agent_id": source_agent_id,
-                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                    "timestamp_utc": datetime.now(UTC).isoformat(),
                     "failures": failures,
                 }
             )
@@ -183,7 +184,7 @@ class HandoffProtocol:
 
         # All verifiers passed — build the packet
         packet_id = str(uuid.uuid4())
-        timestamp_utc = datetime.now(timezone.utc)
+        timestamp_utc = datetime.now(UTC)
         hmac_token = _compute_hmac(
             packet_id, task.id, source_agent_id, timestamp_utc, self._secret_key
         )
@@ -261,7 +262,7 @@ class HandoffProtocol:
                     "event": "handoff_blocked",
                     "task_id": task.id,
                     "source_agent_id": source_agent_id,
-                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                    "timestamp_utc": datetime.now(UTC).isoformat(),
                     "failures": ["condition returned False"],
                 }
             )

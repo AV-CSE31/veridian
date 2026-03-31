@@ -349,7 +349,7 @@ def generate_all(seed: int = RANDOM_SEED) -> tuple[list[dict], list[dict]]:
         # Make last domain absorb rounding remainder
         if domain_name == domain_names[-1]:
             count = 500 - len(skills)
-        for i in range(count):
+        for _j in range(count):
             skills.append(generate_skill(idx, domain_name, cfg, rng))
             idx += 1
 

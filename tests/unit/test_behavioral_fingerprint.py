@@ -21,7 +21,6 @@ from veridian.hooks.builtin.behavioral_fingerprint import (
     FingerprintReport,
 )
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 

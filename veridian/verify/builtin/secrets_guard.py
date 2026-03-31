@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 import math
 import re
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from veridian.core.exceptions import VeridianConfigError
 from veridian.core.task import Task, TaskResult
@@ -236,11 +236,10 @@ class SecretsGuard(BaseVerifier):
                 len(token) >= _MIN_TOKEN_LENGTH
                 and _is_secret_charset(token)
                 and _shannon_entropy(token) >= self.min_entropy
+                and not any(regex.search(token) for _, regex in _SECRET_PATTERNS)
             ):
-                # Only flag if not already caught by pattern matching
-                if not any(regex.search(token) for _, regex in _SECRET_PATTERNS):
-                    snippet = self._safe_snippet(token)
-                    findings.append(("high_entropy_string", snippet))
+                snippet = self._safe_snippet(token)
+                findings.append(("high_entropy_string", snippet))
 
         return findings
 

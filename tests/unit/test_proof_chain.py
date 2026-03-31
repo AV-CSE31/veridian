@@ -5,14 +5,9 @@ TDD: RED phase.
 
 from __future__ import annotations
 
-import hashlib
-import json
 from pathlib import Path
 
-import pytest
-
 from veridian.observability.proof_chain import ProofChain, ProofEntry
-
 
 # ── ProofEntry ──────────────────────────────────────────────────────────────
 

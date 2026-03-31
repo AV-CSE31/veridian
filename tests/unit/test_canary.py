@@ -8,20 +8,17 @@ TDD: RED phase.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 from veridian.core.exceptions import CanaryRegressionError, VeridianConfigError
 from veridian.eval.canary import (
+    CanaryReport,
     CanaryResult,
     CanarySuite,
     CanaryTask,
-    CanaryReport,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

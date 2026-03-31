@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -27,7 +27,6 @@ from veridian.audit.crypto_trail import (
     make_audit_entry,
 )
 from veridian.core.exceptions import AuditIntegrityError
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # AuditEntry tests

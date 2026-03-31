@@ -108,8 +108,8 @@ def run() -> ExperimentResult:
 
     # ── Baseline: no verification (all pass silently) ─────────────────────────
     baseline_silent_failures = 0
-    for i, skill in enumerate(skills):
-        if i in drift_indices:
+    for idx, _skill in enumerate(skills):
+        if idx in drift_indices:
             baseline_silent_failures += 1  # drifted output accepted silently
 
     baseline_sfr = silent_failure_rate(baseline_silent_failures, len(skills))
@@ -138,7 +138,7 @@ def run() -> ExperimentResult:
     veridian_sfr = silent_failure_rate(veridian_silent_failures, len(skills))
 
     # ── Metrics ───────────────────────────────────────────────────────────────
-    impv = improvement_pct(baseline_sfr, baseline_sfr - veridian_sfr)
+    improvement_pct(baseline_sfr, baseline_sfr - veridian_sfr)
     # H1 requires ≥40% reduction in silent failures
     sfr_reduction = improvement_pct(baseline_sfr, veridian_sfr) * -1
 

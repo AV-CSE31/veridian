@@ -22,15 +22,13 @@ Design constraints (CLAUDE.md):
 from __future__ import annotations
 
 import logging
-from typing import Any
 
-from veridian.core.exceptions import ComplianceError, ComplianceGapError
 from veridian.compliance.models import (
     ArticleMapping,
     ComplianceReport,
-    ComplianceStatus,
     EUAIActArticle,
 )
+from veridian.core.exceptions import ComplianceError, ComplianceGapError
 
 log = logging.getLogger(__name__)
 

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -116,7 +116,7 @@ class Explanation:
     detail_level: ExplanationDetail
     evidence: list[Evidence] = field(default_factory=list)
     generated_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
 
     # ── Human-readable output ─────────────────────────────────────────────────
@@ -167,7 +167,7 @@ class Explanation:
             reason=d["reason"],
             detail_level=ExplanationDetail(d["detail_level"]),
             evidence=[Evidence.from_dict(e) for e in d.get("evidence", [])],
-            generated_at=d.get("generated_at", datetime.now(timezone.utc).isoformat()),
+            generated_at=d.get("generated_at", datetime.now(UTC).isoformat()),
         )
 
 

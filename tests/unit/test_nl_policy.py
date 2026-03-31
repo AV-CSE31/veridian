@@ -9,17 +9,16 @@ from __future__ import annotations
 
 import pytest
 
-from veridian.core.exceptions import NLPolicyError, PolicyActivationRequired, PolicyNotFound
+from veridian.core.exceptions import NLPolicyError, PolicyNotFound
 from veridian.policy.nl_interface import (
+    NLPolicyInterface,
+    PolicyCheck,
     PolicyDraft,
     PolicySeverity,
     PolicySpec,
-    PolicyCheck,
     PolicyStatus,
-    NLPolicyInterface,
     PolicyStore,
 )
-
 
 # ── PolicyCheck ───────────────────────────────────────────────────────────────
 

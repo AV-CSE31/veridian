@@ -10,10 +10,9 @@ from unittest.mock import patch
 
 import pytest
 
-from veridian.core.exceptions import SecretNotFound, SecretRotationFailed, SecretsProviderError
+from veridian.core.exceptions import SecretNotFound, SecretRotationFailed
 from veridian.secrets.base import SecretsProvider
 from veridian.secrets.env_provider import EnvSecretsProvider
-
 
 # ── ABC contract ─────────────────────────────────────────────────────────────
 

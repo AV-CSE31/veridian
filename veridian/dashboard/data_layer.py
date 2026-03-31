@@ -17,7 +17,7 @@ import csv
 import io
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 __all__ = [
@@ -330,7 +330,7 @@ class ComplianceDashboard:
     @staticmethod
     def _bucket_floor(ts: datetime, bucket_size: timedelta) -> datetime:
         """Round ts down to the nearest bucket boundary."""
-        epoch = datetime(2000, 1, 1, tzinfo=timezone.utc)
+        epoch = datetime(2000, 1, 1, tzinfo=UTC)
         if ts.tzinfo is None:
             epoch = datetime(2000, 1, 1)
         delta = ts - epoch

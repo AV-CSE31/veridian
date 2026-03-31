@@ -6,19 +6,13 @@ Tests for F3.4 — Checkpoint/Restore for Long-Running Tasks.
 
 from __future__ import annotations
 
-import json
-import time
 from pathlib import Path
-from typing import Any
-
-import pytest
 
 from veridian.core.checkpoint import (
     Checkpoint,
-    CheckpointManager,
     CheckpointConfig,
+    CheckpointManager,
 )
-
 
 # ─── Checkpoint model tests ───────────────────────────────────────────────────
 
@@ -142,7 +136,7 @@ class TestCheckpointManager:
         mgr = CheckpointManager(storage_dir=tmp_path, config=cfg, run_id="run_001")
 
         history = [{"verifier": "schema", "passed": True, "at": "2024-01-01T00:00:00"}]
-        cp = mgr.save(task_state={"step": 1}, verification_history=history)
+        mgr.save(task_state={"step": 1}, verification_history=history)
 
         restored = mgr.restore_latest()
         assert restored is not None
@@ -153,7 +147,7 @@ class TestCheckpointManager:
         mgr = CheckpointManager(storage_dir=tmp_path, config=cfg, run_id="run_001")
 
         context = {"model": "claude-3", "tokens_used": 1000}
-        cp = mgr.save(task_state={}, agent_context=context)
+        mgr.save(task_state={}, agent_context=context)
 
         restored = mgr.restore_latest()
         assert restored is not None

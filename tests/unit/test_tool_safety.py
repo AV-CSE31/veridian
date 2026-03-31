@@ -13,7 +13,6 @@ import pytest
 
 from veridian.core.exceptions import VeridianConfigError
 from veridian.core.task import Task, TaskResult
-from veridian.verify.base import VerificationResult
 from veridian.verify.builtin.tool_safety import ToolSafetyVerifier
 
 

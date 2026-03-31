@@ -13,21 +13,17 @@ Covers:
 
 from __future__ import annotations
 
-import pytest
-
+from veridian.core.task import Task, TaskResult
 from veridian.eval.attack_framework import (
     BUILTIN_ATTACK_PATTERNS,
     AttackCategory,
     AttackPattern,
     AttackResult,
-    AttackScore,
     AttackSuite,
     RedTeamScenarioGenerator,
     VerifierRedTeam,
 )
-from veridian.core.task import Task, TaskResult
 from veridian.verify.base import BaseVerifier, VerificationResult
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -193,7 +189,7 @@ class TestRedTeamScenarioGenerator:
         suite = AttackSuite(patterns=BUILTIN_ATTACK_PATTERNS[:10])
         scenarios = gen.generate_batch(suite)
         assert len(scenarios) == 10
-        for pattern, (task, result) in scenarios:
+        for _pattern, (task, result) in scenarios:
             assert isinstance(task, Task)
             assert isinstance(result, TaskResult)
 

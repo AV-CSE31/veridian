@@ -5,10 +5,7 @@ TDD: RED phase.
 
 from __future__ import annotations
 
-import pytest
-
 from veridian.skills.blast_radius import BlastRadiusAnalyzer, ImpactReport
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

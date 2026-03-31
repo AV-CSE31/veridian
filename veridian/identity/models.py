@@ -12,11 +12,10 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from veridian.core.exceptions import PKIError
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # AGENT IDENTITY
@@ -38,7 +37,7 @@ class AgentIdentity:
     parent_id: str | None = None
     is_revoked: bool = False
     created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
 
     def revoke(self) -> None:
@@ -63,7 +62,7 @@ class AgentIdentity:
             public_key_bytes=base64.b64decode(d["public_key_b64"]),
             parent_id=d.get("parent_id"),
             is_revoked=d.get("is_revoked", False),
-            created_at=d.get("created_at", datetime.now(timezone.utc).isoformat()),
+            created_at=d.get("created_at", datetime.now(UTC).isoformat()),
         )
 
 
@@ -82,7 +81,7 @@ class SignedMessage:
     signature: bytes
     agent_id: str
     timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
 
     def to_dict(self) -> dict[str, Any]:
@@ -99,7 +98,7 @@ class SignedMessage:
             message=base64.b64decode(d["message_b64"]),
             signature=base64.b64decode(d["signature_b64"]),
             agent_id=d["agent_id"],
-            timestamp=d.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            timestamp=d.get("timestamp", datetime.now(UTC).isoformat()),
         )
 
 

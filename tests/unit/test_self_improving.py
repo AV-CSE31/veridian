@@ -8,22 +8,20 @@ adjusts thresholds, tracks performance, generates reports.
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 
 import pytest
 
-from veridian.core.exceptions import SelfImprovingError, VeridianConfigError
+from veridian.core.exceptions import SelfImprovingError
 from veridian.core.task import Task, TaskResult
-from veridian.verify.base import BaseVerifier, VerificationResult
 from veridian.intelligence.self_improving import (
     FeedbackRecord,
     FeedbackStore,
-    VerifierPerformance,
-    SelfImprovingVerifier,
     PerformanceReport,
+    SelfImprovingVerifier,
+    VerifierPerformance,
 )
-
+from veridian.verify.base import BaseVerifier, VerificationResult
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 

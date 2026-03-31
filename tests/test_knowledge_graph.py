@@ -15,15 +15,14 @@ from __future__ import annotations
 
 import pytest
 
+from veridian.knowledge.graph import RegulatoryGraph
+from veridian.knowledge.loader import load_default_graph
 from veridian.knowledge.models import (
     EdgeType,
     NodeType,
-    RegNode,
     RegEdge,
+    RegNode,
 )
-from veridian.knowledge.graph import RegulatoryGraph
-from veridian.knowledge.loader import load_default_graph
-
 
 # ─── RegNode / RegEdge model tests ───────────────────────────────────────────
 

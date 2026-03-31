@@ -20,7 +20,6 @@ from veridian.core.exceptions import HandoffIntegrityError, HandoffVerificationF
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import BaseVerifier, VerificationResult
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures
 # ─────────────────────────────────────────────────────────────────────────────

@@ -8,16 +8,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-import pytest
-
-from veridian.core.exceptions import VeridianConfigError
 from veridian.hooks.builtin.adaptive_safety import (
     AdaptiveSafetyHook,
     TrustLevel,
     TrustScore,
     VerificationLevel,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

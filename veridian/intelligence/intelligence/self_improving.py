@@ -20,7 +20,7 @@ import logging
 import os
 import tempfile
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -51,7 +51,7 @@ class FeedbackRecord:
     human_expected_pass: bool
     notes: str = ""
     timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
 
     # ── Derived properties ────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ class FeedbackRecord:
             verifier_passed=d["verifier_passed"],
             human_expected_pass=d["human_expected_pass"],
             notes=d.get("notes", ""),
-            timestamp=d.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            timestamp=d.get("timestamp", datetime.now(UTC).isoformat()),
         )
 
 
@@ -403,7 +403,7 @@ class PerformanceReport:
 
     verifiers: dict[str, VerifierPerformance]
     generated_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
 
     @classmethod

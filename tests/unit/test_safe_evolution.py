@@ -5,20 +5,12 @@ TDD: RED phase.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
-
-import pytest
-
-from veridian.core.exceptions import EvolutionBlockedError
 from veridian.eval.canary import CanaryReport, CanaryResult
 from veridian.hooks.builtin.drift_detector import RunSnapshot
 from veridian.protocols.safe_evolution import (
     EvolutionGate,
     EvolutionProposal,
-    EvolutionOutcome,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

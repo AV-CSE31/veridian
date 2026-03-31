@@ -128,7 +128,11 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = ["B008"]
+ignore = ["B008", "E501", "B905"]
+
+[tool.ruff.lint.per-file-ignores]
+"examples/*" = ["E402"]
+"tests/*" = ["E402"]
 
 [tool.mypy]
 python_version = "3.11"

@@ -16,8 +16,7 @@ from veridian.core.exceptions import (
     SignatureVerificationError,
 )
 from veridian.identity.models import AgentIdentity, CertificateChain, SignedMessage
-from veridian.identity.pki import AgentKeyPair, AgentIdentityRegistry, PKIManager
-
+from veridian.identity.pki import AgentIdentityRegistry, AgentKeyPair, PKIManager
 
 # ── AgentKeyPair ──────────────────────────────────────────────────────────────
 
@@ -234,7 +233,7 @@ class TestPKIManager:
 
     def test_verify_unknown_agent_raises(self) -> None:
         manager, kp, agent_id = self._setup()
-        unknown_kp = AgentKeyPair.generate()
+        AgentKeyPair.generate()
         signed = manager.sign(b"payload", agent_id, kp)
         # Craft a message with an unknown agent_id
         unknown_signed = SignedMessage(
