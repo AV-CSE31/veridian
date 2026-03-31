@@ -1,10 +1,11 @@
-"""veridian.observability — Tracing, dashboard, audit, and compliance tooling."""
+"""veridian.observability — Tracing, dashboard, audit, compliance, and CoT auditing."""
 
 from veridian.observability.compliance_report import (
     ComplianceReport,
     ComplianceReportGenerator,
     ComplianceStandard,
 )
+from veridian.observability.cot_audit import AlignmentViolation, CoTAuditResult, CoTAuditor, ViolationType
 from veridian.observability.dashboard import DASHBOARD_PORT, VeridianDashboard
 from veridian.observability.otlp_exporter import (
     OTLPConfig,
@@ -15,16 +16,20 @@ from veridian.observability.proof_chain import ProofChain, ProofEntry
 from veridian.observability.tracer import TraceEvent, VeridianTracer
 
 __all__ = [
+    "AlignmentViolation",
+    "CoTAuditResult",
+    "CoTAuditor",
     "ComplianceReport",
     "ComplianceReportGenerator",
     "ComplianceStandard",
-    "TraceEvent",
-    "VeridianTracer",
-    "VeridianDashboard",
     "DASHBOARD_PORT",
     "OTLPConfig",
     "ProofChain",
     "ProofEntry",
+    "TraceEvent",
+    "VeridianDashboard",
+    "VeridianTracer",
     "VerificationSpan",
+    "ViolationType",
     "configure_otlp_tracer",
 ]
