@@ -5,6 +5,10 @@ AGENTS.md
 CLAUDE.md
 ONBOARDING.md
 CHANGELOG.md
+ARCHITECTURE.md
+CODEBASE_HEALTH.md
+SESSION_HANDOFF.md 
+CHANGELOG.md
 
 # Secrets / credentials
 .env

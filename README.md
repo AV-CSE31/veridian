@@ -4,12 +4,47 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://github.com/AV-CSE31/veridian/actions/workflows/test.yml/badge.svg)](https://github.com/AV-CSE31/veridian/actions)
+[![Tests](https://img.shields.io/badge/tests-1312_passing-brightgreen.svg)]()
 [![PyPI](https://img.shields.io/pypi/v/veridian-ai.svg)](https://pypi.org/project/veridian-ai/)
+
+> **Every agent framework gives you a loop. Veridian gives you a guarantee.**
+
+Long-running AI agents fail in production not because models are incapable, but because the infrastructure is missing. Veridian is the verification contract between your agent and the real world — ensuring tasks are deterministically verified, states are crash-safe, and behaviors remain aligned.
 
 ---
 
-Every agent framework gives you a loop. Veridian gives you a **guarantee**.
+## The Problem vs. The Veridian Solution
+
+| Vulnerability | What Happens | How Veridian Solves It |
+| :--- | :--- | :--- |
+| **Self-Certification** | Agent says "done" — system blindly believes it | `BaseVerifier` enforces deterministic Python checks. Never trust the LLM. |
+| **Volatile State** | Process crash at step 47/100 = start over | `TaskLedger` uses POSIX-atomic writes. Resume exactly where you left off. |
+| **Context Rot** | Context windows fill silently; agents hallucinate | `ContextCompactor` compresses at 85% capacity, preserves critical context. |
+| **Contradictions** | Task 3: "LOW risk". Task 47: "CRITICAL risk" | `CrossRunConsistencyHook` checks logical claims across all tasks. |
+| **Execution Vulnerability** | Injected instructions execute unchecked | `TrustedExecutor` applies 5-layer ACI injection defense + AST analysis. |
+| **Behavioral Drift** | Pass rates erode from 95% to 80% over weeks | `DriftDetectorHook` uses Bayesian regression to detect behavioral shifts. |
+
+---
+
+## Quick Start
+
+### The 3-Line Function Guard
+
+Wrap any Python function with deterministic verification:
+
+```python
+from veridian import verified
+
+@verified(verifier="schema", config={"required_fields": ["decision", "reasoning"]})
+def classify_content(text: str) -> dict:
+    return {"decision": "ALLOW", "reasoning": "Content meets safety guidelines."}
+
+result = classify_content("Evaluate this input.")  # verified automatically
+```
+
+### The Crash-Safe Task Pipeline
+
+For long-running, multi-step workflows:
 
 ```python
 from veridian import TaskLedger, Task, VeridianRunner, LiteLLMProvider
@@ -17,211 +52,61 @@ from veridian import TaskLedger, Task, VeridianRunner, LiteLLMProvider
 ledger = TaskLedger("ledger.json")
 ledger.add([
     Task(
-        title="Migrate auth.py to Python 3.11",
-        description="Migrate src/auth.py to Python 3.11 syntax. Verify: pytest passes.",
+        title="Migrate Authentication Module",
+        description="Migrate src/auth.py to Python 3.11 syntax. Verify via pytest.",
         verifier_id="bash_exit",
         verifier_config={"command": "pytest tests/test_auth.py -v"},
     )
 ])
 
 summary = VeridianRunner(ledger=ledger, provider=LiteLLMProvider()).run()
-# Kill it at any point. Re-run. It picks up exactly where it left off.
+# Kill this process at any point. Re-run. It picks up exactly where it left off.
 ```
 
 ---
 
-## The Problem
-
-Long-running AI agents fail not because models are incapable, but because infrastructure is missing:
-
-| Failure mode | What happens | Veridian solution |
-|---|---|---|
-| Agents self-certify completion | Agent says "done" — system believes it | `BaseVerifier` — deterministic Python checks, never LLM |
-| State lost on crash | Process kill at step 47/100 = start over | `TaskLedger` — atomic writes via `os.replace()`, auto-recovery |
-| Context windows fill silently | Agents hallucinate as context degrades | `ContextCompactor` — 85% threshold, preserves critical context |
-| Contradictions go undetected | Task 3: risk LOW. Task 47: risk CRITICAL | `CrossRunConsistencyHook` — checks claims across all tasks |
-| Tool output trusted blindly | Injected instructions execute unchecked | `TrustedExecutor` — 5-layer ACI injection defense |
-| Agent behavior drifts silently | Pass rate drops from 95% to 80% over weeks | `DriftDetectorHook` — Bayesian regression detection across runs |
-
----
-
-## Architecture
-
-```
-                        ┌──────────────────────────────────────────┐
-                        │            CLI / Public API               │
-                        │     veridian init · run · status · gc     │
-                        └──────────────────┬───────────────────────┘
-                                           │
-                        ┌──────────────────▼───────────────────────┐
-                        │              Runner Layer                 │
-                        │  VeridianRunner · ParallelRunner (async)  │
-                        │  SIGINT-safe · dry_run · RunSummary       │
-                        └──┬──────────┬──────────┬─────────────────┘
-                           │          │          │
-              ┌────────────▼──┐  ┌────▼─────┐  ┌▼──────────────────┐
-              │    Agents     │  │ Context  │  │  Hooks (middleware) │
-              │               │  │          │  │                    │
-              │ Initializer   │  │ Manager  │  │ CostGuard          │
-              │ Worker        │  │ Compactor│  │ HumanReview        │
-              │ Reviewer      │  │ Window   │  │ RateLimit · Slack  │
-              └──────┬────────┘  └──────────┘  │ CrossRunConsistency│
-                     │                          │ DriftDetector      │
-                     │                          └───────────────────┘
-              ┌──────▼───────────────────────────────────────────────┐
-              │              Verification Layer                       │
-              │                                                      │
-              │  BaseVerifier ABC + VerifierRegistry (entry-points)   │
-              │                                                      │
-              │  bash_exit · schema · quote_match · http_status       │
-              │  file_exists · composite · any_of · semantic_grounding│
-              │  self_consistency · llm_judge (always gated)          │
-              │  tool_safety · memory_integrity (Phase 6b)            │
-              └──────────────────────┬───────────────────────────────┘
-                                     │
-              ┌──────────────────────▼───────────────────────────────┐
-              │                  Task Ledger                          │
-              │                                                      │
-              │  Atomic writes (temp + os.replace) · FileLock         │
-              │  ledger.json · progress.md · reset_in_progress()      │
-              │                                                      │
-              │  PENDING ──▶ IN_PROGRESS ──▶ VERIFYING ──▶ DONE      │
-              │                  │ crash        │                     │
-              │                  ▼ recovery     ▼                     │
-              │               PENDING        FAILED ──▶ ABANDONED     │
-              └──────────────────────┬───────────────────────────────┘
-                                     │
-         ┌───────────────┬───────────┴───────────┬───────────────────┐
-         │               │                       │                   │
-    ┌────▼────┐   ┌──────▼──────┐   ┌────────────▼───┐   ┌──────────▼──┐
-    │Providers│   │  Storage    │   │ Observability  │   │  Entropy    │
-    │         │   │             │   │                │   │             │
-    │ LiteLLM │   │ LocalJSON   │   │ OTel Tracer    │   │ EntropyGC   │
-    │ (circuit│   │ Redis       │   │ JSONL fallback │   │ 9 checks    │
-    │ breaker)│   │ Postgres    │   │ Dashboard:7474 │   │ read-only   │
-    │ Mock    │   └─────────────┘   └────────────────┘   └─────────────┘
-    └─────────┘
-         │
-    ┌────▼────────────────────────────────────────────────────────────┐
-    │                    SkillLibrary                                  │
-    │  Bayesian reliability scoring · 4-gate admission control         │
-    │  Cosine dedup · Post-run extraction · Verified procedure memory  │
-    └─────────────────────────────────────────────────────────────────┘
-
-    ┌─────────────────────────────────────────────────────────────────┐
-    ┌─────────────────────────────────────────────────────────────────┐
-    │               Verifier Integrity Checker                        │
-    │  SHA-256 fingerprint at run start · tamper detection at run end  │
-    └─────────────────────────────────────────────────────────────────┘
-
-    ┌─────────────────────────────────────────────────────────────────┐
-    │                    Security Layer                                │
-    │  TrustedExecutor: 5-layer ACI injection defense                  │
-    │  OutputSanitizer · Provenance tokens · Quarantine logging        │
-    │  IdentityGuard: secret scrubbing on all output surfaces          │
-    └─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Key Features
-
-**Verification** — 12 built-in verifiers (bash exit code, schema validation, quote matching, HTTP status, file existence, semantic grounding, self-consistency, composite AND/OR chains, LLM judge, tool safety, memory integrity). Write custom verifiers by extending `BaseVerifier`. Plugin autodiscovery via entry-points.
-
-**Crash safety** — Atomic ledger with `os.replace()`. Kill the process at any point, re-run, and it resumes exactly where it left off. Zero duplicate work.
-
-**Drift detection** — `DriftDetectorHook` compares verification pass rates, confidence distributions, retry rates, and token usage across runs. Uses Bayesian Beta lower-bound analysis to detect statistically significant behavioral regression before production breaks.
-
-**Context management** — Frozen 6-step prompt assembly. Automatic compaction at 85% token budget. System prompt and last 3 exchanges are never compacted.
-
-**`@verified` decorator** — Wrap any Python function with deterministic verification. No restructuring into `Task` + `VeridianRunner` needed.
-
-**Sprint Contracts** — Pre-execution commitment protocol between agent and evaluator. HMAC-SHA256 signed. Raises `ContractViolation` on breach.
-
-**Adversarial Evaluator** — GAN-inspired structural separation of generator and judge. Independent LLM evaluates output against signed contracts with calibrated rubrics.
-
-**Hooks** — Middleware system for cost tracking, rate limiting, human review gates, Slack notifications, cross-run consistency detection, and drift monitoring. Hook errors are always caught — one broken hook never kills a run.
-
-**SkillLibrary** — Extracts reusable procedures from completed tasks. Bayesian lower-bound reliability scoring. 4-gate admission control (confidence, retry count, step count, cosine dedup).
-
-**Anti-misevolution safety** — `ToolSafetyVerifier` uses AST-based static analysis to block eval/exec, shell injection, and blocked imports in agent-generated code. `MemoryIntegrityVerifier` detects reward hacking, prompt injection, and numeric drift in memory updates. `VerifierIntegrityChecker` SHA-256 fingerprints the verification chain to detect mid-run tampering.
-
-**Security** — `TrustedExecutor` applies 5-layer injection detection to every command output before it reaches agent context. `IdentityGuard` scrubs secrets from all output surfaces.
-
-**Provider agnostic** — Built on LiteLLM with circuit breaker, exponential backoff, and fallback model chains.
-
----
-
-## Install
+## Installation
 
 ```bash
-pip install veridian-ai
-
-# With LLM provider support
-pip install veridian-ai[llm]
+pip install veridian-ai              # Core verification engine
+pip install "veridian-ai[llm]"       # Core + LiteLLM provider
 ```
 
-### Optional extras
+<details>
+<summary><b>Optional enterprise plugins</b></summary>
 
 ```bash
-pip install veridian-ai[dashboard]   # FastAPI SSE dashboard (port 7474)
-pip install veridian-ai[otel]        # OpenTelemetry exporter
-pip install veridian-ai[redis]       # RedisStorage backend
-pip install veridian-ai[postgres]    # PostgresStorage backend
-pip install veridian-ai[all]         # Everything
+pip install "veridian-ai[postgres]"  # PostgresStorage backend
+pip install "veridian-ai[redis]"     # RedisStorage backend
+pip install "veridian-ai[otel]"      # OpenTelemetry exporter
+pip install "veridian-ai[dashboard]" # FastAPI SSE dashboard (port 7474)
+pip install "veridian-ai[all]"       # Full enterprise suite
 ```
 
-### From source
+</details>
+
+<details>
+<summary><b>From source</b></summary>
 
 ```bash
 git clone https://github.com/AV-CSE31/veridian
 cd veridian
 pip install -e ".[dev]"
-pytest -q   # 741 tests
+pytest -q   # 1312 tests
 ```
+
+</details>
 
 ---
 
-## Quick Start
+## Architecture & Capabilities
 
-### Hello World — verify a function in 3 lines
+<details>
+<summary><b>12 Built-in Verifiers</b></summary>
 
-```python
-from veridian import verified
+Write custom verifiers by extending `BaseVerifier`. Plugin autodiscovery via entry-points.
 
-@verified(verifier="schema", config={"required_fields": ["answer"]})
-def classify(text: str) -> dict:
-    return {"answer": "ALLOW", "reasoning": "Content is safe."}
-
-result = classify("hello world")  # passes verification automatically
-```
-
-### Full pipeline — tasks with crash recovery
-
-```python
-from veridian import TaskLedger, Task, VeridianRunner, MockProvider
-
-ledger = TaskLedger("ledger.json")
-ledger.add([
-    Task(
-        title="Classify content",
-        description="Classify this item. Output: decision (ALLOW/FLAG/REMOVE), reasoning.",
-        verifier_id="schema",
-        verifier_config={"required_fields": ["decision", "reasoning"]},
-    )
-])
-
-# Kill this at any point. Re-run. Resumes exactly where it left off.
-runner = VeridianRunner(ledger=ledger, provider=MockProvider())
-summary = runner.run()
-print(f"Done: {summary.done_count}, Failed: {summary.failed_count}")
-```
-
----
-
-## Built-in Verifiers
-
-| ID | Description | Use when |
+| ID | Description | Use Case |
 |----|-------------|----------|
 | `bash_exit` | Run command, pass if exit code 0 | Tests, compilation, scripts |
 | `schema` | Validate structured output fields | Enforce output format |
@@ -236,150 +121,191 @@ print(f"Done: {summary.done_count}, Failed: {summary.failed_count}")
 | `tool_safety` | AST-based static analysis on generated code | Agent code generation |
 | `memory_integrity` | Validates memory updates for bias/tampering | Skill/memory updates |
 
----
+</details>
 
-## Built-in Hooks
+<details>
+<summary><b>12 Built-in Hooks</b></summary>
+
+Priority-ordered middleware pipeline. Hook errors are caught and isolated — a single monitoring failure never kills a production run.
 
 | Hook | Priority | Description |
 |------|----------|-------------|
 | `LoggingHook` | 0 | Structured JSON logging on every lifecycle event |
+| `IdentityGuardHook` | 5 | Proactive secret redaction from all output surfaces |
+| `AdaptiveSafetyHook` | 45 | Trust-based verification scaling (4 levels) |
 | `CostGuardHook` | 50 | Token-to-USD tracking, halts run at cost limit |
 | `HumanReviewHook` | 50 | Pauses run when review criteria are met |
 | `RateLimitHook` | 50 | Sliding window rate limiting with inter-task delay |
 | `SlackNotifyHook` | 50 | Webhook notifications, silent on missing config |
 | `CrossRunConsistencyHook` | 50 | Detects contradictions across tasks in a run |
+| `AnomalyDetectorHook` | 55 | Mid-run token spikes, novel tool usage, output shifts |
+| `EvolutionMonitorHook` | 85 | 6-pathway misevolution detection |
+| `BehavioralFingerprintHook` | 88 | 7-dimensional cosine similarity divergence |
 | `DriftDetectorHook` | 90 | Bayesian behavioral regression detection across runs |
+
+</details>
+
+<details>
+<summary><b>Anti-Misevolution Safety (6 Pathways)</b></summary>
+
+Based on *Misevolution* (NeurIPS 2025) and *Agents of Chaos* (Feb 2026):
+
+| # | Pathway | Detection |
+|---|---------|-----------|
+| 1 | **Model** — safety refusal erosion | Refusal rate tracking vs baseline |
+| 2 | **Memory** — biased experience accumulation | Contradiction rate, reward hacking |
+| 3 | **Tool** — insecure code generation | AST analysis, blocked imports |
+| 4 | **Workflow** — safety node pruning | Verification step completion rate |
+| 5 | **Environment** — shared env corruption | Resource access anomaly index |
+| 6 | **Evaluation** — eval code tampering | SHA-256 verifier fingerprinting |
+
+</details>
+
+<details>
+<summary><b>Evolution Safety & Canary Tasks</b></summary>
+
+**EvolutionGate** — three hard gates for agent self-modification:
+1. Canary regression -> REJECT (non-negotiable)
+2. Safety degradation -> REJECT
+3. Both safe and capable -> APPROVE
+
+**CanarySuite** — held-out tasks the agent never sees during self-improvement. Any regression blocks evolution.
+
+**BehavioralFingerprint** — 7-dimensional signature per run. Cosine similarity below threshold triggers alert.
+
+**CoT Alignment Auditing** — inspects reasoning traces for goal hijacking, sycophancy, alignment mirages, and specification contradictions.
+
+</details>
+
+<details>
+<summary><b>MCP Skill Server + Federated Trust</b></summary>
+
+- Expose verified procedures to Claude Code, Cursor, Windsurf via MCP protocol
+- Skills filtered by Bayesian reliability lower bound
+- Cross-organization skill sharing with independent trust scores
+- Imported skills always go through quarantine
+- Full provenance chain attached to every shared skill
+
+</details>
+
+<details>
+<summary><b>Enterprise & Compliance</b></summary>
+
+- **EU AI Act & NIST RMF:** Cryptographic proof chain with SHA-256 hash-linked entries and optional HMAC signing. Every task traceable to model version and policy attestation.
+- **OWASP Agentic Top 10:** Built-in safeguards for prompt injection, insecure execution, and unverified tool outputs.
+- **OpenTelemetry:** GenAI Semantic Conventions v1.37+ with JSONL fallback. SSE dashboard on port 7474.
+
+</details>
+
+---
+
+## Framework Comparison
+
+| Feature | Veridian | LangGraph | AutoGen | CrewAI |
+|---------|:---:|:---:|:---:|:---:|
+| Crash-safe atomic ledger | **Yes** | — | — | — |
+| Deterministic verification (12 verifiers) | **Yes** | — | — | — |
+| Anti-misevolution safety (6 pathways) | **Yes** | — | — | — |
+| Behavioral drift detection | **Yes** | — | — | — |
+| ACI injection defense (5-layer) | **Yes** | — | — | — |
+| Cryptographic proof chain | **Yes** | — | — | — |
+| MCP skill server | **Yes** | — | — | — |
+| Chain-of-thought alignment audit | **Yes** | — | — | — |
+| Adaptive trust-based safety | **Yes** | — | — | — |
+| Context compaction | **Yes** | Partial | — | — |
+| Bayesian skill memory | **Yes** | — | — | — |
+| Provider agnostic | **Yes** | Yes | Yes | Yes |
 
 ---
 
 ## Module Status
 
 | Package | Status | Description |
-|---------|--------|-------------|
-| `core/` | ✅ | Task, events, exceptions, quality gate, config |
-| `ledger/` | ✅ | Atomic ledger, crash recovery, progress log |
-| `verify/` | ✅ | 12 verifiers + integrity checker + plugin registry |
-| `hooks/` | ✅ | 7 built-in hooks (including drift detection) |
-| `agents/` | ✅ | Initializer, Worker, Reviewer agents |
-| `context/` | ✅ | Frozen 6-step assembly, 85% compaction |
-| `loop/` | ✅ | VeridianRunner, ParallelRunner |
-| `providers/` | ✅ | LiteLLM + MockProvider |
-| `skills/` | ✅ | Bayesian SkillLibrary |
-| `storage/` | ✅ | LocalJSON, Redis, Postgres — `BaseStorage` ABC + 3 backends |
-| `observability/` | ✅ | OTel GenAI v1.37+ tracer, JSONL fallback, FastAPI dashboard :7474 |
-| `contracts/` | ✅ | Sprint contracts + HMAC signing |
-| `eval/` | ✅ | Adversarial evaluator + calibration pipeline |
-| `testing/` | ✅ | Recorder/replayer for deterministic test replay |
-| `entropy/` | ✅ | EntropyGC — 9 read-only consistency checks, atomic report |
-| `cli/` | ✅ | Typer + Rich CLI (init, run, status, gc, reset, retry, skip, report) |
+|---------|:---:|-------------|
+| `core/` | Shipped | Task, events, exceptions, config, quality gates |
+| `ledger/` | Shipped | Atomic ledger, crash recovery, progress log |
+| `verify/` | Shipped | 12 verifiers + integrity checker + plugin registry |
+| `hooks/` | Shipped | 12 hooks (logging through drift detection) |
+| `agents/` | Shipped | Initializer, Worker, Reviewer agents |
+| `context/` | Shipped | Frozen 6-step assembly, 85% compaction |
+| `loop/` | Shipped | VeridianRunner, ParallelRunner |
+| `providers/` | Shipped | LiteLLM (circuit breaker) + MockProvider |
+| `skills/` | Shipped | Bayesian SkillLibrary + quarantine + blast radius |
+| `storage/` | Shipped | LocalJSON, Redis, PostgreSQL |
+| `observability/` | Shipped | OTel tracer, dashboard, proof chain, compliance reports |
+| `contracts/` | Shipped | Sprint contracts + HMAC signing |
+| `eval/` | Shipped | Adversarial evaluator, canary suite, evolution sandbox |
+| `secrets/` | Shipped | SecretsProvider ABC + EnvSecretsProvider |
+| `mcp/` | Shipped | MCP Skill Server + Federated Trust |
+| `protocols/` | Shipped | Safety-aware evolution gate |
+| `cli/` | Shipped | Typer + Rich (init, run, status, gc, reset, retry, skip, report) |
 
 ---
 
 ## Who Is This For?
 
-Veridian is for teams and individuals who are:
-
-- **Deploying AI agents to production** and need guarantees beyond "the model said it's done"
-- **Building compliance, legal, or financial pipelines** where hallucinated output has real consequences
-- **Running long multi-task agent workflows** that need crash recovery and consistency checking
-- **Researching agent reliability** — ARC-AGI, liquid intelligence, autonomous reasoning systems
-- **Building on top of LangChain/LangGraph/AutoGen** but need a verification layer those frameworks don't provide
-
-If you're building agents that make decisions people depend on, Veridian is the verification contract between your agent and the world.
-
----
-
-## Roadmap
-
-### Where we are
-
-| Milestone | Status |
-|-----------|--------|
-| Core verification engine | ✅ Shipped |
-| 12 built-in verifiers + plugin system | ✅ Shipped |
-| Crash-safe atomic ledger | ✅ Shipped |
-| Hook system + drift detection | ✅ Shipped |
-| Bayesian SkillLibrary | ✅ Shipped |
-| Sprint Contracts + Adversarial Eval | ✅ Shipped |
-| `@verified` decorator | ✅ Shipped |
-| Observability + Storage backends | ✅ Shipped |
-| Anti-misevolution safety (Tool Safety, Memory Integrity, Verifier Integrity) | ✅ Shipped |
-| CLI with Typer + Rich | ✅ Shipped |
-| v0.2.0 Tier A quick-wins (config validation, path traversal guard) | ✅ Shipped |
-
-### Where we're heading
-
-**v0.2.0 — Foundation Safety**
-- Evolution safety monitor + behavioral fingerprinting
-- Sandbox isolation + canary tasks
-- Secrets management + identity guard
-
-**v0.3.0 — Inter-Agent Safety**
-- Agent-to-agent handoff verification
-- Skill quarantine + contamination blast radius
-- Adaptive verification thresholds + anomaly detection
-
-**v1.0.0 — Production Release (EU AI Act ready)**
-- Cryptographic audit chain + compliance reports
-- MCP Skill Server (Claude Code, Cursor, Windsurf integration)
-- Federated trust across organizations
-
-**Beyond v1.0**
-- Safety-aware self-evolution
-- Chain-of-thought auditing
-- Research frontier: Impossible Trilemma experiments
-
----
-
-## Comparison
-
-| Feature | Veridian | LangGraph | AutoGen | CrewAI |
-|---------|----------|-----------|---------|--------|
-| Crash-safe atomic ledger | ✅ | — | — | — |
-| Deterministic verification (12 verifiers) | ✅ | — | — | — |
-| Anti-misevolution safety gates | ✅ | — | — | — |
-| Verifier integrity (anti-eval-hacking) | ✅ | — | — | — |
-| Semantic grounding | ✅ | — | — | — |
-| Cross-run consistency | ✅ | — | — | — |
-| Agent drift detection | ✅ | — | — | — |
-| ACI injection defense | ✅ | — | — | — |
-| Context compaction | ✅ | ⚠️ | — | — |
-| Bayesian skill memory | ✅ | — | — | — |
-| Sprint contracts + adversarial eval | ✅ | — | — | — |
-| Provider agnostic | ✅ | ✅ | ✅ | ✅ |
-| Plugin autodiscovery | ✅ | — | — | — |
+- **Teams deploying AI agents to production** who need guarantees beyond "the model said it's done"
+- **Compliance, legal, and financial pipelines** where hallucinated output has real consequences
+- **Long-running multi-task workflows** that need crash recovery and consistency checking
+- **Agent reliability researchers** working on autonomous reasoning systems
+- **Teams building on LangChain/LangGraph/AutoGen** who need a verification layer those frameworks don't provide
 
 ---
 
 ## Contributing
 
-Veridian is in **public beta** and under active development. Contributions are welcome.
+Veridian is in **public beta** under active development. We welcome contributions of all kinds.
 
-### Areas where help is most valuable
+### Areas Where Help Is Most Valuable
 
-- **Domain-specific verifier packages** — legal, compliance, healthcare, data engineering
-- **Storage backends** — MongoDB, DynamoDB, S3
-- **Example pipelines** — real-world use cases for new domains
-- **MCP tool integrations** — connecting verified procedures to development tools
-- **Documentation** — tutorials, guides, API reference
+| Area | Examples |
+|------|---------|
+| **Domain verifiers** | Healthcare, legal, data engineering, compliance |
+| **Storage backends** | MongoDB, DynamoDB, S3 |
+| **Example pipelines** | Real-world use cases for new domains |
+| **MCP integrations** | Connecting verified procedures to dev tools |
+| **Documentation** | Tutorials, guides, API reference |
+| **Research** | Misevolution benchmarks, safety experiments |
 
-### How to contribute
+### How to Contribute
 
 1. Fork the repo and create a feature branch
 2. Write tests first (`tests/unit/test_<module>.py`)
 3. Implement your changes
-4. Ensure all quality gates pass: `ruff check .`, `mypy veridian/ --strict`, `pytest`
+4. Ensure all quality gates pass:
+   ```bash
+   ruff check . && ruff format --check .
+   mypy veridian/ --strict
+   pytest -x --tb=short -q
+   ```
 5. Open a PR with a clear description
 
-### Get in touch
+### Get in Touch
 
-- **Issues**: [github.com/AV-CSE31/veridian/issues](https://github.com/AV-CSE31/veridian/issues)
-- **Discussions**: [github.com/AV-CSE31/veridian/discussions](https://github.com/AV-CSE31/veridian/discussions)
+| Channel | Link |
+|---------|------|
+| Issues | [github.com/AV-CSE31/veridian/issues](https://github.com/AV-CSE31/veridian/issues) |
+| Discussions | [github.com/AV-CSE31/veridian/discussions](https://github.com/AV-CSE31/veridian/discussions) |
+| PyPI | [pypi.org/project/veridian-ai](https://pypi.org/project/veridian-ai/) |
 
-If you're working on agent reliability in production — whether in research, enterprise, or open source — we'd love to collaborate.
+---
+
+## Support the Project
+
+If Veridian is useful to your work:
+
+- **Star the repo** — helps others discover the project
+- **Share your use case** — open a discussion to tell us how you're using it
+- **Report bugs** — detailed issue reports help us improve fastest
+- **Write about it** — blog posts, tweets, and conference talks all help
+- **Contribute code** — even a single test or documentation fix matters
 
 ---
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+<sub>1312 tests | 12 verifiers | 12 hooks | 3 storage backends | 6 misevolution pathways | EU AI Act ready | Python 3.11+ | MIT</sub>
