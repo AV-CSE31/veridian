@@ -13,6 +13,7 @@ All data is deterministic given RANDOM_SEED and written atomically to:
 Usage:
   python examples/fixtures/generate_fixtures.py
 """
+
 from __future__ import annotations
 
 import json
@@ -39,17 +40,37 @@ DOMAINS = {
             "Verify {field} compliance with {regulation}",
         ],
         "doc_types": [
-            "NDA", "MSA", "SOW", "lease", "employment", "vendor", "SLA",
-            "license", "partnership", "acquisition",
+            "NDA",
+            "MSA",
+            "SOW",
+            "lease",
+            "employment",
+            "vendor",
+            "SLA",
+            "license",
+            "partnership",
+            "acquisition",
         ],
         "clause_types": [
-            "indemnification", "limitation_of_liability", "termination",
-            "change_of_control", "non_compete", "confidentiality", "IP_ownership",
-            "force_majeure", "governing_law", "dispute_resolution",
+            "indemnification",
+            "limitation_of_liability",
+            "termination",
+            "change_of_control",
+            "non_compete",
+            "confidentiality",
+            "IP_ownership",
+            "force_majeure",
+            "governing_law",
+            "dispute_resolution",
         ],
         "fields": [
-            "payment_terms", "notice_period", "liability_cap", "renewal_terms",
-            "audit_rights", "data_residency", "SLA_credits",
+            "payment_terms",
+            "notice_period",
+            "liability_cap",
+            "renewal_terms",
+            "audit_rights",
+            "data_residency",
+            "SLA_credits",
         ],
         "regulations": ["GDPR", "CCPA", "SOX", "HIPAA", "PCI-DSS"],
         "parties": ["vendor", "customer", "partner", "employee", "contractor"],
@@ -68,24 +89,50 @@ DOMAINS = {
             "Audit {system} system for {framework} compliance",
         ],
         "controls": [
-            "CC6.1", "CC7.2", "CC8.1", "A1.1", "A1.2", "PI1.1", "C1.1",
-            "CC5.1", "CC5.2", "CC9.1", "CC9.2",
+            "CC6.1",
+            "CC7.2",
+            "CC8.1",
+            "A1.1",
+            "A1.2",
+            "PI1.1",
+            "C1.1",
+            "CC5.1",
+            "CC5.2",
+            "CC9.1",
+            "CC9.2",
         ],
         "frameworks": ["SOC2", "ISO27001", "NIST-CSF", "PCI-DSS", "HIPAA"],
         "domain_areas": [
-            "access_control", "encryption", "audit_logging", "incident_response",
-            "change_management", "vendor_management", "data_classification",
+            "access_control",
+            "encryption",
+            "audit_logging",
+            "incident_response",
+            "change_management",
+            "vendor_management",
+            "data_classification",
         ],
         "evidence_types": [
-            "policy_document", "system_screenshot", "log_export", "interview_notes",
+            "policy_document",
+            "system_screenshot",
+            "log_export",
+            "interview_notes",
             "configuration_file",
         ],
         "processes": [
-            "onboarding", "offboarding", "patch_management", "backup_restore",
-            "pen_testing", "code_review",
+            "onboarding",
+            "offboarding",
+            "patch_management",
+            "backup_restore",
+            "pen_testing",
+            "code_review",
         ],
         "systems": [
-            "AWS_IAM", "GitHub", "Slack", "Okta", "PagerDuty", "Datadog",
+            "AWS_IAM",
+            "GitHub",
+            "Slack",
+            "Okta",
+            "PagerDuty",
+            "Datadog",
         ],
         "statuses": ["compliant", "partial", "gap", "not_applicable"],
         "output_schema": {
@@ -102,26 +149,47 @@ DOMAINS = {
             "Optimize {operation} performance in {module}",
         ],
         "modules": [
-            "auth", "payments", "notifications", "search", "storage",
-            "cache", "queue", "scheduler", "api_gateway", "data_pipeline",
+            "auth",
+            "payments",
+            "notifications",
+            "search",
+            "storage",
+            "cache",
+            "queue",
+            "scheduler",
+            "api_gateway",
+            "data_pipeline",
         ],
         "old_versions": ["Python 2.7", "Python 3.8", "Django 3.x", "Flask 1.x"],
         "new_versions": ["Python 3.11", "Python 3.12", "Django 5.x", "Flask 3.x"],
         "patterns": [
-            "callback_chains", "global_state", "sync_blocking_calls",
-            "raw_SQL_queries", "hardcoded_secrets",
+            "callback_chains",
+            "global_state",
+            "sync_blocking_calls",
+            "raw_SQL_queries",
+            "hardcoded_secrets",
         ],
         "new_patterns": [
-            "async/await", "dependency_injection", "ORM_queries",
-            "env_secrets", "event_driven",
+            "async/await",
+            "dependency_injection",
+            "ORM_queries",
+            "env_secrets",
+            "event_driven",
         ],
         "test_types": ["unit", "integration", "e2e", "property-based"],
         "issue_types": [
-            "memory_leak", "race_condition", "SQL_injection", "XSS",
-            "n+1_query", "deadlock",
+            "memory_leak",
+            "race_condition",
+            "SQL_injection",
+            "XSS",
+            "n+1_query",
+            "deadlock",
         ],
         "operations": [
-            "database_query", "file_IO", "JSON_serialization", "HTTP_requests",
+            "database_query",
+            "file_IO",
+            "JSON_serialization",
+            "HTTP_requests",
         ],
         "output_schema": {
             "required": ["status", "test_command", "exit_code"],
@@ -205,7 +273,9 @@ def generate_skill(
 
     # Confidence and quality signals
     base_confidence = rng.uniform(0.55, 0.98)
-    quality_tier = "high" if base_confidence > 0.80 else "medium" if base_confidence > 0.65 else "low"
+    quality_tier = (
+        "high" if base_confidence > 0.80 else "medium" if base_confidence > 0.65 else "low"
+    )
 
     schema = cfg.get("output_schema", {"required": [], "optional": []})
 
@@ -215,7 +285,9 @@ def generate_skill(
     structured: dict = {}
     if domain == "legal":
         risk = rng.choice(cfg.get("risk_levels", ["LOW"]))
-        decision = "ALLOW" if risk in ("LOW", "MEDIUM") else rng.choice(["ALLOW", "ESCALATE", "FLAG"])
+        decision = (
+            "ALLOW" if risk in ("LOW", "MEDIUM") else rng.choice(["ALLOW", "ESCALATE", "FLAG"])
+        )
         structured = {
             "clause_type": kwargs.get("clause_type", "standard"),
             "risk_level": risk,
@@ -277,16 +349,30 @@ def generate_query(
         template = rng.choice(cfg["skill_templates"])
         kwargs: dict = {}
         for placeholder in [
-            "doc_type", "clause_type", "field", "regulation", "contract_party",
-            "control", "framework", "control_id", "domain_area", "evidence_type",
-            "process", "system", "module", "old_version", "new_version",
-            "pattern", "new_pattern", "test_type", "issue_type", "operation",
+            "doc_type",
+            "clause_type",
+            "field",
+            "regulation",
+            "contract_party",
+            "control",
+            "framework",
+            "control_id",
+            "domain_area",
+            "evidence_type",
+            "process",
+            "system",
+            "module",
+            "old_version",
+            "new_version",
+            "pattern",
+            "new_pattern",
+            "test_type",
+            "issue_type",
+            "operation",
         ]:
             if f"{{{placeholder}}}" in template:
                 choices_key = placeholder + "s"
-                kwargs[placeholder] = rng.choice(
-                    cfg.get(choices_key, [placeholder])
-                )
+                kwargs[placeholder] = rng.choice(cfg.get(choices_key, [placeholder]))
         query_text = template.format(**kwargs)
         expected_domain = domain
         is_ambiguous = False
@@ -349,7 +435,7 @@ def generate_all(seed: int = RANDOM_SEED) -> tuple[list[dict], list[dict]]:
         # Make last domain absorb rounding remainder
         if domain_name == domain_names[-1]:
             count = 500 - len(skills)
-        for i in range(count):
+        for _j in range(count):
             skills.append(generate_skill(idx, domain_name, cfg, rng))
             idx += 1
 
@@ -381,7 +467,9 @@ def main() -> None:
     n_ood = sum(1 for q in queries if q["distribution"] == "ood")
 
     print(f"  Skills : {len(skills):,} across {n_domains} domains")
-    print(f"    Planted hallucinations : {n_hallucinations} ({n_hallucinations/len(skills)*100:.1f}%)")
+    print(
+        f"    Planted hallucinations : {n_hallucinations} ({n_hallucinations / len(skills) * 100:.1f}%)"
+    )
     print(f"  Queries: {len(queries)} ({n_in_dist} in-dist, {n_ood} OOD)")
     print(f"  Written: {skills_path}")
     print(f"  Written: {queries_path}")

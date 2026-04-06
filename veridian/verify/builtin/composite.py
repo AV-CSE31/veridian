@@ -18,6 +18,7 @@ Usage:
         ]
     }
 """
+
 from __future__ import annotations
 
 from typing import Any, ClassVar
@@ -38,6 +39,7 @@ def _resolve_verifiers(items: list[Any]) -> list[BaseVerifier]:
             resolved.append(item)
         elif isinstance(item, dict):
             from veridian.verify.base import registry  # noqa: PLC0415
+
             verifier_id: str = item["id"]
             config: dict[str, Any] | None = item.get("config")
             resolved.append(registry.get(verifier_id, config))

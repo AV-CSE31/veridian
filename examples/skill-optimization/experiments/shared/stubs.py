@@ -16,15 +16,15 @@ Components stubbed here:
   - HookRegistry         (Phase 3) — fire/register, errors always caught
   - EntropyGC            (Phase 6) — entropy/staleness detector (read-only)
 """
+
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, ClassVar, Optional
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from typing import Any, ClassVar
 
 from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.core.exceptions import VeridianError
 from veridian.verify.base import BaseVerifier, VerificationResult
 
 log = logging.getLogger(__name__)
@@ -46,9 +46,9 @@ class SchemaVerifier(BaseVerifier):
 
     def __init__(
         self,
-        required_fields: Optional[list[str]] = None,
-        field_types: Optional[dict[str, type]] = None,
-        allowed_values: Optional[dict[str, list]] = None,
+        required_fields: list[str] | None = None,
+        field_types: dict[str, type] | None = None,
+        allowed_values: dict[str, list] | None = None,
         **_: Any,
     ) -> None:
         self.required_fields = required_fields or []
@@ -63,7 +63,7 @@ class SchemaVerifier(BaseVerifier):
             return VerificationResult(
                 passed=False,
                 error=f"[schema] Missing required fields: {missing}. "
-                      f"Add them to the structured output.",
+                f"Add them to the structured output.",
             )
 
         for fld, expected_type in self.field_types.items():
@@ -71,7 +71,7 @@ class SchemaVerifier(BaseVerifier):
                 return VerificationResult(
                     passed=False,
                     error=f"[schema] Field '{fld}' must be {expected_type.__name__} "
-                          f"(got {type(s[fld]).__name__}). Fix the field type.",
+                    f"(got {type(s[fld]).__name__}). Fix the field type.",
                 )
 
         for fld, allowed in self.allowed_values.items():
@@ -79,7 +79,7 @@ class SchemaVerifier(BaseVerifier):
                 return VerificationResult(
                     passed=False,
                     error=f"[schema] Field '{fld}' must be one of {allowed} "
-                          f"(got '{s[fld]}'). Fix the value.",
+                    f"(got '{s[fld]}'). Fix the value.",
                 )
 
         return VerificationResult(passed=True, evidence={"schema": "all fields present"})
@@ -93,7 +93,7 @@ class BashExitCodeVerifier(BaseVerifier):
         "Verifies that bash commands completed with exit code 0. (Phase 2 stub)"
     )
 
-    def __init__(self, command: Optional[str] = None, **_: Any) -> None:
+    def __init__(self, command: str | None = None, **_: Any) -> None:
         self.command = command
 
     def verify(self, task: Task, result: TaskResult) -> VerificationResult:
@@ -101,7 +101,7 @@ class BashExitCodeVerifier(BaseVerifier):
             return VerificationResult(
                 passed=False,
                 error="[bash_exit] No bash commands were executed. "
-                      "Run at least one command to verify.",
+                "Run at least one command to verify.",
             )
         # Check the last command (or the specific one if configured)
         last = result.bash_outputs[-1]
@@ -109,7 +109,7 @@ class BashExitCodeVerifier(BaseVerifier):
             return VerificationResult(
                 passed=False,
                 error=f"[bash_exit] Command exited with code {last['exit_code']}. "
-                      f"stderr: {last.get('stderr', '')[:100]}",
+                f"stderr: {last.get('stderr', '')[:100]}",
             )
         return VerificationResult(passed=True, evidence={"exit_code": 0})
 
@@ -118,13 +118,11 @@ class CompositeVerifier(BaseVerifier):
     """Stub: AND-chain of verifiers. All must pass."""
 
     id: ClassVar[str] = "composite"
-    description: ClassVar[str] = (
-        "Runs sub-verifiers in order; all must pass. (Phase 2 stub)"
-    )
+    description: ClassVar[str] = "Runs sub-verifiers in order; all must pass. (Phase 2 stub)"
 
     def __init__(
         self,
-        verifiers: Optional[list[BaseVerifier]] = None,
+        verifiers: list[BaseVerifier] | None = None,
         **_: Any,
     ) -> None:
         self.verifiers: list[BaseVerifier] = verifiers or []
@@ -132,6 +130,7 @@ class CompositeVerifier(BaseVerifier):
         ids = [v.id for v in self.verifiers]
         if ids == ["llm_judge"]:
             from veridian.core.exceptions import VeridianError
+
             raise VeridianError(
                 "LLMJudgeVerifier cannot run standalone. "
                 "Wrap it with at least one deterministic verifier."
@@ -142,9 +141,7 @@ class CompositeVerifier(BaseVerifier):
             vr = verifier.verify(task, result)
             if not vr.passed:
                 n = len(self.verifiers)
-                prefixed = (
-                    f"[Step {i}/{n}] {verifier.id}: {vr.error or 'failed'}"
-                )[:300]
+                prefixed = (f"[Step {i}/{n}] {verifier.id}: {vr.error or 'failed'}")[:300]
                 return VerificationResult(
                     passed=False,
                     error=prefixed,
@@ -167,7 +164,7 @@ class AnyOfVerifier(BaseVerifier):
 
     def __init__(
         self,
-        verifiers: Optional[list[BaseVerifier]] = None,
+        verifiers: list[BaseVerifier] | None = None,
         **_: Any,
     ) -> None:
         self.verifiers: list[BaseVerifier] = verifiers or []
@@ -201,7 +198,7 @@ class LLMJudgeVerifier(BaseVerifier):
 
     def __init__(
         self,
-        criteria: Optional[list[str]] = None,
+        criteria: list[str] | None = None,
         passing_score: float = 0.7,
         model: str = "gemini/gemini-2.0-flash",
         **_: Any,
@@ -306,6 +303,7 @@ class HookRegistry:
 @dataclass
 class EntropyIssue:
     """Represents a single entropy issue detected by EntropyGC."""
+
     type: str
     task_id: str
     detail: str
@@ -345,20 +343,22 @@ class EntropyGC:
 
     def check_stale_in_progress(self) -> list[EntropyIssue]:
         """Return IN_PROGRESS tasks stuck longer than stale_threshold."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
         issues = []
         for task in self.ledger.list(status=TaskStatus.IN_PROGRESS):
             age = now - task.updated_at
             if age > self.stale_threshold:
-                issues.append(EntropyIssue(
-                    type="stale_in_progress",
-                    task_id=task.id,
-                    detail=(
-                        f"Task IN_PROGRESS for {int(age.total_seconds() / 60)} min "
-                        f"(threshold: {int(self.stale_threshold.total_seconds() / 60)} min)"
-                    ),
-                    severity="warning",
-                ))
+                issues.append(
+                    EntropyIssue(
+                        type="stale_in_progress",
+                        task_id=task.id,
+                        detail=(
+                            f"Task IN_PROGRESS for {int(age.total_seconds() / 60)} min "
+                            f"(threshold: {int(self.stale_threshold.total_seconds() / 60)} min)"
+                        ),
+                        severity="warning",
+                    )
+                )
         return issues
 
     def check_excessive_retries(self) -> list[EntropyIssue]:
@@ -366,16 +366,19 @@ class EntropyGC:
         issues = []
         for task in self.ledger.list():
             if task.retry_count >= self.max_retries_threshold:
-                issues.append(EntropyIssue(
-                    type="excessive_retries",
-                    task_id=task.id,
-                    detail=(
-                        f"retry_count={task.retry_count} >= "
-                        f"threshold={self.max_retries_threshold}"
-                    ),
-                    severity="critical" if task.retry_count >= self.max_retries_threshold * 2
-                    else "warning",
-                ))
+                issues.append(
+                    EntropyIssue(
+                        type="excessive_retries",
+                        task_id=task.id,
+                        detail=(
+                            f"retry_count={task.retry_count} >= "
+                            f"threshold={self.max_retries_threshold}"
+                        ),
+                        severity="critical"
+                        if task.retry_count >= self.max_retries_threshold * 2
+                        else "warning",
+                    )
+                )
         return issues
 
     def check_abandoned_dependency_chains(self) -> list[EntropyIssue]:
@@ -388,15 +391,16 @@ class EntropyGC:
             for dep_id in task.depends_on:
                 dep = all_tasks.get(dep_id)
                 if dep and dep.status == TaskStatus.ABANDONED:
-                    issues.append(EntropyIssue(
-                        type="abandoned_dependency_chain",
-                        task_id=task.id,
-                        detail=(
-                            f"Depends on abandoned task '{dep_id}'. "
-                            "This task can never run."
-                        ),
-                        severity="critical",
-                    ))
+                    issues.append(
+                        EntropyIssue(
+                            type="abandoned_dependency_chain",
+                            task_id=task.id,
+                            detail=(
+                                f"Depends on abandoned task '{dep_id}'. This task can never run."
+                            ),
+                            severity="critical",
+                        )
+                    )
                     break
         return issues
 
@@ -407,15 +411,17 @@ class EntropyGC:
         for task in self.ledger.list():
             for dep_id in task.depends_on:
                 if dep_id not in all_ids:
-                    issues.append(EntropyIssue(
-                        type="orphaned_dependency",
-                        task_id=task.id,
-                        detail=f"depends_on references non-existent task '{dep_id}'",
-                        severity="warning",
-                    ))
+                    issues.append(
+                        EntropyIssue(
+                            type="orphaned_dependency",
+                            task_id=task.id,
+                            detail=f"depends_on references non-existent task '{dep_id}'",
+                            severity="warning",
+                        )
+                    )
         return issues
 
-    def run(self, report_path: Optional[str] = None) -> list[EntropyIssue]:
+    def run(self, report_path: str | None = None) -> list[EntropyIssue]:
         """Run all checks. Optionally write a markdown report. NEVER mutates ledger."""
         all_issues = (
             self.check_stale_in_progress()
@@ -437,7 +443,7 @@ class EntropyGC:
 
         lines = [
             "# Entropy Report\n",
-            f"Generated: {datetime.utcnow().isoformat()}Z\n",
+            f"Generated: {datetime.now(tz=UTC).isoformat()}Z\n",
             f"Total issues: {len(issues)}\n\n",
         ]
         by_type: dict[str, list[EntropyIssue]] = {}

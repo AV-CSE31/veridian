@@ -3,27 +3,29 @@ tests.unit.test_agents
 ───────────────────────
 Unit tests for BaseAgent, WorkerAgent, InitializerAgent, ReviewerAgent.
 """
+
 import json
+
 import pytest
 
 from veridian.agents.base import BaseAgent
 from veridian.agents.worker import WorkerAgent
 from veridian.core.config import VeridianConfig
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.providers.mock_provider import MockProvider
+from veridian.core.task import Task, TaskResult
 from veridian.providers.base import LLMResponse
-
+from veridian.providers.mock_provider import MockProvider
 
 # ── BaseAgent ─────────────────────────────────────────────────────────────────
 
-class TestBaseAgent:
 
+class TestBaseAgent:
     def test_base_agent_has_id_classvar(self):
         """BaseAgent must declare id as ClassVar."""
         assert hasattr(BaseAgent, "id")
 
     def test_concrete_agent_must_implement_run(self):
         """Concrete agents that don't implement run() raise TypeError."""
+
         class BadAgent(BaseAgent):
             id = "bad"
 
@@ -33,8 +35,8 @@ class TestBaseAgent:
 
 # ── WorkerAgent ───────────────────────────────────────────────────────────────
 
-class TestWorkerAgent:
 
+class TestWorkerAgent:
     @pytest.fixture
     def config(self) -> VeridianConfig:
         return VeridianConfig(max_turns_per_task=5)
@@ -55,9 +57,11 @@ class TestWorkerAgent:
     def test_extracts_result_from_veridian_block(self, config, mock_provider, task):
         """WorkerAgent extracts structured output from <veridian:result> block."""
         payload = json.dumps({"summary": "done", "structured": {"answer": "42"}})
-        mock_provider.script([
-            LLMResponse(content=f"<veridian:result>\n{payload}\n</veridian:result>"),
-        ])
+        mock_provider.script(
+            [
+                LLMResponse(content=f"<veridian:result>\n{payload}\n</veridian:result>"),
+            ]
+        )
         agent = WorkerAgent(provider=mock_provider, config=config)
         result = agent.run(task)
         assert result.structured.get("answer") == "42"
@@ -65,21 +69,45 @@ class TestWorkerAgent:
     def test_result_has_raw_output(self, config, mock_provider, task):
         """WorkerAgent result contains the raw LLM output."""
         payload = json.dumps({"summary": "ok", "structured": {}})
-        mock_provider.script([
-            LLMResponse(content=f"<veridian:result>\n{payload}\n</veridian:result>"),
-        ])
+        mock_provider.script(
+            [
+                LLMResponse(content=f"<veridian:result>\n{payload}\n</veridian:result>"),
+            ]
+        )
         agent = WorkerAgent(provider=mock_provider, config=config)
         result = agent.run(task)
         assert "veridian:result" in result.raw_output
+
+    def test_worker_captures_tool_calls_and_timing(self, config, mock_provider, task):
+        payload = json.dumps({"summary": "ok", "structured": {"x": 1}})
+        mock_provider.script(
+            [
+                LLMResponse(
+                    content=f"<veridian:result>\n{payload}\n</veridian:result>",
+                    input_tokens=12,
+                    output_tokens=7,
+                    tool_calls=[{"name": "shell"}],
+                ),
+            ]
+        )
+        agent = WorkerAgent(provider=mock_provider, config=config)
+        result = agent.run(task)
+        assert result.tool_calls == [{"name": "shell"}]
+        assert result.token_usage["total_tokens"] == 19
+        assert "worker_ms" in result.timing
+        assert len(result.trace_steps) >= 1
+        assert result.trace_steps[0].action_type == "reason"
 
     def test_exits_on_max_turns_without_result(self, config, mock_provider, task):
         """WorkerAgent returns a result (possibly empty structured) after max_turns."""
         config.max_turns_per_task = 2
         # Provide responses that have no result block — agent will exhaust turns
-        mock_provider.script([
-            LLMResponse(content="Thinking..."),
-            LLMResponse(content="Still thinking..."),
-        ])
+        mock_provider.script(
+            [
+                LLMResponse(content="Thinking..."),
+                LLMResponse(content="Still thinking..."),
+            ]
+        )
         agent = WorkerAgent(provider=mock_provider, config=config)
         result = agent.run(task)
         assert isinstance(result, TaskResult)
@@ -88,18 +116,21 @@ class TestWorkerAgent:
         """When no result or bash commands detected, agent appends prompt nudge."""
         config.max_turns_per_task = 3
         payload = json.dumps({"summary": "done", "structured": {}})
-        mock_provider.script([
-            LLMResponse(content="I'm done"),  # no result block
-            LLMResponse(content=f"<veridian:result>\n{payload}\n</veridian:result>"),
-        ])
+        mock_provider.script(
+            [
+                LLMResponse(content="I'm done"),  # no result block
+                LLMResponse(content=f"<veridian:result>\n{payload}\n</veridian:result>"),
+            ]
+        )
         agent = WorkerAgent(provider=mock_provider, config=config)
-        result = agent.run(task)
+        agent.run(task)
         # Should have made 2 calls
         assert mock_provider.call_count == 2
 
     def test_result_regex_matches_veridian_block(self):
         """The result regex matches a valid veridian:result block."""
         from veridian.agents.worker import _RESULT_RE
+
         content = '<veridian:result>\n{"summary": "ok", "structured": {}}\n</veridian:result>'
         match = _RESULT_RE.search(content)
         assert match is not None
@@ -109,6 +140,7 @@ class TestWorkerAgent:
     def test_result_regex_does_not_match_partial(self):
         """The result regex does not match incomplete blocks."""
         from veridian.agents.worker import _RESULT_RE
+
         content = '<veridian:result>{"summary": "ok"}'  # no closing tag
         match = _RESULT_RE.search(content)
         assert match is None
@@ -119,14 +151,16 @@ class TestWorkerAgent:
 
 # ── InitializerAgent ──────────────────────────────────────────────────────────
 
-class TestInitializerAgent:
 
+class TestInitializerAgent:
     def test_initializer_agent_id(self):
         from veridian.agents.initializer import InitializerAgent
+
         assert InitializerAgent.id == "initializer"
 
     def test_initializer_run_returns_task(self):
         from veridian.agents.initializer import InitializerAgent
+
         mock = MockProvider()
         config = VeridianConfig()
         agent = InitializerAgent(provider=mock, config=config)
@@ -137,14 +171,16 @@ class TestInitializerAgent:
 
 # ── ReviewerAgent ─────────────────────────────────────────────────────────────
 
-class TestReviewerAgent:
 
+class TestReviewerAgent:
     def test_reviewer_agent_id(self):
         from veridian.agents.reviewer import ReviewerAgent
+
         assert ReviewerAgent.id == "reviewer"
 
     def test_reviewer_run_returns_task_result(self):
         from veridian.agents.reviewer import ReviewerAgent
+
         mock = MockProvider()
         config = VeridianConfig()
         agent = ReviewerAgent(provider=mock, config=config)

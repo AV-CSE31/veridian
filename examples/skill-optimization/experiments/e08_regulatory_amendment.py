@@ -17,6 +17,7 @@ Method:
 
 No LLM calls -- EntropyGC is deterministic.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,18 +25,17 @@ import os
 import random
 import sys
 import tempfile
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task, TaskStatus
-from veridian.ledger.ledger import TaskLedger
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
-from examples.experiments.shared.metrics import recall_score, print_result
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
+from examples.experiments.shared.metrics import print_result, recall_score
 from examples.experiments.shared.stubs import EntropyGC
 
+from veridian.core.task import Task
+from veridian.ledger.ledger import TaskLedger
 
 FRAMEWORKS = ["SOC2", "ISO27001", "NIST-CSF"]
 CONTROLS = [f"CC{i}.{j}" for i in range(1, 10) for j in range(1, 4)]
@@ -53,7 +53,7 @@ def _force_stale_timestamps(
 ) -> None:
     """Directly modify ledger JSON to set status=in_progress and updated_at to the past."""
     data = json.loads(ledger_path.read_text(encoding="utf-8"))
-    old_time = (datetime.utcnow() - timedelta(minutes=minutes_ago)).isoformat()
+    old_time = (datetime.now(tz=UTC) - timedelta(minutes=minutes_ago)).isoformat()
     for tid in task_ids:
         if tid in data["tasks"]:
             data["tasks"][tid]["status"] = "in_progress"
@@ -120,8 +120,7 @@ def run() -> ExperimentResult:
                 id=f"reg_task_{i:03d}",
                 title=f"{fw} {ctrl} assessment",
                 description=(
-                    f"Assess {fw} control {ctrl}. "
-                    f"Verify: output status and evidence_source fields."
+                    f"Assess {fw} control {ctrl}. Verify: output status and evidence_source fields."
                 ),
                 verifier_id="schema",
                 verifier_config={"required_fields": ["status"]},
@@ -152,7 +151,8 @@ def run() -> ExperimentResult:
         # Force in_progress + old timestamps via direct JSON edit (avoids ledger
         # state machine, which has a ClassVar/Enum metaclass issue under PEP 563)
         _force_stale_timestamps(
-            ledger_path, stale_ids,
+            ledger_path,
+            stale_ids,
             minutes_ago=STALE_THRESHOLD_MINUTES + 30,
         )
 

@@ -2,15 +2,13 @@
 Tests for SkillLibrary: Bayesian reliability, atomic persistence, extraction, integration.
 Run: pytest tests/unit/test_skill_library.py -x -q --timeout=30
 """
+
 from __future__ import annotations
 
 import hashlib
 import json
-import os
-import tempfile
 import uuid
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -22,7 +20,6 @@ from veridian.skills.extractor import SkillExtractor
 from veridian.skills.library import SkillLibrary
 from veridian.skills.models import Skill, SkillCandidate, SkillStep
 from veridian.skills.store import SkillStore
-
 
 # ── Test helpers ───────────────────────────────────────────────────────────────
 
@@ -297,9 +294,7 @@ class TestSkillAdmissionControl:
         assert not admitted
         assert "retr" in reason.lower()
 
-    def test_admits_novel_high_confidence_candidate(
-        self, admission: SkillAdmissionControl
-    ) -> None:
+    def test_admits_novel_high_confidence_candidate(self, admission: SkillAdmissionControl) -> None:
         """Novel candidate with confidence >= 0.70 is admitted."""
         candidate = _make_candidate(confidence=0.85)
         admitted, reason = admission.admit(candidate)
@@ -339,13 +334,10 @@ class TestSkillExtractor:
     def extractor(self, provider: MockProvider) -> SkillExtractor:
         return SkillExtractor(provider=provider)
 
-    def test_extract_skips_failed_tasks(
-        self, extractor: SkillExtractor, tmp_path: Path
-    ) -> None:
+    def test_extract_skips_failed_tasks(self, extractor: SkillExtractor, tmp_path: Path) -> None:
         """extract() does not create candidates for FAILED tasks."""
         ledger = TaskLedger(path=tmp_path / "ledger.json")
-        t = Task(id="t1", title="Failed task", verifier_id="bash_exit",
-                 status=TaskStatus.FAILED)
+        t = Task(id="t1", title="Failed task", verifier_id="bash_exit", status=TaskStatus.FAILED)
         ledger.add([t])
         candidates = extractor.extract(ledger, run_id="run_001")
         assert all(c.task_id != "t1" for c in candidates)
@@ -355,15 +347,17 @@ class TestSkillExtractor:
     ) -> None:
         """extract() does not create candidates for IN_PROGRESS tasks."""
         ledger = TaskLedger(path=tmp_path / "ledger.json")
-        t = Task(id="t1", title="In-progress task", verifier_id="bash_exit",
-                 status=TaskStatus.IN_PROGRESS)
+        t = Task(
+            id="t1",
+            title="In-progress task",
+            verifier_id="bash_exit",
+            status=TaskStatus.IN_PROGRESS,
+        )
         ledger.add([t])
         candidates = extractor.extract(ledger, run_id="run_001")
         assert all(c.task_id != "t1" for c in candidates)
 
-    def test_extract_skips_high_retry_tasks(
-        self, provider: MockProvider, tmp_path: Path
-    ) -> None:
+    def test_extract_skips_high_retry_tasks(self, provider: MockProvider, tmp_path: Path) -> None:
         """extract() skips tasks with retry_count > max_retries_for_skill."""
         extractor = SkillExtractor(provider=provider, max_retries_for_skill=1)
         ledger = TaskLedger(path=tmp_path / "ledger.json")
@@ -394,18 +388,14 @@ class TestSkillLibrary:
             embed_fn=_hash_embed,
         )
 
-    def test_post_run_empty_when_no_done_tasks(
-        self, library: SkillLibrary, tmp_path: Path
-    ) -> None:
+    def test_post_run_empty_when_no_done_tasks(self, library: SkillLibrary, tmp_path: Path) -> None:
         """post_run() returns [] when ledger has no qualifying DONE tasks."""
         ledger = TaskLedger(path=tmp_path / "ledger.json")
         ledger.add([Task(id="t1", title="Pending task", verifier_id="bash_exit")])
         skill_ids = library.post_run(ledger, run_id="run_001")
         assert skill_ids == []
 
-    def test_record_outcome_success_increments_alpha(
-        self, library: SkillLibrary
-    ) -> None:
+    def test_record_outcome_success_increments_alpha(self, library: SkillLibrary) -> None:
         """record_outcome(success=True) increments alpha via the store."""
         skill = _make_skill()
         library._store.save(skill)
@@ -415,9 +405,7 @@ class TestSkillLibrary:
         assert updated.alpha == pytest.approx(2.0)
         assert updated.beta_ == pytest.approx(1.0)
 
-    def test_record_outcome_failure_increments_beta(
-        self, library: SkillLibrary
-    ) -> None:
+    def test_record_outcome_failure_increments_beta(self, library: SkillLibrary) -> None:
         """record_outcome(success=False) increments beta_, not alpha."""
         skill = _make_skill()
         library._store.save(skill)

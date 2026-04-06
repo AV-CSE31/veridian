@@ -4,24 +4,24 @@ Statistical metrics used across all experiments.
 All metrics operate on plain Python lists/floats -- no numpy required.
 numpy is used only when available for AUROC (degrades gracefully otherwise).
 """
+
 from __future__ import annotations
 
+import contextlib
 import math
 import statistics
 import sys
 
 # Force UTF-8 on Windows so hypothesis strings with >= symbols print correctly
 if hasattr(sys.stdout, "reconfigure"):
-    try:
+    with contextlib.suppress(Exception):
         sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
-from typing import Sequence
+from collections.abc import Sequence
 
 from examples.experiments.shared.config import ExperimentResult
 
-
 # ── Core metrics ──────────────────────────────────────────────────────────────
+
 
 def improvement_pct(baseline: float, improved: float) -> float:
     """Percentage improvement from baseline to improved.
@@ -198,6 +198,7 @@ def is_statistically_significant(
 
 # ── Reporting ─────────────────────────────────────────────────────────────────
 
+
 def print_result(result: ExperimentResult) -> None:
     """Print a formatted experiment result to stdout."""
     status = "[PASS]" if result.passed else "[FAIL]"
@@ -205,8 +206,10 @@ def print_result(result: ExperimentResult) -> None:
     print(f"\n{bar}")
     print(f"  {result.experiment_id}  |  {status}")
     print(f"  {result.hypothesis}")
-    print(f"  {result.primary_metric}: {result.primary_value:.4f}  "
-          f"(threshold: {result.threshold:.4f})")
+    print(
+        f"  {result.primary_metric}: {result.primary_value:.4f}  "
+        f"(threshold: {result.threshold:.4f})"
+    )
     if result.secondary_metrics:
         for k, v in result.secondary_metrics.items():
             val_str = f"{v:.4f}" if isinstance(v, float) else str(v)

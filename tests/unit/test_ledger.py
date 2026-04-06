@@ -4,15 +4,19 @@ tests.unit.test_ledger
 Unit tests for TaskLedger — state machine, atomic writes, crash recovery.
 All tests use tmp_path (pytest fixture) so no disk residue.
 """
-import pytest
+
+import json
+import os
 from pathlib import Path
 
-from veridian.core.exceptions import InvalidTransition, TaskNotFound, TaskAlreadyClaimed
-from veridian.core.task import Task, TaskResult, TaskStatus, TaskPriority
+import pytest
+
+from veridian.core.exceptions import InvalidTransition, TaskAlreadyClaimed, TaskNotFound
+from veridian.core.task import Task, TaskPriority, TaskResult, TaskStatus
 from veridian.ledger.ledger import TaskLedger
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def ledger(tmp_path: Path) -> TaskLedger:
@@ -27,8 +31,8 @@ def make_task(**kwargs) -> Task:
 
 # ── Basic CRUD ────────────────────────────────────────────────────────────────
 
-class TestLedgerBasic:
 
+class TestLedgerBasic:
     def test_add_and_get(self, ledger):
         t = make_task(title="hello")
         count = ledger.add([t])
@@ -77,11 +81,24 @@ class TestLedgerBasic:
         result = ledger.list(phase="phase_a")
         assert len(result) == 1
 
+    def test_reads_legacy_task_list_shape(self, tmp_path: Path):
+        legacy_task = make_task(title="legacy task")
+        ledger_file = tmp_path / "legacy_ledger.json"
+        ledger_file.write_text(json.dumps({"tasks": [legacy_task.to_dict()]}, indent=2))
+
+        legacy_ledger = TaskLedger(
+            path=ledger_file,
+            progress_file=str(tmp_path / "progress.md"),
+        )
+        tasks = legacy_ledger.list()
+        assert len(tasks) == 1
+        assert tasks[0].id == legacy_task.id
+
 
 # ── State machine ─────────────────────────────────────────────────────────────
 
-class TestLedgerStateMachine:
 
+class TestLedgerStateMachine:
     def test_claim_transitions_to_in_progress(self, ledger):
         t = make_task()
         ledger.add([t])
@@ -93,7 +110,7 @@ class TestLedgerStateMachine:
         t = make_task()
         ledger.add([t])
         ledger.claim(t.id, "runner-1")
-        ledger.claim(t.id, "runner-1")   # idempotent for same runner
+        ledger.claim(t.id, "runner-1")  # idempotent for same runner
 
     def test_double_claim_different_runner_raises(self, ledger):
         t = make_task()
@@ -112,6 +129,18 @@ class TestLedgerStateMachine:
         assert updated.status == TaskStatus.DONE
         assert updated.result.verified is True
         assert updated.result.verified_at is not None
+
+    def test_checkpoint_result_persists_without_status_transition(self, ledger):
+        t = make_task()
+        ledger.add([t])
+        ledger.claim(t.id, "runner-1")
+
+        checkpoint = TaskResult(raw_output="checkpoint", structured={"summary": "partial"})
+        updated = ledger.checkpoint_result(t.id, checkpoint)
+
+        assert updated.status == TaskStatus.IN_PROGRESS
+        assert updated.result is not None
+        assert updated.result.structured["summary"] == "partial"
 
     def test_mark_failed_increments_retry(self, ledger):
         t = make_task(max_retries=2)
@@ -158,10 +187,10 @@ class TestLedgerStateMachine:
 
 # ── get_next priority + dependency ordering ───────────────────────────────────
 
-class TestGetNext:
 
+class TestGetNext:
     def test_returns_highest_priority_first(self, ledger):
-        low  = make_task(title="low",  priority=TaskPriority.LOW)
+        low = make_task(title="low", priority=TaskPriority.LOW)
         high = make_task(title="high", priority=TaskPriority.HIGH)
         ledger.add([low, high])
         nxt = ledger.get_next()
@@ -186,15 +215,15 @@ class TestGetNext:
         assert nxt.title == "phase_b task"
 
     def test_blocks_on_unresolved_dependency(self, ledger):
-        dep  = make_task(title="dep")
+        dep = make_task(title="dep")
         child = make_task(title="child", depends_on=[dep.id])
         ledger.add([dep, child])
         # dep is PENDING, so child should be blocked
         nxt = ledger.get_next()
-        assert nxt.id == dep.id   # dep comes first
+        assert nxt.id == dep.id  # dep comes first
 
     def test_unblocks_when_dependency_done(self, ledger):
-        dep   = make_task(title="dep", priority=10)
+        dep = make_task(title="dep", priority=10)
         child = make_task(title="child", depends_on=[dep.id], priority=100)
         ledger.add([dep, child])
 
@@ -210,8 +239,8 @@ class TestGetNext:
 
 # ── Crash recovery ────────────────────────────────────────────────────────────
 
-class TestCrashRecovery:
 
+class TestCrashRecovery:
     def test_reset_in_progress_clears_stale_claims(self, ledger):
         t = make_task()
         ledger.add([t])
@@ -253,8 +282,8 @@ class TestCrashRecovery:
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
-class TestStats:
 
+class TestStats:
     def test_stats_counts(self, ledger):
         tasks = [make_task() for _ in range(5)]
         ledger.add(tasks)
@@ -270,8 +299,8 @@ class TestStats:
 
 # ── Progress log ──────────────────────────────────────────────────────────────
 
-class TestProgressLog:
 
+class TestProgressLog:
     def test_log_creates_progress_file(self, ledger, tmp_path):
         ledger.log("Run started")
         assert (tmp_path / "progress.md").exists()
@@ -287,3 +316,22 @@ class TestProgressLog:
         # Should return empty list, not raise
         result = ledger.read_recent_log()
         assert result == []
+
+
+class TestAtomicWrite:
+    def test_write_retries_on_transient_permission_error(self, ledger, monkeypatch):
+        original_replace = os.replace
+        calls = {"count": 0}
+
+        def flaky_replace(src, dst):
+            if calls["count"] == 0:
+                calls["count"] += 1
+                raise PermissionError("Access is denied")
+            return original_replace(src, dst)
+
+        monkeypatch.setattr("veridian.ledger.ledger.os.replace", flaky_replace)
+
+        task = make_task(title="retry write")
+        ledger.add([task])
+        assert ledger.get(task.id).title == "retry write"
+        assert calls["count"] == 1

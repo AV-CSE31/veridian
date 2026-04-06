@@ -10,6 +10,7 @@ Usage:
         "check_non_empty": True,
     }
 """
+
 from __future__ import annotations
 
 from pathlib import Path

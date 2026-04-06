@@ -16,25 +16,24 @@ Method:
 
 No LLM calls — CrossRunConsistencyHook is deterministic.
 """
+
 from __future__ import annotations
 
 import random
 import sys
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
+from examples.experiments.shared.metrics import auroc, print_result
 
 from veridian.core.task import Task, TaskResult, TaskStatus
 from veridian.hooks.builtin.cross_run_consistency import CrossRunConsistencyHook
 
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
-from examples.experiments.shared.metrics import auroc, print_result
-
-
 # ── Minimal event stub ────────────────────────────────────────────────────────
+
 
 @dataclass
 class TaskCompletedEvent:
@@ -128,19 +127,23 @@ def run() -> ExperimentResult:
         # Task 0 is always clean (establishes baseline)
         # Tasks 1–3 may drift
         drift_in_this_entity = {
-            i for i in range(1, tasks_per_entity)
-            if rng.random() < drift_probability
+            i for i in range(1, tasks_per_entity) if rng.random() < drift_probability
         }
 
         entries = generate_entity_tasks(
-            entity_id, tasks_per_entity, drift_in_this_entity, rng,
-            base_risk, base_decision, base_status,
+            entity_id,
+            tasks_per_entity,
+            drift_in_this_entity,
+            rng,
+            base_risk,
+            base_decision,
+            base_status,
         )
         all_entries.extend(entries)
 
     # Process tasks through hook in order
-    y_true = []   # 1 = ground-truth drifted
-    scores = []   # hook conflict score (0.0 = no conflict, 1.0 = critical conflict)
+    y_true = []  # 1 = ground-truth drifted
+    scores = []  # hook conflict score (0.0 = no conflict, 1.0 = critical conflict)
 
     prev_conflict_count = 0
     for entry in all_entries:

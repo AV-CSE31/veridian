@@ -5,6 +5,7 @@ BaseHook ABC. All hooks inherit from this.
 All lifecycle methods default to no-op — subclasses override only what they need.
 Priority is a ClassVar[int]; lower numbers run earlier.
 """
+
 from __future__ import annotations
 
 from typing import Any, ClassVar
@@ -40,3 +41,11 @@ class BaseHook:
 
     def on_failure(self, event: Any) -> None:
         """Called when a task transitions to FAILED or ABANDONED."""
+
+    def on_pause(self, event: Any) -> None:
+        """RV3-001: Called when a task transitions IN_PROGRESS → PAUSED via a
+        control-flow signal (HumanReviewRequired, TaskPauseRequested)."""
+
+    def on_resume(self, event: Any) -> None:
+        """RV3-001: Called when a PAUSED task is picked up and transitions back
+        to IN_PROGRESS before the worker runs."""

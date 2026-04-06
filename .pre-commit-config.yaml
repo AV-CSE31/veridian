@@ -1,0 +1,23 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: ruff check .
+        language: system
+        pass_filenames: false
+      - id: ruff-format-check
+        name: ruff format --check
+        entry: ruff format --check .
+        language: system
+        pass_filenames: false
+      - id: mypy-strict
+        name: mypy strict
+        entry: mypy veridian/ --strict
+        language: system
+        pass_filenames: false
+      - id: pytest-fast
+        name: pytest fast
+        entry: pytest -q --tb=short
+        language: system
+        pass_filenames: false

@@ -30,6 +30,7 @@ Run
 ---
     python examples/p9_crash_recovery/p9_crash_recovery.py
 """
+
 from __future__ import annotations
 
 import json
@@ -57,6 +58,7 @@ sep = "-" * 72
 
 
 # ── Task factory ──────────────────────────────────────────────────────────────
+
 
 def build_migration_tasks() -> list[Task]:
     """
@@ -139,6 +141,7 @@ def make_migration_result(batch_id: str, records: int) -> TaskResult:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
     """Demonstrate crash recovery for a 50-task migration pipeline."""
     with tempfile.TemporaryDirectory(prefix="veridian_p9_") as tmp:
@@ -160,7 +163,7 @@ def main() -> None:
         ledger = TaskLedger(path=ledger_path, progress_file=str(progress_path))
         ledger.add(tasks)
         print(f"[OK] {TOTAL_TASKS} migration tasks loaded into ledger")
-        print(f"     Phases: extract (10), transform (25), load (15)")
+        print("     Phases: extract (10), transform (25), load (15)")
 
         # Phase 2: Process tasks 1-24 (normal operation, pre-crash)
         print()
@@ -191,7 +194,7 @@ def main() -> None:
         crash_task_id = f"batch_{CRASH_AT_TASK:03d}"
         crash_task = ledger.get(crash_task_id)
         print(f'Runner picks up task {crash_task_id}: "{crash_task.title}"')
-        ledger.claim(crash_task_id, PRE_CRASH_RUN_ID)   # -> IN_PROGRESS
+        ledger.claim(crash_task_id, PRE_CRASH_RUN_ID)  # -> IN_PROGRESS
 
         stats_crash = ledger.stats()
         print()
@@ -210,9 +213,7 @@ def main() -> None:
         print(sep)
 
         raw_ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
-        in_progress = [
-            t for t in raw_ledger["tasks"].values() if t["status"] == "in_progress"
-        ]
+        in_progress = [t for t in raw_ledger["tasks"].values() if t["status"] == "in_progress"]
         tmp_files = list(tmp_path.glob("*.tmp"))
 
         assert raw_ledger.get("schema_version") == 2, "Schema version corrupted"
@@ -247,7 +248,9 @@ def main() -> None:
         print(f"     Task {crash_task_id}: back to PENDING -- will resume from scratch")
         print()
         print("     Compare: LangGraph / CrewAI / AutoGen have no reset_in_progress().")
-        print(f"     They restart from task 1, re-executing {CRASH_AT_TASK - 1} already-done tasks.")
+        print(
+            f"     They restart from task 1, re-executing {CRASH_AT_TASK - 1} already-done tasks."
+        )
 
         # Phase 6: Resume pipeline
         remaining = stats_recovered.by_status.get("pending", 0)
@@ -270,7 +273,7 @@ def main() -> None:
             )
 
         config = VeridianConfig(
-            max_turns_per_task=1,   # single LLM call per task (mock)
+            max_turns_per_task=1,  # single LLM call per task (mock)
             max_retries=0,
             dry_run=False,
             progress_file=progress_path,
@@ -288,8 +291,8 @@ def main() -> None:
             f"completed {summary.done_count} tasks in {resume_duration:.2f}s"
         )
         print(
-            f"     Runner called reset_in_progress() again at startup "
-            f"(idempotent -- 0 tasks reset, none were IN_PROGRESS)"
+            "     Runner called reset_in_progress() again at startup "
+            "(idempotent -- 0 tasks reset, none were IN_PROGRESS)"
         )
 
         # Phase 7: Final report
@@ -304,14 +307,13 @@ def main() -> None:
         print(f"  Completed before crash             : {CRASH_AT_TASK - 1}")
         print(f"  Task at crash (-> PENDING -> re-run): {crash_task_id}")
         print(f"  Completed after recovery           : {summary.done_count}")
-        print(f"  Total DONE                         : {final_stats.by_status.get('done', 0)} / {TOTAL_TASKS}")
-        failed = (
-            final_stats.by_status.get("failed", 0)
-            + final_stats.by_status.get("abandoned", 0)
+        print(
+            f"  Total DONE                         : {final_stats.by_status.get('done', 0)} / {TOTAL_TASKS}"
         )
+        failed = final_stats.by_status.get("failed", 0) + final_stats.by_status.get("abandoned", 0)
         print(f"  Failed / Abandoned                 : {failed}")
-        print(f"  Tasks wasted on restart            : 0 (resumed from task 25, not from task 1)")
-        print(f"  Ledger integrity                   : [OK] Verified")
+        print("  Tasks wasted on restart            : 0 (resumed from task 25, not from task 1)")
+        print("  Ledger integrity                   : [OK] Verified")
         print(f"  Resume time                        : {resume_duration:.2f}s")
 
         if all_done:
@@ -326,9 +328,13 @@ def main() -> None:
         print("WHY THIS MATTERS")
         print(SEP)
         print("  With Veridian (this example):")
-        print(f"    * Crash at task {CRASH_AT_TASK} -- tasks 1-{CRASH_AT_TASK - 1} preserved in ledger")
+        print(
+            f"    * Crash at task {CRASH_AT_TASK} -- tasks 1-{CRASH_AT_TASK - 1} preserved in ledger"
+        )
         print(f"    * reset_in_progress() -> task {CRASH_AT_TASK} back to PENDING (1 line)")
-        print(f"    * Resume from task {CRASH_AT_TASK} -- {saved_tasks} tasks saved, zero duplicated work")
+        print(
+            f"    * Resume from task {CRASH_AT_TASK} -- {saved_tasks} tasks saved, zero duplicated work"
+        )
         print("    * Atomic writes ensure ledger.json is never partially written")
         print()
         print("  Without Veridian (LangGraph / CrewAI / AutoGen):")

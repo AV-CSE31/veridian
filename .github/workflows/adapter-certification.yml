@@ -1,0 +1,46 @@
+name: Adapter Certification (WCP-019)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  certify-adapters:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run certification suites
+        run: |
+          pytest tests/integration/test_langgraph_certification.py \
+                 tests/integration/test_crewai_certification.py \
+                 tests/integration/test_certification_matrix.py \
+                 -x --tb=short -q \
+                 --junitxml=adapter-certification.xml
+
+      - name: Upload certification artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adapter-certification-py${{ matrix.python-version }}
+          path: adapter-certification.xml
+          retention-days: 14

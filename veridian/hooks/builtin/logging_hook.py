@@ -4,6 +4,7 @@ veridian.hooks.builtin.logging_hook
 LoggingHook — structured log lines for every lifecycle event.
 Priority 0: runs first among all hooks.
 """
+
 from __future__ import annotations
 
 import logging
@@ -37,7 +38,9 @@ class LoggingHook(BaseHook):
             failed = getattr(summary, "failed_count", "?")
             log.info(
                 "run.completed run_id=%s done=%s failed=%s",
-                run_id, done, failed,
+                run_id,
+                done,
+                failed,
             )
         else:
             log.info("run.completed run_id=%s", run_id)

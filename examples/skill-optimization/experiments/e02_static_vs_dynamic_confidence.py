@@ -18,6 +18,7 @@ Method:
 
 No LLM calls — SemanticGroundingVerifier is deterministic.
 """
+
 from __future__ import annotations
 
 import random
@@ -26,12 +27,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task, TaskResult
-from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
 from examples.experiments.shared.metrics import f1, print_result
 from examples.experiments.shared.skillnet_client import SkillNetClient
+
+from veridian.core.task import Task, TaskResult
+from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
 
 # Static threshold: low enough to pass many skills including hallucinated ones
 STATIC_THRESHOLD = 0.60
@@ -53,7 +54,9 @@ def skill_to_result(skill: dict) -> tuple[Task, TaskResult]:
 
 def false_positive_rate(y_true: list[int], y_pred: list[int]) -> float:
     """FPR = bad accepted / total bad = (1 - recall) for bad class."""
-    fp = sum(1 for a, b in zip(y_true, y_pred) if a == 1 and b == 1)  # bad + accepted = false positive
+    fp = sum(
+        1 for a, b in zip(y_true, y_pred) if a == 1 and b == 1
+    )  # bad + accepted = false positive
     n_bad = sum(y_true)
     return fp / n_bad if n_bad > 0 else 0.0
 
@@ -64,9 +67,8 @@ def run() -> ExperimentResult:
     client = SkillNetClient()
 
     # Use legal + compliance skills (where hallucinations have cross-field conflicts)
-    skills = (
-        client.list_skills(domain="legal", limit=50)
-        + client.list_skills(domain="compliance", limit=50)
+    skills = client.list_skills(domain="legal", limit=50) + client.list_skills(
+        domain="compliance", limit=50
     )
     rng.shuffle(skills)
     skills = skills[:100]
@@ -106,8 +108,7 @@ def run() -> ExperimentResult:
     veridian_f1 = f1(y_true_reject, y_veridian_rejects)
 
     fpr_reduction_pct = (
-        (static_fpr - veridian_fpr) / max(static_fpr, 1e-9) * 100
-        if static_fpr > 0 else 0.0
+        (static_fpr - veridian_fpr) / max(static_fpr, 1e-9) * 100 if static_fpr > 0 else 0.0
     )
 
     # H2: static FPR >= 20% AND veridian reduces it

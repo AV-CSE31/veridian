@@ -5,6 +5,7 @@ LLMProvider ABC + Message/LLMResponse types.
 All LLM I/O flows through these types — swapping providers requires
 no changes to the rest of the codebase.
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,7 +19,7 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class Message:
-    role: str        # "system" | "user" | "assistant"
+    role: str  # "system" | "user" | "assistant"
     content: str
     tool_call_id: str | None = None
     tool_calls: list[Any] | None = None
@@ -42,12 +43,10 @@ class LLMProvider(ABC):
     """Abstract base for LLM providers."""
 
     @abstractmethod
-    def complete(self, messages: list[Message], **kwargs: Any) -> LLMResponse:
-        ...
+    def complete(self, messages: list[Message], **kwargs: Any) -> LLMResponse: ...
 
     @abstractmethod
-    async def complete_async(self, messages: list[Message], **kwargs: Any) -> LLMResponse:
-        ...
+    async def complete_async(self, messages: list[Message], **kwargs: Any) -> LLMResponse: ...
 
     def count_tokens(self, text: str) -> int:
         """Approximate token count. Override with provider-specific tokeniser."""

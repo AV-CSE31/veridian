@@ -4,6 +4,7 @@ veridian.hooks.builtin.rate_limit
 RateLimitHook — enforces max tasks per minute via a sliding window.
 Priority 50.
 """
+
 from __future__ import annotations
 
 import logging

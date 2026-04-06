@@ -4,11 +4,13 @@ veridian.hooks.registry
 HookRegistry — maintains ordered hook list and fires events safely.
 fire() wraps every hook call in try/except; one broken hook never kills a run.
 """
+
 from __future__ import annotations
 
 import logging
 from typing import Any
 
+from veridian.core.exceptions import ControlFlowSignal
 from veridian.hooks.base import BaseHook
 
 __all__ = ["HookRegistry"]
@@ -20,8 +22,13 @@ class HookRegistry:
     """
     Manages registered hooks and dispatches events in ascending priority order.
 
-    CONTRACT: A failing hook NEVER propagates — exceptions are caught, logged,
-    and swallowed. The run continues without interruption.
+    CONTRACT (RV3-002):
+    - Observability errors (any Exception that is NOT a ControlFlowSignal) are
+      caught, logged, and swallowed. The run continues without interruption.
+    - Control-flow signals (ControlFlowSignal subclasses, e.g. TaskPauseRequested
+      or HumanReviewRequired) are re-raised so the runner can route them to the
+      ledger (e.g. ledger.pause()). Without this split, HITL pause-and-resume
+      would be impossible because the signal would be swallowed here.
     """
 
     def __init__(self) -> None:
@@ -41,7 +48,12 @@ class HookRegistry:
         """
         Call hook.method(event) for each registered hook in priority order.
         If a hook does not implement the method, it is silently skipped.
-        Exceptions from hooks are caught, logged, and never re-raised.
+
+        Exception handling (RV3-002):
+        - ControlFlowSignal subclasses (TaskPauseRequested, HumanReviewRequired,
+          ...) are re-raised immediately. Subsequent hooks are NOT called.
+        - All other exceptions are caught, logged, and swallowed so one broken
+          observability hook can never kill a run.
         """
         for hook in self._hooks:
             fn = getattr(hook, method, None)
@@ -49,6 +61,10 @@ class HookRegistry:
                 continue
             try:
                 fn(event)
+            except ControlFlowSignal:
+                # Control-flow signals MUST propagate to the runner — do NOT
+                # swallow them here or HITL pause/resume becomes a no-op.
+                raise
             except Exception as exc:
                 log.error(
                     "hook.error hook_id=%s method=%s err=%s",

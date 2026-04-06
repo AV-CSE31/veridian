@@ -21,6 +21,7 @@ Method:
 
 No LLM calls -- SemanticGroundingVerifier is deterministic.
 """
+
 from __future__ import annotations
 
 import random
@@ -29,12 +30,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task, TaskResult
-from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
 from examples.experiments.shared.metrics import improvement_pct, print_result
 from examples.experiments.shared.skillnet_client import SkillNetClient
+
+from veridian.core.task import Task, TaskResult
+from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
 
 # Fraction of OOD retrievals that are corrupted (semantically inconsistent)
 OOD_CORRUPTION_RATE = 0.65
@@ -84,7 +85,11 @@ def simulate_retrieval(
             # Clean retrieval even for OOD query
             clean = [s for s in domain_skills if not s.get("has_hallucination")]
             skill = rng.choice(clean) if clean else rng.choice(domain_skills)
-            return {**skill, "structured_output": dict(skill["structured_output"]), "is_corrupted": False}
+            return {
+                **skill,
+                "structured_output": dict(skill["structured_output"]),
+                "is_corrupted": False,
+            }
 
 
 def build_result(skill: dict, query: dict) -> tuple[Task, TaskResult]:

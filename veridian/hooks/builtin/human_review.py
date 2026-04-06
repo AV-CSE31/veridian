@@ -4,6 +4,7 @@ veridian.hooks.builtin.human_review
 HumanReviewHook — pauses run for tasks that require human approval.
 Priority 50.
 """
+
 from __future__ import annotations
 
 import logging

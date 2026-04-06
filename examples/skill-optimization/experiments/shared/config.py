@@ -4,6 +4,7 @@ Shared configuration for the Veridian × SkillNet × AutoResearch experiment sui
 All paths are anchored to the examples/ directory so experiments are
 relocatable regardless of where the repo is checked out.
 """
+
 from __future__ import annotations
 
 import os
@@ -37,12 +38,12 @@ RANDOM_SEED: int = 42
 class ExperimentResult:
     """Standardised result container returned by every experiment."""
 
-    experiment_id: str          # e.g. "E-01"
-    hypothesis: str             # one-line hypothesis being tested
-    passed: bool                # did the experiment confirm the hypothesis?
-    primary_metric: str         # metric name (e.g. "silent_failure_rate")
-    primary_value: float        # measured value
-    threshold: float            # hypothesis threshold
+    experiment_id: str  # e.g. "E-01"
+    hypothesis: str  # one-line hypothesis being tested
+    passed: bool  # did the experiment confirm the hypothesis?
+    primary_metric: str  # metric name (e.g. "silent_failure_rate")
+    primary_value: float  # measured value
+    threshold: float  # hypothesis threshold
     secondary_metrics: dict = field(default_factory=dict)
     notes: str = ""
 

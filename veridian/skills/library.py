@@ -22,7 +22,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from veridian.ledger.ledger import TaskLedger
+from veridian.loop.runtime_store import RuntimeStore
 from veridian.providers.base import LLMProvider
 from veridian.skills.admission import SkillAdmissionControl
 from veridian.skills.extractor import SkillExtractor
@@ -64,7 +64,7 @@ class SkillLibrary:
 
     # ── Core operations ───────────────────────────────────────────────────────
 
-    def post_run(self, ledger: TaskLedger, run_id: str) -> list[str]:
+    def post_run(self, ledger: RuntimeStore, run_id: str) -> list[str]:
         """
         Extract skills from completed tasks in ledger.
         Returns list of skill IDs for newly admitted skills.

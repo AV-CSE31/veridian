@@ -4,6 +4,7 @@ veridian.agents.reviewer
 ReviewerAgent — performs a lightweight quality check on a completed TaskResult
 before it is submitted for final verification.
 """
+
 from __future__ import annotations
 
 import logging

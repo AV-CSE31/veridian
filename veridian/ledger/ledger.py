@@ -9,6 +9,7 @@ RULES:
 - FileLock ensures single writer across processes.
 - reset_in_progress() MUST be called at the start of every run().
 """
+
 from __future__ import annotations
 
 import builtins
@@ -17,8 +18,9 @@ import json
 import logging
 import os
 import tempfile
+import time
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +31,7 @@ from veridian.core.exceptions import (
     LedgerCorrupted,
     TaskAlreadyClaimed,
     TaskNotFound,
+    TaskNotPaused,
 )
 from veridian.core.task import LedgerStats, Task, TaskResult, TaskStatus
 
@@ -81,17 +84,35 @@ class TaskLedger:
         self,
         phase: str | None = None,
         respect_dependencies: bool = True,
+        include_paused: bool = False,
     ) -> Task | None:
         """
-        Return the highest-priority PENDING task whose dependencies are all DONE.
-        Returns None when the queue is empty.
+        Return the highest-priority schedulable task. Returns None when empty.
+
+        Normal mode: returns a PENDING task whose dependencies are all DONE.
+
+        include_paused=True (RV3-001): also considers PAUSED tasks and prefers
+        them over PENDING work so HITL approvals aren't starved. Dependency
+        gating does not apply to resumes because the task was already running.
         """
         data = self._read_raw()
         tasks = [Task.from_dict(t) for t in data["tasks"].values()]
         done_ids = {t.id for t in tasks if t.status == TaskStatus.DONE}
 
+        # RV3-001: Resume-first policy — surface PAUSED tasks before PENDING ones.
+        if include_paused:
+            paused = [
+                t
+                for t in tasks
+                if t.status == TaskStatus.PAUSED and (phase is None or t.phase == phase)
+            ]
+            if paused:
+                paused.sort(key=lambda t: (-t.priority, t.created_at))
+                return paused[0]
+
         candidates = [
-            t for t in tasks
+            t
+            for t in tasks
             if t.status == TaskStatus.PENDING
             and (phase is None or t.phase == phase)
             and (not respect_dependencies or all(dep in done_ids for dep in t.depends_on))
@@ -205,7 +226,7 @@ class TaskLedger:
 
             self._transition(task, TaskStatus.IN_PROGRESS)
             task.claimed_by = runner_id
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
             self._write_raw(data)
 
@@ -219,7 +240,24 @@ class TaskLedger:
             task = Task.from_dict(data["tasks"][task_id])
             self._transition(task, TaskStatus.VERIFYING)
             task.result = result
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(tz=UTC)
+            data["tasks"][task_id] = task.to_dict()
+            self._write_raw(data)
+        return task
+
+    def checkpoint_result(self, task_id: str, result: TaskResult) -> Task:
+        """
+        Persist intermediate task evidence without changing lifecycle status.
+
+        This is used by replay-aware runners to save deterministic checkpoints
+        (trace, score boundaries, policy logs, invocation IDs) after each step.
+        """
+        with self._lock:
+            data = self._read_raw()
+            self._assert_exists(data, task_id)
+            task = Task.from_dict(data["tasks"][task_id])
+            task.result = result
+            task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
             self._write_raw(data)
         return task
@@ -232,10 +270,10 @@ class TaskLedger:
             task = Task.from_dict(data["tasks"][task_id])
             self._transition(task, TaskStatus.DONE)
             result.verified = True
-            result.verified_at = datetime.utcnow()
+            result.verified_at = datetime.now(tz=UTC)
             task.result = result
             task.claimed_by = None
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
             self._write_raw(data)
         self.log(f"[DONE] {task_id} — {task.title[:60]}")
@@ -254,7 +292,7 @@ class TaskLedger:
             task.retry_count += 1
             task.last_error = error
             task.claimed_by = None
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(tz=UTC)
 
             self._transition(task, TaskStatus.FAILED)
 
@@ -275,9 +313,83 @@ class TaskLedger:
             task = Task.from_dict(data["tasks"][task_id])
             self._transition(task, TaskStatus.SKIPPED)
             task.last_error = reason
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
             self._write_raw(data)
+        return task
+
+    def pause(
+        self,
+        task_id: str,
+        reason: str,
+        payload: dict[str, Any] | None = None,
+    ) -> Task:
+        """
+        RV3-001: IN_PROGRESS → PAUSED. Persists pause metadata in
+        ``task.result.extras['pause_payload']`` so resume() can restore context.
+
+        The pause payload carries the reason, an optional worker cursor, and a
+        resume_count that increments on each resume. Crash-safe via atomic write.
+        """
+        with self._lock:
+            data = self._read_raw()
+            self._assert_exists(data, task_id)
+            task = Task.from_dict(data["tasks"][task_id])
+            self._transition(task, TaskStatus.PAUSED)
+
+            # Preserve any existing TaskResult (e.g. from checkpoint_result())
+            # and append/refresh the pause_payload extras entry.
+            result = task.result if task.result is not None else TaskResult(raw_output="")
+            existing_pause = result.extras.get("pause_payload") or {}
+            pause_payload: dict[str, Any] = {
+                "reason": reason,
+                "cursor": (payload or {}).get("cursor", existing_pause.get("cursor")),
+                "resume_hint": (payload or {}).get("resume_hint")
+                or existing_pause.get("resume_hint"),
+                "paused_at": datetime.now(tz=UTC).isoformat(),
+                "resume_count": int(existing_pause.get("resume_count", 0)),
+            }
+            # Allow arbitrary extra keys from the caller payload without
+            # letting them clobber the canonical fields above.
+            for key, value in (payload or {}).items():
+                if key not in {"cursor", "resume_hint"}:
+                    pause_payload.setdefault(key, value)
+            result.extras["pause_payload"] = pause_payload
+            task.result = result
+            task.claimed_by = None
+            task.updated_at = datetime.now(tz=UTC)
+            data["tasks"][task_id] = task.to_dict()
+            self._write_raw(data)
+        log.info("ledger.pause task_id=%s reason=%s", task_id, reason[:60])
+        self.log(f"[PAUSE] {task_id} — {reason[:80]}")
+        return task
+
+    def resume(self, task_id: str, runner_id: str) -> Task:
+        """
+        RV3-001: PAUSED → IN_PROGRESS. Increments resume_count, sets claimed_by.
+        Raises TaskNotPaused if the task is not in PAUSED state.
+        """
+        with self._lock:
+            data = self._read_raw()
+            self._assert_exists(data, task_id)
+            task = Task.from_dict(data["tasks"][task_id])
+            if task.status != TaskStatus.PAUSED:
+                raise TaskNotPaused(task_id=task_id, status=task.status.value)
+
+            self._transition(task, TaskStatus.IN_PROGRESS)
+            task.claimed_by = runner_id
+            task.updated_at = datetime.now(tz=UTC)
+
+            if task.result is not None:
+                pause_payload = task.result.extras.get("pause_payload") or {}
+                pause_payload["resume_count"] = int(pause_payload.get("resume_count", 0)) + 1
+                pause_payload["resumed_at"] = datetime.now(tz=UTC).isoformat()
+                task.result.extras["pause_payload"] = pause_payload
+
+            data["tasks"][task_id] = task.to_dict()
+            self._write_raw(data)
+        log.info("ledger.resume task_id=%s runner_id=%s", task_id, runner_id)
+        self.log(f"[RESUME] {task_id}")
         return task
 
     def reset_in_progress(self, runner_id: str | None = None) -> int:
@@ -286,6 +398,9 @@ class TaskLedger:
         Resets IN_PROGRESS tasks back to PENDING (crash recovery).
         If runner_id given: only reset tasks claimed by that runner.
         Returns count reset.
+
+        RV3-001 guarantee: PAUSED tasks are NEVER reset. Their pause payload is
+        preserved so they can be resumed on next run().
         """
         reset = 0
         with self._lock:
@@ -297,7 +412,7 @@ class TaskLedger:
                     continue
                 task_dict["status"] = "pending"
                 task_dict["claimed_by"] = None
-                task_dict["updated_at"] = datetime.utcnow().isoformat()
+                task_dict["updated_at"] = datetime.now(tz=UTC).isoformat()
                 reset += 1
             if reset:
                 self._write_raw(data)
@@ -323,7 +438,7 @@ class TaskLedger:
                     continue
                 task_dict["status"] = "pending"
                 task_dict["last_error"] = None
-                task_dict["updated_at"] = datetime.utcnow().isoformat()
+                task_dict["updated_at"] = datetime.now(tz=UTC).isoformat()
                 reset += 1
             if reset:
                 self._write_raw(data)
@@ -336,7 +451,7 @@ class TaskLedger:
         Append a timestamped entry to progress.md.
         Agents read this on startup for fast orientation.
         """
-        ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        ts = datetime.now(tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
         line = f"[{ts}] [{level}] {message}\n"
         with open(self.progress_path, "a", encoding="utf-8") as f:
             f.write(line)
@@ -354,11 +469,40 @@ class TaskLedger:
         """Read and parse ledger.json. Raises LedgerCorrupted on parse failure."""
         try:
             text = self.path.read_text(encoding="utf-8")
-            return dict(json.loads(text))
+            payload = json.loads(text)
+            if not isinstance(payload, dict):
+                raise LedgerCorrupted("ledger.json root must be an object")
+            return self._normalize_legacy_shape(dict(payload))
         except json.JSONDecodeError as e:
             raise LedgerCorrupted(f"ledger.json is malformed: {e}") from e
         except FileNotFoundError:
             return {"schema_version": SCHEMA_VERSION, "tasks": {}}
+
+    @staticmethod
+    def _normalize_legacy_shape(data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Normalize historical ledger shapes to the canonical in-memory format.
+
+        Legacy CLI versions wrote ``{"tasks": []}`` instead of ``{"tasks": {}}``.
+        This method keeps reads backward-compatible by coercing task containers
+        to a task-id keyed dict.
+        """
+        raw_tasks = data.get("tasks", {})
+        tasks: dict[str, Any] = {}
+        if isinstance(raw_tasks, dict):
+            tasks = raw_tasks
+        elif isinstance(raw_tasks, list):
+            for item in raw_tasks:
+                if not isinstance(item, dict):
+                    continue
+                task_id = item.get("id")
+                if isinstance(task_id, str) and task_id:
+                    tasks[task_id] = item
+
+        data["tasks"] = tasks
+        if not isinstance(data.get("schema_version"), int):
+            data["schema_version"] = SCHEMA_VERSION
+        return data
 
     def _write_raw(self, data: dict[str, Any]) -> None:
         """
@@ -366,7 +510,7 @@ class TaskLedger:
         Validates JSON round-trip before renaming.
         """
         data["schema_version"] = SCHEMA_VERSION
-        data["updated_at"] = datetime.utcnow().isoformat()
+        data["updated_at"] = datetime.now(tz=UTC).isoformat()
 
         text = json.dumps(data, indent=2, ensure_ascii=False)
 
@@ -374,13 +518,28 @@ class TaskLedger:
         json.loads(text)
 
         # Write to temp file in same directory (required for atomic rename)
-        tmp_fd, tmp_path = tempfile.mkstemp(
-            dir=self.path.parent, suffix=".tmp", prefix="ledger_"
-        )
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=self.path.parent, suffix=".tmp", prefix="ledger_")
         try:
             with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
                 f.write(text)
-            os.replace(tmp_path, self.path)  # atomic on POSIX and Windows
+
+            # Windows can transiently deny replace if another thread/process is
+            # briefly reading the target path. Retry a few times with tiny
+            # backoff to preserve atomic semantics under parallel reads.
+            last_error: OSError | None = None
+            for attempt in range(5):
+                try:
+                    os.replace(tmp_path, self.path)  # atomic on POSIX and Windows
+                    last_error = None
+                    break
+                except PermissionError as exc:
+                    last_error = exc
+                    if attempt == 4:
+                        break
+                    time.sleep(0.01 * (attempt + 1))
+
+            if last_error is not None:
+                raise last_error
         except Exception:
             # Clean up temp file on failure
             with contextlib.suppress(OSError):

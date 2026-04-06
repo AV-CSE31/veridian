@@ -13,7 +13,7 @@ import logging
 from typing import Any, ClassVar
 
 from veridian.core.task import Task, TaskStatus
-from veridian.ledger.ledger import TaskLedger
+from veridian.loop.runtime_store import RuntimeStore
 from veridian.providers.base import LLMProvider
 from veridian.skills.models import SkillCandidate
 
@@ -51,7 +51,7 @@ class SkillExtractor:
         self.provider = provider
         self.max_retries_for_skill = max_retries_for_skill
 
-    def extract(self, ledger: TaskLedger, run_id: str) -> list[SkillCandidate]:
+    def extract(self, ledger: RuntimeStore, run_id: str) -> list[SkillCandidate]:
         """
         Scan all tasks in ledger and return SkillCandidates for qualifying DONE tasks.
         run_id is stored in each candidate for provenance.

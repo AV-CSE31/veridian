@@ -24,27 +24,26 @@ Method:
 Note: SelfConsistencyVerifier requires LLM calls (gemini-2.0-flash).
 It is included only if GEMINI_API_KEY is available; otherwise skipped.
 """
+
 from __future__ import annotations
 
-import os
 import random
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
-from veridian.hooks.builtin.cross_run_consistency import CrossRunConsistencyHook
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED, GEMINI_MODEL
-from examples.experiments.shared.metrics import f1, silent_failure_rate, print_result
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
+from examples.experiments.shared.metrics import f1, print_result
 from examples.experiments.shared.skillnet_client import SkillNetClient
 
+from veridian.core.task import Task, TaskResult, TaskStatus
+from veridian.hooks.builtin.cross_run_consistency import CrossRunConsistencyHook
+from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
 
 # ── Drift injection (reused from E-01) ────────────────────────────────────────
+
 
 def inject_drift(structured: dict, rng: random.Random) -> tuple[dict, str]:
     """Return (drifted_structured, drift_type)."""
@@ -78,7 +77,9 @@ class TaskCompletedEvent:
     run_id: str = "run_e09"
 
 
-def build_entries(skills: list[dict], drift_indices: set[int], rng: random.Random) -> list[TaskEntry]:
+def build_entries(
+    skills: list[dict], drift_indices: set[int], rng: random.Random
+) -> list[TaskEntry]:
     entries = []
     for i, skill in enumerate(skills):
         is_drifted = i in drift_indices
@@ -97,7 +98,9 @@ def build_entries(skills: list[dict], drift_indices: set[int], rng: random.Rando
         task.status = TaskStatus.DONE
         result = TaskResult(raw_output=raw, structured=structured)
         task.result = result
-        entries.append(TaskEntry(task=task, result=result, is_drifted=is_drifted, entity_id=skill["id"]))
+        entries.append(
+            TaskEntry(task=task, result=result, is_drifted=is_drifted, entity_id=skill["id"])
+        )
     return entries
 
 
@@ -127,19 +130,26 @@ def run_condition(
 ) -> ConditionResult:
     """Run a single ablation condition and return per-task predictions."""
     condition_name = (
-        "full" if (use_grounding and use_consistency) else
-        "grounding" if use_grounding else
-        "consistency" if use_consistency else
-        "none"
+        "full"
+        if (use_grounding and use_consistency)
+        else "grounding"
+        if use_grounding
+        else "consistency"
+        if use_consistency
+        else "none"
     )
     cond = ConditionResult(name=condition_name)
 
     grounding_verifier = SemanticGroundingVerifier() if use_grounding else None
-    hook = CrossRunConsistencyHook(
-        claim_fields=["risk_level", "decision", "status"],
-        entity_key_field="entity_id",
-        raise_on_critical=False,
-    ) if use_consistency else None
+    hook = (
+        CrossRunConsistencyHook(
+            claim_fields=["risk_level", "decision", "status"],
+            entity_key_field="entity_id",
+            raise_on_critical=False,
+        )
+        if use_consistency
+        else None
+    )
 
     if hook:
         hook.on_run_started(RunStartedEvent())
@@ -179,9 +189,8 @@ def run() -> ExperimentResult:
     client = SkillNetClient()
 
     # 25 legal + 25 compliance skills
-    skills = (
-        client.list_skills(domain="legal", limit=25)
-        + client.list_skills(domain="compliance", limit=25)
+    skills = client.list_skills(domain="legal", limit=25) + client.list_skills(
+        domain="compliance", limit=25
     )
     rng.shuffle(skills)
 
@@ -191,10 +200,10 @@ def run() -> ExperimentResult:
 
     # Run 4 conditions
     conditions = {
-        "no_veridian":    run_condition(entries, use_grounding=False, use_consistency=False),
-        "grounding_only": run_condition(entries, use_grounding=True,  use_consistency=False),
+        "no_veridian": run_condition(entries, use_grounding=False, use_consistency=False),
+        "grounding_only": run_condition(entries, use_grounding=True, use_consistency=False),
         "consistency_only": run_condition(entries, use_grounding=False, use_consistency=True),
-        "full_pipeline":  run_condition(entries, use_grounding=True,  use_consistency=True),
+        "full_pipeline": run_condition(entries, use_grounding=True, use_consistency=True),
     }
 
     # ── Metrics ───────────────────────────────────────────────────────────────
@@ -212,7 +221,9 @@ def run() -> ExperimentResult:
     h9_passed = degradation_pct <= 5.0
 
     # Also check full_pipeline beats no_veridian
-    improvement_vs_baseline = (full_f1 - f1_scores["no_veridian"]) / max(f1_scores["no_veridian"], 1e-9) * 100
+    improvement_vs_baseline = (
+        (full_f1 - f1_scores["no_veridian"]) / max(f1_scores["no_veridian"], 1e-9) * 100
+    )
 
     result_obj = ExperimentResult(
         experiment_id="E-09",

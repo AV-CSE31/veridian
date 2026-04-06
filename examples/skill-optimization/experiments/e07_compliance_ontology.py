@@ -23,6 +23,7 @@ Gap types designed to score clearly < 0.80:
 
 No LLM calls -- TaskQualityGate is deterministic.
 """
+
 from __future__ import annotations
 
 import random
@@ -31,16 +32,24 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task
-from veridian.core.quality_gate import TaskQualityGate
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
 from examples.experiments.shared.metrics import f1, print_result
+
+from veridian.core.quality_gate import TaskQualityGate
+from veridian.core.task import Task
 
 FRAMEWORKS = ["SOC2", "ISO27001", "NIST-CSF", "PCI-DSS", "HIPAA"]
 CONTROLS = [
-    "CC6.1", "CC7.2", "CC8.1", "A1.1", "A1.2",
-    "PI1.1", "C1.1", "CC5.1", "CC9.1", "CC9.2",
+    "CC6.1",
+    "CC7.2",
+    "CC8.1",
+    "A1.1",
+    "A1.2",
+    "PI1.1",
+    "C1.1",
+    "CC5.1",
+    "CC9.1",
+    "CC9.2",
 ]
 DOMAINS = ["access_control", "encryption", "audit_logging", "incident_response"]
 EVIDENCE_TYPES = ["policy_document", "system_screenshot", "log_export"]
@@ -88,7 +97,7 @@ def make_gap_task(idx: int, rng: random.Random, gap_type: str) -> Task:
         return Task(
             id=f"ctrl_{idx:03d}_gap_short",
             title=f"{framework} check",
-            description="Do it.",   # 6 chars → specificity=0.1
+            description="Do it.",  # 6 chars → specificity=0.1
             verifier_id="schema",
             verifier_config={},
         )
@@ -105,7 +114,7 @@ def make_gap_task(idx: int, rng: random.Random, gap_type: str) -> Task:
             ),
             verifier_id="schema",
             verifier_config={},
-            depends_on=[task_id],   # self-dependency: dep_soundness -= 0.50
+            depends_on=[task_id],  # self-dependency: dep_soundness -= 0.50
         )
 
     elif gap_type == "bad_composite":
@@ -119,7 +128,7 @@ def make_gap_task(idx: int, rng: random.Random, gap_type: str) -> Task:
                 f"Improve as needed and handle all findings. Take care of it."
             ),
             verifier_id="composite",
-            verifier_config={},   # missing "verifiers" key: -0.50 verifiability
+            verifier_config={},  # missing "verifiers" key: -0.50 verifiability
         )
 
     else:  # undeclared_dep
@@ -146,10 +155,7 @@ def run() -> ExperimentResult:
     gap_types = ["too_short", "self_dep", "bad_composite", "undeclared_dep"]
 
     good_tasks = [make_good_task(i, rng) for i in range(60)]
-    gap_tasks = [
-        make_gap_task(60 + i, rng, gap_types[i % len(gap_types)])
-        for i in range(40)
-    ]
+    gap_tasks = [make_gap_task(60 + i, rng, gap_types[i % len(gap_types)]) for i in range(40)]
     all_tasks = good_tasks + gap_tasks
     rng.shuffle(all_tasks)
 
@@ -158,7 +164,7 @@ def run() -> ExperimentResult:
 
     # Run quality gate
     gate = TaskQualityGate(
-        min_score=0.60,         # internal pass/fail (not used for prediction)
+        min_score=0.60,  # internal pass/fail (not used for prediction)
         fail_on_below=0.35,
         require_verifier_match=True,
         require_success_criteria=True,
@@ -169,10 +175,7 @@ def run() -> ExperimentResult:
     score_by_id = {s.task_id: s for s in scores}
 
     # Prediction: gap detected if composite score < DETECTION_THRESHOLD
-    y_pred = [
-        1 if score_by_id[t.id].composite < DETECTION_THRESHOLD else 0
-        for t in all_tasks
-    ]
+    y_pred = [1 if score_by_id[t.id].composite < DETECTION_THRESHOLD else 0 for t in all_tasks]
 
     f1_score = f1(y_true, y_pred)
     tp = sum(1 for a, b in zip(y_true, y_pred) if a == 1 and b == 1)

@@ -4,10 +4,11 @@ veridian.core.events
 Typed event hierarchy. Every significant lifecycle moment emits one of these.
 Hooks receive strongly-typed events — no dict key typos, full IDE autocomplete.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -17,9 +18,10 @@ if TYPE_CHECKING:
 @dataclass
 class VeridianEvent:
     """Base event. All veridian events inherit from this."""
+
     event_type: str = ""
     run_id: str = ""
-    ts: datetime = field(default_factory=datetime.utcnow)
+    ts: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -33,6 +35,7 @@ class VeridianEvent:
 
 # ── Run lifecycle ─────────────────────────────────────────────────────────────
 
+
 @dataclass
 class RunStarted(VeridianEvent):
     event_type: str = "run.started"
@@ -43,7 +46,7 @@ class RunStarted(VeridianEvent):
 @dataclass
 class RunCompleted(VeridianEvent):
     event_type: str = "run.completed"
-    summary: Any | None = None    # RunSummary — avoid circular import
+    summary: Any | None = None  # RunSummary — avoid circular import
 
 
 @dataclass
@@ -54,17 +57,18 @@ class RunAborted(VeridianEvent):
 
 # ── Task lifecycle ────────────────────────────────────────────────────────────
 
+
 @dataclass
 class TaskClaimed(VeridianEvent):
     event_type: str = "task.claimed"
-    task: Any | None = None       # Task
+    task: Any | None = None  # Task
 
 
 @dataclass
 class TaskCompleted(VeridianEvent):
     event_type: str = "task.completed"
     task: Any | None = None
-    result: Any | None = None     # TaskResult
+    result: Any | None = None  # TaskResult
 
 
 @dataclass
@@ -91,6 +95,7 @@ class TaskSkipped(VeridianEvent):
 
 # ── Verification ──────────────────────────────────────────────────────────────
 
+
 @dataclass
 class VerificationPassed(VeridianEvent):
     event_type: str = "verification.passed"
@@ -111,6 +116,7 @@ class VerificationFailed(VeridianEvent):
 
 # ── Context ───────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ContextCompacted(VeridianEvent):
     event_type: str = "context.compacted"
@@ -119,6 +125,7 @@ class ContextCompacted(VeridianEvent):
 
 
 # ── Resilience ────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class CircuitBreakerOpened(VeridianEvent):
@@ -145,6 +152,7 @@ class RetryScheduled(VeridianEvent):
 
 # ── Cost / rate ───────────────────────────────────────────────────────────────
 
+
 @dataclass
 class CostGuardTriggered(VeridianEvent):
     event_type: str = "cost_guard.triggered"
@@ -168,6 +176,7 @@ class RateLimitHit(VeridianEvent):
 
 # ── Human review ─────────────────────────────────────────────────────────────
 
+
 @dataclass
 class HumanReviewRequested(VeridianEvent):
     event_type: str = "human_review.requested"
@@ -184,7 +193,32 @@ class HumanReviewResumed(VeridianEvent):
     reviewer_note: str = ""
 
 
+# ── Pause / Resume (RV3-001) ─────────────────────────────────────────────────
+
+
+@dataclass
+class TaskPaused(VeridianEvent):
+    """Fired when a task transitions IN_PROGRESS → PAUSED via a control-flow
+    signal (HumanReviewRequired, TaskPauseRequested)."""
+
+    event_type: str = "task.paused"
+    task: Any | None = None
+    reason: str = ""
+    payload: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class TaskResumed(VeridianEvent):
+    """Fired when a runner picks up a PAUSED task and transitions it back to
+    IN_PROGRESS. resume_count tracks how many times this task has been resumed."""
+
+    event_type: str = "task.resumed"
+    task: Any | None = None
+    resume_count: int = 0
+
+
 # ── SLA ───────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class SLAWarning(VeridianEvent):
@@ -204,12 +238,136 @@ class SLABreached(VeridianEvent):
 
 # ── Drift detection ─────────────────────────────────────────────────────
 
+
 @dataclass
 class DriftWarning(VeridianEvent):
     """Fired when DriftDetectorHook detects behavioral regression."""
+
     event_type: str = "drift.warning"
     metric: str = ""
     baseline_value: float = 0.0
     current_value: float = 0.0
     z_score: float = 0.0
     direction: str = ""  # "degraded" | "improved"
+
+
+# ── Sprint Contract ────────────────────────────────────────────────────────────
+
+
+@dataclass
+class ContractSigned(VeridianEvent):
+    """Fired when a SprintContract is signed before task execution."""
+
+    event_type: str = "contract.signed"
+    contract_id: str = ""
+    task_id: str = ""
+
+
+@dataclass
+class ContractViolated(VeridianEvent):
+    """Fired when a SprintContract validation fails (unsigned or criteria unmet)."""
+
+    event_type: str = "contract.violated"
+    contract_id: str = ""
+    task_id: str = ""
+    reason: str = ""
+
+
+# ── Adversarial Evaluation ────────────────────────────────────────────────────
+
+
+@dataclass
+class ContractNegotiated(VeridianEvent):
+    """Fired when generator and evaluator sign a SprintContract."""
+
+    event_type: str = "eval.contract_negotiated"
+    contract_id: str = ""
+    task_id: str = ""
+    deliverable_count: int = 0
+
+
+@dataclass
+class EvaluationStarted(VeridianEvent):
+    """Fired when AdversarialEvaluator begins evaluating generator output."""
+
+    event_type: str = "eval.started"
+    task_id: str = ""
+    contract_id: str = ""
+    iteration: int = 0
+
+
+@dataclass
+class EvaluationCompleted(VeridianEvent):
+    """Fired when evaluation produces a result (pass or fail)."""
+
+    event_type: str = "eval.completed"
+    task_id: str = ""
+    contract_id: str = ""
+    iteration: int = 0
+    passed: bool = False
+    score: float = 0.0
+
+
+@dataclass
+class EvaluationConverged(VeridianEvent):
+    """Fired when VerificationPipeline reaches a passing score."""
+
+    event_type: str = "eval.converged"
+    task_id: str = ""
+    total_iterations: int = 0
+    final_score: float = 0.0
+
+
+@dataclass
+class EvaluationExhausted(VeridianEvent):
+    """Fired when max iterations reached without convergence."""
+
+    event_type: str = "eval.exhausted"
+    task_id: str = ""
+    max_iterations: int = 0
+    best_score: float = 0.0
+
+
+# ── Evolution Safety (Phase 7b) ──────────────────────────────────────────────
+
+
+@dataclass
+class MisevolutionWarningEvent(VeridianEvent):
+    """Fired when EvolutionMonitorHook detects a misevolution pathway signal."""
+
+    event_type: str = "evolution.misevolution_warning"
+    pathway: str = ""
+    metric: str = ""
+    baseline_value: float = 0.0
+    current_value: float = 0.0
+    severity: str = ""  # "warning" | "significant"
+
+
+@dataclass
+class FingerprintDivergence(VeridianEvent):
+    """Fired when BehavioralFingerprintHook detects significant fingerprint shift."""
+
+    event_type: str = "evolution.fingerprint_divergence"
+    cosine_similarity: float = 0.0
+    threshold: float = 0.0
+    dimensions_changed: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CanaryRegressionEvent(VeridianEvent):
+    """Fired when canary task suite detects a regression."""
+
+    event_type: str = "evolution.canary_regression"
+    failed_canaries: list[str] = field(default_factory=list)
+    total_canaries: int = 0
+    regression_rate: float = 0.0
+
+
+@dataclass
+class EvolutionVerdict(VeridianEvent):
+    """Fired when evolution sandbox produces UPGRADE / HOLD / ROLLBACK verdict."""
+
+    event_type: str = "evolution.verdict"
+    recommendation: str = ""  # "upgrade" | "hold" | "rollback"
+    confidence: float = 0.0
+    reason: str = ""

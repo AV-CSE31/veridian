@@ -3,16 +3,13 @@ tests.unit.test_circuit_breaker
 ────────────────────────────────
 Tests for the circuit breaker and retry resilience layer in LiteLLMProvider.
 """
-import pytest
-import time
-from unittest.mock import patch, MagicMock
 
-from veridian.providers.litellm_provider import CircuitBreaker, CBState
-from veridian.core.exceptions import ProviderError, ProviderRateLimited
+import time
+
+from veridian.providers.litellm_provider import CBState, CircuitBreaker
 
 
 class TestCircuitBreaker:
-
     def test_initial_state_is_closed(self):
         cb = CircuitBreaker(name="test")
         assert cb.state == CBState.CLOSED
@@ -56,9 +53,9 @@ class TestCircuitBreaker:
         cb.allow_request()  # → HALF_OPEN
         assert cb.state == CBState.HALF_OPEN
 
-        cb.record_success()   # 1/2
+        cb.record_success()  # 1/2
         assert cb.state == CBState.HALF_OPEN
-        cb.record_success()   # 2/2 → CLOSED
+        cb.record_success()  # 2/2 → CLOSED
         assert cb.state == CBState.CLOSED
 
     def test_reopens_on_half_open_failure(self):
@@ -70,7 +67,7 @@ class TestCircuitBreaker:
         cb.record_failure()
         time.sleep(0.01)
         cb.allow_request()  # → HALF_OPEN
-        cb.record_failure()   # → OPEN again
+        cb.record_failure()  # → OPEN again
         assert cb.state == CBState.OPEN
 
     def test_blocked_while_open(self):
@@ -87,25 +84,29 @@ class TestCircuitBreaker:
 
 
 class TestRetryableErrors:
-
     def test_rate_limit_is_retryable(self):
         from veridian.providers.litellm_provider import _is_retryable
+
         assert _is_retryable(Exception("429 rate limit exceeded")) is True
 
     def test_server_error_is_retryable(self):
         from veridian.providers.litellm_provider import _is_retryable
+
         assert _is_retryable(Exception("503 service unavailable")) is True
 
     def test_timeout_is_retryable(self):
         from veridian.providers.litellm_provider import _is_retryable
+
         assert _is_retryable(Exception("connection timeout")) is True
 
     def test_bad_request_is_not_retryable(self):
         from veridian.providers.litellm_provider import _is_retryable
+
         assert _is_retryable(Exception("400 bad request")) is False
 
     def test_auth_failure_is_not_retryable(self):
         from veridian.providers.litellm_provider import _is_retryable
+
         assert _is_retryable(Exception("401 unauthorized")) is False
 
 
@@ -113,21 +114,23 @@ class TestMockProvider:
     """Verify MockProvider behaviour used in all other tests."""
 
     def test_script_responses_in_order(self):
-        from veridian.providers.mock_provider import MockProvider
         from veridian.providers.base import LLMResponse, Message
+        from veridian.providers.mock_provider import MockProvider
 
         mock = MockProvider()
-        mock.script([
-            LLMResponse(content="first"),
-            LLMResponse(content="second"),
-        ])
+        mock.script(
+            [
+                LLMResponse(content="first"),
+                LLMResponse(content="second"),
+            ]
+        )
         msgs = [Message(role="user", content="hi")]
         assert mock.complete(msgs).content == "first"
         assert mock.complete(msgs).content == "second"
 
     def test_script_harness_result(self):
-        from veridian.providers.mock_provider import MockProvider
         from veridian.providers.base import Message
+        from veridian.providers.mock_provider import MockProvider
 
         mock = MockProvider()
         mock.script_veridian_result({"status": "compliant"}, summary="ok")
@@ -136,8 +139,8 @@ class TestMockProvider:
         assert "compliant" in resp.content
 
     def test_call_count(self):
-        from veridian.providers.mock_provider import MockProvider
         from veridian.providers.base import Message
+        from veridian.providers.mock_provider import MockProvider
 
         mock = MockProvider()
         msgs = [Message(role="user", content="x")]
@@ -146,8 +149,8 @@ class TestMockProvider:
         assert mock.call_count == 2
 
     def test_reset(self):
+        from veridian.providers.base import LLMResponse, Message
         from veridian.providers.mock_provider import MockProvider
-        from veridian.providers.base import Message, LLMResponse
 
         mock = MockProvider()
         mock.script([LLMResponse(content="x")])

@@ -14,6 +14,7 @@ Usage:
         "min_quote_length": 10,
     }
 """
+
 from __future__ import annotations
 
 import re
@@ -99,9 +100,7 @@ class QuoteMatchVerifier(BaseVerifier):
             min_quote_length: Minimum accepted quote length in characters. Must be ≥ 1.
         """
         if not source_file or not source_file.strip():
-            raise VeridianConfigError(
-                "QuoteMatchVerifier: 'source_file' must not be empty."
-            )
+            raise VeridianConfigError("QuoteMatchVerifier: 'source_file' must not be empty.")
         if min_quote_length < 1:
             raise VeridianConfigError(
                 f"QuoteMatchVerifier: 'min_quote_length' must be ≥ 1, got {min_quote_length}."
@@ -137,8 +136,7 @@ class QuoteMatchVerifier(BaseVerifier):
             return VerificationResult(
                 passed=False,
                 error=(
-                    f"Source file not found: {self.source_file}. "
-                    f"Check the file path is correct."
+                    f"Source file not found: {self.source_file}. Check the file path is correct."
                 )[:300],
             )
 

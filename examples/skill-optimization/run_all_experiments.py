@@ -13,6 +13,7 @@ The script:
 Budget: experiments are designed to cost < $0.50 total in LLM credits
 (E-09 optional SelfConsistency path would add ~$1–2 if API key present).
 """
+
 from __future__ import annotations
 
 import json
@@ -25,12 +26,23 @@ from pathlib import Path
 # Ensure project root is importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Load .env if present
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+
+def _load_dotenv_file(path: Path) -> None:
+    """Minimal .env loader with no external dependency."""
+    if not path.exists():
+        return
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+
+_load_dotenv_file(Path(".env"))
 
 
 from examples.experiments.shared.config import RESULTS_DIR, ExperimentResult
@@ -39,17 +51,20 @@ from examples.experiments.shared.config import RESULTS_DIR, ExperimentResult
 def run_fixtures() -> None:
     """Generate fixture data if not already present."""
     from examples.experiments.shared.config import DATA_DIR
+
     if (DATA_DIR / "skills.json").exists() and (DATA_DIR / "queries.json").exists():
         print("[fixtures] Already present — skipping generation.")
         return
     print("[fixtures] Generating...")
     from examples.fixtures.generate_fixtures import main as gen_main
+
     gen_main()
 
 
 def run_experiment(module_name: str, exp_id: str) -> ExperimentResult:
     """Import and run one experiment. Returns ExperimentResult or error stub."""
     import importlib
+
     print(f"\n{'─' * 60}")
     print(f"  Running {exp_id}...")
     print(f"{'─' * 60}")
@@ -58,7 +73,9 @@ def run_experiment(module_name: str, exp_id: str) -> ExperimentResult:
         mod = importlib.import_module(module_name)
         result = mod.run()
         elapsed = time.monotonic() - t0
-        print(f"  [{exp_id}] completed in {elapsed:.1f}s  ->  {'PASS' if result.passed else 'FAIL'}")
+        print(
+            f"  [{exp_id}] completed in {elapsed:.1f}s  ->  {'PASS' if result.passed else 'FAIL'}"
+        )
         return result
     except Exception as exc:
         elapsed = time.monotonic() - t0
@@ -99,15 +116,23 @@ def print_summary_table(results: list[ExperimentResult]) -> None:
         if r.passed:
             passed_count += 1
         hyp_short = r.hypothesis[:53] + ".." if len(r.hypothesis) > 55 else r.hypothesis
-        value_str = f"{r.primary_value:.4f}" if r.primary_value != 0 or not r.notes.startswith("Exception") else "ERROR"
-        print(row([
-            r.experiment_id,
-            hyp_short,
-            status,
-            r.primary_metric[:10],
-            value_str,
-            f"{r.threshold:.4f}",
-        ]))
+        value_str = (
+            f"{r.primary_value:.4f}"
+            if r.primary_value != 0 or not r.notes.startswith("Exception")
+            else "ERROR"
+        )
+        print(
+            row(
+                [
+                    r.experiment_id,
+                    hyp_short,
+                    status,
+                    r.primary_metric[:10],
+                    value_str,
+                    f"{r.threshold:.4f}",
+                ]
+            )
+        )
 
     print(sep)
     print(f"  {passed_count}/{len(results)} experiments passed")
@@ -116,7 +141,6 @@ def print_summary_table(results: list[ExperimentResult]) -> None:
 
 def save_results(results: list[ExperimentResult]) -> Path:
     """Save results to results/summary.json atomically."""
-    import os
     import tempfile
 
     summary = {
@@ -140,15 +164,15 @@ def save_results(results: list[ExperimentResult]) -> Path:
 # ── Experiment registry ───────────────────────────────────────────────────────
 
 EXPERIMENTS = [
-    ("examples.experiments.e01_skill_trust_decay",           "E-01"),
-    ("examples.experiments.e02_static_vs_dynamic_confidence","E-02"),
+    ("examples.experiments.e01_skill_trust_decay", "E-01"),
+    ("examples.experiments.e02_static_vs_dynamic_confidence", "E-02"),
     ("examples.experiments.e03_semantic_grounding_retrieval", "E-03"),
-    ("examples.experiments.e04_crossrun_consistency_drift",   "E-04"),
-    ("examples.experiments.e05_adversarial_skill_poisoning",  "E-05"),
-    ("examples.experiments.e06_trust_propagation",            "E-06"),
-    ("examples.experiments.e07_compliance_ontology",          "E-07"),
-    ("examples.experiments.e08_regulatory_amendment",         "E-08"),
-    ("examples.experiments.e09_e2e_ablation",                 "E-09"),
+    ("examples.experiments.e04_crossrun_consistency_drift", "E-04"),
+    ("examples.experiments.e05_adversarial_skill_poisoning", "E-05"),
+    ("examples.experiments.e06_trust_propagation", "E-06"),
+    ("examples.experiments.e07_compliance_ontology", "E-07"),
+    ("examples.experiments.e08_regulatory_amendment", "E-08"),
+    ("examples.experiments.e09_e2e_ablation", "E-09"),
 ]
 
 

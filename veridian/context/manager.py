@@ -11,6 +11,7 @@ BLOCK ORDER IS A FROZEN CONTRACT (CLAUDE.md §2.4). Do NOT reorder.
   5. [ENVIRONMENT]  context_files                — ONLY if token budget allows
   6. [OUTPUT FMT]   veridian:result XML format
 """
+
 from __future__ import annotations
 
 import logging
@@ -24,9 +25,7 @@ __all__ = ["ContextManager"]
 
 log = logging.getLogger(__name__)
 
-_WORKER_PROMPT_PATH = (
-    Path(__file__).parent.parent / "agents" / "prompts" / "worker.md"
-)
+_WORKER_PROMPT_PATH = Path(__file__).parent.parent / "agents" / "prompts" / "worker.md"
 
 _OUTPUT_FORMAT = """\
 Output your final answer inside this exact XML block. No content after it.
@@ -177,7 +176,8 @@ class ContextManager:
                 else:
                     log.info(
                         "context.file_skipped path=%s tokens=%d (budget exceeded)",
-                        fpath, tokens,
+                        fpath,
+                        tokens,
                     )
                     break
             except Exception as exc:

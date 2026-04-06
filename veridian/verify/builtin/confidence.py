@@ -41,6 +41,7 @@ USAGE:
       ]
   }
 """
+
 from __future__ import annotations
 
 import json
@@ -58,6 +59,7 @@ log = logging.getLogger(__name__)
 
 # ── Confidence Score ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class ConfidenceScore:
     """
@@ -71,6 +73,7 @@ class ConfidenceScore:
     composite  — weighted geometric mean of all dimensions
     tier       — human-readable: HIGH / MEDIUM / LOW / UNCERTAIN
     """
+
     attempt_score: float = 1.0
     verifier_score: float = 1.0
     consistency_score: float = 1.0
@@ -105,9 +108,9 @@ class ConfidenceScore:
         # Weighted geometric mean (more robust to outliers than arithmetic)
         w = cls._WEIGHTS
         composite = (
-            attempt_score ** w["attempt_score"] *
-            vs ** w["verifier_score"] *
-            cs ** w["consistency_score"]
+            attempt_score ** w["attempt_score"]
+            * vs ** w["verifier_score"]
+            * cs ** w["consistency_score"]
         )
         composite = round(min(1.0, max(0.0, composite)), 3)
 
@@ -140,6 +143,7 @@ class ConfidenceScore:
 
 # ── Self-Consistency Verifier ─────────────────────────────────────────────────
 
+
 class SelfConsistencyVerifier(BaseVerifier):
     """
     Generates the structured output N times (cheap model, slight temperature
@@ -153,6 +157,7 @@ class SelfConsistencyVerifier(BaseVerifier):
     Pair with SemanticGroundingVerifier and domain verifier in CompositeVerifier:
         [semantic_grounding, schema, self_consistency, domain_verifier]
     """
+
     id = "self_consistency"
     description = (
         "Generates structured output N times and checks critical fields for agreement. "
@@ -170,7 +175,7 @@ class SelfConsistencyVerifier(BaseVerifier):
         model: str = "gemini/gemini-2.0-flash",
         n_samples: int = 2,
         temperature_variation: float = 0.3,
-        agreement_threshold: float = 0.5,   # fraction of samples that must agree
+        agreement_threshold: float = 0.5,  # fraction of samples that must agree
     ) -> None:
         self.critical_fields = critical_fields or []
         self.model = model or os.getenv("VERIDIAN_CONSISTENCY_MODEL", "gemini/gemini-2.0-flash")
@@ -196,8 +201,7 @@ class SelfConsistencyVerifier(BaseVerifier):
         conflicts = self._find_conflicts(result.structured, samples)
         if conflicts:
             conflict_str = "; ".join(
-                f"{f}: original='{orig}' but sample said '{alt}'"
-                for f, orig, alt in conflicts[:3]
+                f"{f}: original='{orig}' but sample said '{alt}'" for f, orig, alt in conflicts[:3]
             )
             return VerificationResult(
                 passed=False,
@@ -265,7 +269,7 @@ class SelfConsistencyVerifier(BaseVerifier):
             f"AGENT'S STRUCTURED OUTPUT (to verify):\n{structured_preview}\n\n"
             f"Re-derive the answer from scratch. Output ONLY:\n"
             f"<veridian:result>\n"
-            f'{{\"structured\": {{...critical fields only...}}, \"summary\": \"...\"}}\n'
+            f'{{"structured": {{...critical fields only...}}, "summary": "..."}}\n'
             f"</veridian:result>\n"
         )
 

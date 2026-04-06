@@ -1,8 +1,55 @@
 docs/
+planning/
+examples/
+
 
 # Internal engineering docs (IP protected)
 AGENTS.md
 CLAUDE.md
+ONBOARDING.md
+GEMINI.md
+CHANGELOG.md
+ARCHITECTURE.md
+research/
+CODEBASE_HEALTH.md
+SESSION_HANDOFF.md 
+CHANGELOG.md
+cov_progress.txt
+code_review_graph.html
+GEMINI.md
+install-session-system.sh 
+inatll-veridian.sh
+install-veridian-overlay.sh 
+
+session-system.skill
+veridian-overlay.skill
+
+api_stability_progress.log
+api_stability_report.md
+api_stability_report.html
+
+mcp.json
+.claude
+.code-review-graph
+.env
+.cursorrules
+.coverage
+.codex_replace_check
+.codex_verify*/
+.tmp/
+probe_*.tmp
+.cursorrules
+.windsurfrules
+.mcp.json
+code-review-graph.html
+session-system.skill
+veridian-overlay.skill
+planning/manual_runner_*/
+planning/pytest_tmp*/
+planning/tmp_pytest/
+planning/**/pytest_tmp*/
+
+
 
 # Secrets / credentials
 .env
@@ -10,7 +57,7 @@ CLAUDE.md
 *.key
 *.pem
 *.p12
-secrets/
+/secrets/
 
 # Python
 __pycache__/
@@ -47,6 +94,24 @@ veridian_trace.jsonl
 entropy_report.md
 conflicts.jsonl
 quarantine.jsonl
+
+# Claude Code / agent metadata (never commit)
+.claude/
+.auto-memory/
+.codex_replace_check/
+.codex_verify*/
+.tmp/
+probe_*.tmp
+.cursorrules
+.windsurfrules
+.mcp.json
+code-review-graph.html
+session-system.skill
+veridian-overlay.skill
+planning/manual_runner_*/
+planning/pytest_tmp*/
+planning/tmp_pytest/
+planning/**/pytest_tmp*/
 
 # IDE
 .idea/

@@ -23,6 +23,7 @@ Run
 ---
     python examples/p6_aml_kyc_investigation/p6_aml_kyc.py
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -90,6 +91,7 @@ AML_VERIFIER_CONFIG: dict[str, Any] = {
 
 # ── Custom hooks ──────────────────────────────────────────────────────────────
 
+
 class AuditLogHook(BaseHook):
     """
     Produces a cryptographically-hashed audit trail entry for every investigation.
@@ -109,9 +111,9 @@ class AuditLogHook(BaseHook):
         if not task or not result:
             return
         structured = getattr(result, "structured", {}) or {}
-        evidence_hash = hashlib.sha256(
-            json.dumps(structured, sort_keys=True).encode()
-        ).hexdigest()[:16]
+        evidence_hash = hashlib.sha256(json.dumps(structured, sort_keys=True).encode()).hexdigest()[
+            :16
+        ]
         self.entries.append(
             {
                 "alert_id": task.metadata.get("alert_id", task.id),
@@ -195,6 +197,7 @@ class ConsistencyBridgeHook(BaseHook):
 
 # ── Task factory ──────────────────────────────────────────────────────────────
 
+
 def build_tasks(alerts: list[dict[str, Any]]) -> list[Task]:
     """Convert raw AML alert dicts into Veridian investigation tasks."""
     tasks = []
@@ -241,6 +244,7 @@ def build_tasks(alerts: list[dict[str, Any]]) -> list[Task]:
 
 
 # ── MockProvider scripting ────────────────────────────────────────────────────
+
 
 def script_mock_responses(provider: MockProvider) -> None:
     """
@@ -432,6 +436,7 @@ def script_mock_responses(provider: MockProvider) -> None:
 
 # ── Plain-text output ─────────────────────────────────────────────────────────
 
+
 def print_results(
     alerts: list[dict[str, Any]],
     audit_hook: AuditLogHook,
@@ -452,9 +457,7 @@ def print_results(
     total = len(alerts)
     low_risk = sum(1 for e in audit_hook.entries if e["risk_level"] == "LOW")
     medium_risk = sum(1 for e in audit_hook.entries if e["risk_level"] == "MEDIUM")
-    high_crit = sum(
-        1 for e in audit_hook.entries if e["risk_level"] in ("HIGH", "CRITICAL")
-    )
+    high_crit = sum(1 for e in audit_hook.entries if e["risk_level"] in ("HIGH", "CRITICAL"))
     escalations = len(escalation_hook.escalations)
     conflicts_total = len(consistency_bridge.conflicts)
     conflicts_critical = len(consistency_bridge.critical_conflicts)
@@ -477,11 +480,9 @@ def print_results(
     print(sep)
     header = f"  {'Alert':<10} {'Customer':<20} {'Amount':>12}  {'Risk':<10} {'Decision':<25} {'Audit Ref'}"
     print(header)
-    print(f"  {'-'*8} {'-'*18} {'-'*12}  {'-'*8} {'-'*23} {'-'*12}")
+    print(f"  {'-' * 8} {'-' * 18} {'-' * 12}  {'-' * 8} {'-' * 23} {'-' * 12}")
     for alert in alerts:
-        entry = next(
-            (e for e in audit_hook.entries if e["alert_id"] == alert["id"]), None
-        )
+        entry = next((e for e in audit_hook.entries if e["alert_id"] == alert["id"]), None)
         if not entry:
             continue
         amount_str = f"${alert['transaction_amount']:,}"
@@ -497,9 +498,7 @@ def print_results(
         print("HUMAN REVIEW QUEUE -- HIGH/CRITICAL CASES")
         print(sep)
         for e in escalation_hook.escalations:
-            amount_str = (
-                f"${e['amount']:,}" if isinstance(e["amount"], int) else str(e["amount"])
-            )
+            amount_str = f"${e['amount']:,}" if isinstance(e["amount"], int) else str(e["amount"])
             print(
                 f"  [{e['risk_level']}] {e['alert_id']} | "
                 f"{e['customer_name'][:18]} | "
@@ -533,16 +532,19 @@ def print_results(
     print()
     print("COMPLIANCE COVERAGE")
     print(sep)
-    print(f"  [OK] GDPR Art. 22  -- Every automated decision has traceable SHA-256 evidence hash")
+    print("  [OK] GDPR Art. 22  -- Every automated decision has traceable SHA-256 evidence hash")
     print(f"       ({len(audit_hook.entries)} audit entries)")
-    print(f"  [OK] SOX           -- Immutable audit trail, full provenance chain")
+    print("  [OK] SOX           -- Immutable audit trail, full provenance chain")
     print(f"  [OK] FinCEN/BSA    -- {high_crit} HIGH/CRITICAL case(s) routed to Human Review Queue")
     print(f"  [OK] Cross-run     -- {conflicts_total} contradiction(s) surfaced,")
-    print(f"                        {conflicts_critical} critical conflict(s) flagged for arbitration")
+    print(
+        f"                        {conflicts_critical} critical conflict(s) flagged for arbitration"
+    )
     print()
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     """Run the AML/KYC investigation pipeline end-to-end."""
@@ -576,14 +578,16 @@ def main() -> None:
         consistency_bridge = ConsistencyBridgeHook(consistency_inner)
 
         hooks = HookRegistry()
-        hooks.register(audit_hook)            # priority 0 -- runs first
-        hooks.register(escalation_hook)       # priority 50
-        hooks.register(consistency_bridge)    # priority 50
-        print("[OK] Hooks registered: AuditLog (p=0), EscalationTracker (p=50), ConsistencyBridge (p=50)")
+        hooks.register(audit_hook)  # priority 0 -- runs first
+        hooks.register(escalation_hook)  # priority 50
+        hooks.register(consistency_bridge)  # priority 50
+        print(
+            "[OK] Hooks registered: AuditLog (p=0), EscalationTracker (p=50), ConsistencyBridge (p=50)"
+        )
 
         # 4. Run pipeline
         config = VeridianConfig(
-            max_turns_per_task=1,   # single LLM call per alert (mock)
+            max_turns_per_task=1,  # single LLM call per alert (mock)
             max_retries=1,
             dry_run=False,
             progress_file=progress_path,

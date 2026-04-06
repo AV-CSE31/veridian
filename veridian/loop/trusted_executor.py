@@ -66,6 +66,7 @@ USAGE:
       quarantine_log_path="quarantine.jsonl",
   )
 """
+
 from __future__ import annotations
 
 import base64
@@ -77,16 +78,18 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 log = logging.getLogger(__name__)
 
 
 # ── BashOutput dataclass ──────────────────────────────────────────────────────
 
+
 @dataclass
 class BashOutput:
     """Result of a single bash command execution."""
+
     cmd: str
     stdout: str
     stderr: str
@@ -113,12 +116,12 @@ class BashOutput:
 
 # Known injection instruction patterns (case-insensitive)
 _INSTRUCTION_PATTERNS = [
-    r"\bsystem\s*:",                           # SYSTEM: ...
-    r"\[inst\]",                               # [INST] ... [/INST]
-    r"<\s*instruction\s*>",                    # <instruction>...</instruction>
+    r"\bsystem\s*:",  # SYSTEM: ...
+    r"\[inst\]",  # [INST] ... [/INST]
+    r"<\s*instruction\s*>",  # <instruction>...</instruction>
     r"ignore\s+(all\s+)?previous\s+instructions?",
     r"forget\s+(your|all)\s+(previous|prior)",
-    r"you\s+are\s+now\s+a",                   # "you are now a ..."
+    r"you\s+are\s+now\s+a",  # "you are now a ..."
     r"new\s+(system\s+)?prompt\s*:",
     r"override\s+(safety|instructions?|rules?)",
     r"<\s*(harness|veridian)\s*:\s*result\s*>",  # pre-stuffed result block
@@ -127,25 +130,23 @@ _INSTRUCTION_PATTERNS = [
     r"\[\s*system\s*message\s*\]",
     r"act\s+as\s+if\s+you\s+are",
     r"jailbreak",
-    r"dan\s+mode",                             # "Do Anything Now" jailbreak pattern
+    r"dan\s+mode",  # "Do Anything Now" jailbreak pattern
     r"prompt\s+injection",
 ]
 
 _COMPILED_PATTERNS = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in _INSTRUCTION_PATTERNS]
 
 # Harness result block pattern — suspicious if appearing in tool output
-_RESULT_BLOCK_PATTERN = re.compile(
-    r"<(harness|veridian)\s*:\s*result", re.IGNORECASE
-)
+_RESULT_BLOCK_PATTERN = re.compile(r"<(harness|veridian)\s*:\s*result", re.IGNORECASE)
 
 # Base64 detection (long base64 strings in output)
 _BASE64_PATTERN = re.compile(r"[A-Za-z0-9+/]{50,}={0,2}")
 
 # Sensitivity thresholds: (max_suspicious_matches, min_content_length_for_encoding_check)
 _SENSITIVITY = {
-    "low":    {"max_pattern_hits": 2, "encoding_check_len": 200},
+    "low": {"max_pattern_hits": 2, "encoding_check_len": 200},
     "medium": {"max_pattern_hits": 0, "encoding_check_len": 100},
-    "high":   {"max_pattern_hits": 0, "encoding_check_len": 50},
+    "high": {"max_pattern_hits": 0, "encoding_check_len": 50},
 }
 
 # Default blocked commands — substring match on normalised command
@@ -153,21 +154,20 @@ DEFAULT_BLOCKLIST = [
     "rm -rf /",
     "rm -rf ~",
     "sudo rm",
-    ":(){ :|:& };:",     # fork bomb
+    ":(){ :|:& };:",  # fork bomb
     "> /dev/sda",
     "mkfs",
     "dd if=/dev/zero",
     "chmod 777 /",
-    "wget http",         # prevent downloading payloads (allow https only in non-high mode)
+    "wget http",  # prevent downloading payloads (allow https only in non-high mode)
     "curl http://",
 ]
 
 
 # ── Provenance Token ──────────────────────────────────────────────────────────
 
-def _compute_provenance(
-    task_id: str, cmd: str, stdout: str, timestamp: float
-) -> str:
+
+def _compute_provenance(task_id: str, cmd: str, stdout: str, timestamp: float) -> str:
     """
     Compute a short provenance hash binding output to its execution context.
     Not cryptographically secure (not intended to be) — used for audit trail
@@ -178,6 +178,7 @@ def _compute_provenance(
 
 
 # ── OutputSanitizer ───────────────────────────────────────────────────────────
+
 
 class OutputSanitizer:
     """
@@ -243,14 +244,9 @@ class OutputSanitizer:
         cfg = self.cfg
 
         # 1. Instruction pattern scan
-        pattern_hits = [
-            p.pattern for p in _COMPILED_PATTERNS if p.search(content)
-        ]
+        pattern_hits = [p.pattern for p in _COMPILED_PATTERNS if p.search(content)]
         if len(pattern_hits) > cfg["max_pattern_hits"]:
-            issues.append(
-                f"matched {len(pattern_hits)} injection pattern(s): "
-                f"{pattern_hits[:2]}"
-            )
+            issues.append(f"matched {len(pattern_hits)} injection pattern(s): {pattern_hits[:2]}")
 
         if light:
             return issues
@@ -268,9 +264,7 @@ class OutputSanitizer:
             for match in b64_matches[:3]:
                 try:
                     decoded = base64.b64decode(match + "==").decode("utf-8", errors="ignore")
-                    decoded_issues = [
-                        p.pattern for p in _COMPILED_PATTERNS if p.search(decoded)
-                    ]
+                    decoded_issues = [p.pattern for p in _COMPILED_PATTERNS if p.search(decoded)]
                     if decoded_issues:
                         issues.append(
                             f"base64-encoded payload decodes to injection pattern: "
@@ -289,13 +283,11 @@ class OutputSanitizer:
 
         return issues
 
-    def _log_quarantine(
-        self, task_id: str, cmd: str, content: str, reason: str
-    ) -> None:
+    def _log_quarantine(self, task_id: str, cmd: str, content: str, reason: str) -> None:
         """Append quarantine event to JSONL log."""
         try:
             entry = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(tz=UTC).isoformat(),
                 "task_id": task_id,
                 "cmd": cmd[:200],
                 "reason": reason,
@@ -309,6 +301,7 @@ class OutputSanitizer:
 
 
 # ── TrustedExecutor ───────────────────────────────────────────────────────────
+
 
 class TrustedExecutor:
     """
@@ -327,7 +320,7 @@ class TrustedExecutor:
         working_dir: str | None = None,
         sensitivity: str = "medium",
         quarantine_log_path: str | None = None,
-        task_id: str = "unknown",    # set by runner before each task
+        task_id: str = "unknown",  # set by runner before each task
     ) -> None:
         self.blocklist = blocklist if blocklist is not None else DEFAULT_BLOCKLIST
         self.timeout_seconds = timeout_seconds
@@ -385,14 +378,14 @@ class TrustedExecutor:
         if len(stdout) > self.max_output_bytes:
             mid = self.max_output_bytes // 2
             stdout = (
-                stdout[:mid] +
-                f"\n...[truncated {len(stdout) - self.max_output_bytes} bytes]...\n" +
-                stdout[-mid:]
+                stdout[:mid]
+                + f"\n...[truncated {len(stdout) - self.max_output_bytes} bytes]...\n"
+                + stdout[-mid:]
             )
             sanitisation_applied = True
 
         if len(stderr) > self.max_output_bytes // 4:
-            stderr = stderr[:self.max_output_bytes // 4] + "\n...[stderr truncated]..."
+            stderr = stderr[: self.max_output_bytes // 4] + "\n...[stderr truncated]..."
 
         # Sanitise output (injection detection)
         clean_stdout, clean_stderr, quarantine_reason = self.sanitizer.sanitize(
@@ -406,7 +399,8 @@ class TrustedExecutor:
             sanitisation_applied = True
             log.warning(
                 "trusted_executor: quarantined output for task=%s reason=%s",
-                self.task_id, quarantine_reason,
+                self.task_id,
+                quarantine_reason,
             )
 
         # Compute provenance token

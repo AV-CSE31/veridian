@@ -3,6 +3,7 @@ tests.unit.test_hooks
 ──────────────────────
 Unit tests for BaseHook ABC, HookRegistry, and builtin hooks.
 """
+
 import pytest
 
 from veridian.core.events import RunStarted, TaskClaimed, TaskCompleted, TaskFailed
@@ -11,13 +12,13 @@ from veridian.core.task import Task, TaskResult, TaskStatus
 from veridian.hooks.base import BaseHook
 from veridian.hooks.registry import HookRegistry
 
-
 # ── BaseHook ──────────────────────────────────────────────────────────────────
 
-class TestBaseHook:
 
+class TestBaseHook:
     def test_all_methods_are_no_ops(self):
         """All lifecycle methods on BaseHook must silently no-op."""
+
         class MinimalHook(BaseHook):
             id = "minimal"
 
@@ -31,6 +32,7 @@ class TestBaseHook:
 
     def test_priority_is_class_level(self):
         """Priority is a ClassVar — set on the class, not the instance."""
+
         class MyHook(BaseHook):
             id = "myhook"
             priority = 10
@@ -41,6 +43,7 @@ class TestBaseHook:
 
     def test_default_priority_is_50(self):
         """Default priority value is 50."""
+
         class DefaultHook(BaseHook):
             id = "default_hook"
 
@@ -49,8 +52,8 @@ class TestBaseHook:
 
 # ── HookRegistry ──────────────────────────────────────────────────────────────
 
-class TestHookRegistry:
 
+class TestHookRegistry:
     def test_fire_calls_hooks_in_ascending_priority_order(self):
         """Lower priority number runs first."""
         calls: list[str] = []
@@ -58,12 +61,14 @@ class TestHookRegistry:
         class HookA(BaseHook):
             id = "a"
             priority = 50
+
             def before_task(self, event: object) -> None:
                 calls.append("a")
 
         class HookB(BaseHook):
             id = "b"
             priority = 10
+
             def before_task(self, event: object) -> None:
                 calls.append("b")
 
@@ -75,8 +80,10 @@ class TestHookRegistry:
 
     def test_broken_hook_never_kills_run(self):
         """Hook exceptions must be swallowed by HookRegistry. Run continues."""
+
         class BrokenHook(BaseHook):
             id = "broken"
+
             def before_task(self, event: object) -> None:
                 raise RuntimeError("hook exploded")
 
@@ -87,6 +94,7 @@ class TestHookRegistry:
 
     def test_register_and_list(self):
         """Registered hooks are accessible via the hooks property."""
+
         class H(BaseHook):
             id = "h1"
 
@@ -101,6 +109,7 @@ class TestHookRegistry:
 
     def test_fire_missing_method_is_no_op(self):
         """If a hook does not implement the method, skip it silently."""
+
         class SelectiveHook(BaseHook):
             id = "selective"
             # Only implements before_run, not before_task
@@ -115,6 +124,7 @@ class TestHookRegistry:
 
         class Counter(BaseHook):
             id = "counter"
+
             def before_run(self, event: object) -> None:
                 counts[0] += 1
 
@@ -126,8 +136,10 @@ class TestHookRegistry:
 
     def test_hook_isolation_test(self):
         """Mandatory hook isolation: BrokenHook cannot propagate exceptions."""
+
         class BrokenHook(BaseHook):
             id = "broken"
+
             def before_task(self, event: object) -> None:
                 raise RuntimeError("hook exploded")
 
@@ -138,26 +150,30 @@ class TestHookRegistry:
 
 # ── LoggingHook ───────────────────────────────────────────────────────────────
 
-class TestLoggingHook:
 
+class TestLoggingHook:
     def test_priority_is_zero(self):
         from veridian.hooks.builtin.logging_hook import LoggingHook
+
         assert LoggingHook.priority == 0
 
     def test_before_task_does_not_raise(self):
         from veridian.hooks.builtin.logging_hook import LoggingHook
+
         hook = LoggingHook()
         task = Task(title="test", id="t1")
         hook.before_task(TaskClaimed(run_id="r1", task=task))
 
     def test_after_task_does_not_raise(self):
         from veridian.hooks.builtin.logging_hook import LoggingHook
+
         hook = LoggingHook()
         task = Task(title="test", id="t1", status=TaskStatus.DONE)
         hook.after_task(TaskCompleted(run_id="r1", task=task))
 
     def test_on_failure_does_not_raise(self):
         from veridian.hooks.builtin.logging_hook import LoggingHook
+
         hook = LoggingHook()
         task = Task(title="test", id="t1")
         hook.on_failure(TaskFailed(run_id="r1", task=task, error="boom"))
@@ -165,15 +181,17 @@ class TestLoggingHook:
 
 # ── CostGuardHook ─────────────────────────────────────────────────────────────
 
-class TestCostGuardHook:
 
+class TestCostGuardHook:
     def test_no_raise_under_budget(self):
         from veridian.hooks.builtin.cost_guard import CostGuardHook
+
         hook = CostGuardHook(max_cost_usd=10.0)
         hook.before_task(TaskClaimed(run_id="r1"))  # must not raise
 
     def test_raises_cost_limit_exceeded_when_over_budget(self):
         from veridian.hooks.builtin.cost_guard import CostGuardHook
+
         hook = CostGuardHook(max_cost_usd=0.01)
         hook._current_cost = 0.02
         with pytest.raises(CostLimitExceeded):
@@ -181,6 +199,7 @@ class TestCostGuardHook:
 
     def test_accumulates_cost_from_task_tokens(self):
         from veridian.hooks.builtin.cost_guard import CostGuardHook
+
         hook = CostGuardHook(max_cost_usd=100.0, cost_per_token=0.001)
         task = Task(title="t1")
         task.result = TaskResult(
@@ -193,6 +212,7 @@ class TestCostGuardHook:
 
     def test_error_message_actionable(self):
         from veridian.hooks.builtin.cost_guard import CostGuardHook
+
         hook = CostGuardHook(max_cost_usd=1.0)
         hook._current_cost = 2.0
         with pytest.raises(CostLimitExceeded) as exc_info:
@@ -200,13 +220,42 @@ class TestCostGuardHook:
         assert "2" in str(exc_info.value)  # current cost visible
         assert "1" in str(exc_info.value)  # limit visible
 
+    def test_after_task_no_op_when_task_missing(self):
+        """after_task with no task attribute should return early without error."""
+        from veridian.hooks.builtin.cost_guard import CostGuardHook
+
+        hook = CostGuardHook(max_cost_usd=10.0)
+        event_no_task = type("FakeEvent", (), {})()
+        hook.after_task(event_no_task)  # must not raise
+
+    def test_after_task_no_op_when_result_missing(self):
+        """after_task with task but no result should return early."""
+        from veridian.hooks.builtin.cost_guard import CostGuardHook
+
+        hook = CostGuardHook(max_cost_usd=10.0)
+        task_no_result = Task(title="t1")
+        event = TaskCompleted(run_id="r1", task=task_no_result)
+        hook.after_task(event)  # must not raise
+
+    def test_after_task_logs_warning_when_near_budget(self):
+        """after_task should log a warning when cost exceeds warn_at_pct threshold."""
+        from veridian.hooks.builtin.cost_guard import CostGuardHook
+
+        hook = CostGuardHook(max_cost_usd=1.0, cost_per_token=0.001, warn_at_pct=0.5)
+        task = Task(title="t1")
+        task.result = TaskResult(raw_output="done", token_usage={"total_tokens": 600})
+        event = TaskCompleted(run_id="r1", task=task)
+        hook.after_task(event)  # should log but not raise
+        assert hook.current_cost == pytest.approx(0.6)
+
 
 # ── HumanReviewHook ───────────────────────────────────────────────────────────
 
-class TestHumanReviewHook:
 
+class TestHumanReviewHook:
     def test_raises_human_review_required_when_flagged(self):
         from veridian.hooks.builtin.human_review import HumanReviewHook
+
         hook = HumanReviewHook()
         task = Task(title="t1", metadata={"requires_human_review": True})
         with pytest.raises(HumanReviewRequired):
@@ -214,44 +263,79 @@ class TestHumanReviewHook:
 
     def test_no_raise_when_not_flagged(self):
         from veridian.hooks.builtin.human_review import HumanReviewHook
+
         hook = HumanReviewHook()
         task = Task(title="t1", metadata={})
         hook.before_task(TaskClaimed(run_id="r1", task=task))  # must not raise
 
     def test_no_raise_without_task(self):
         from veridian.hooks.builtin.human_review import HumanReviewHook
+
         hook = HumanReviewHook()
         hook.before_task(TaskClaimed(run_id="r1"))  # event with no task attached
 
 
 # ── RateLimitHook ─────────────────────────────────────────────────────────────
 
-class TestRateLimitHook:
 
+class TestRateLimitHook:
     def test_does_not_raise_under_limit(self):
         from veridian.hooks.builtin.rate_limit import RateLimitHook
+
         hook = RateLimitHook(max_per_minute=100)
         hook.before_task(TaskClaimed(run_id="r1"))  # must not raise
 
     def test_priority_is_50(self):
         from veridian.hooks.builtin.rate_limit import RateLimitHook
+
         assert RateLimitHook.priority == 50
 
 
 # ── SlackNotifyHook ───────────────────────────────────────────────────────────
 
-class TestSlackNotifyHook:
 
+class TestSlackNotifyHook:
     def test_no_op_when_no_webhook(self):
         from veridian.hooks.builtin.slack import SlackNotifyHook
+
         hook = SlackNotifyHook(webhook_url=None)
         hook.before_run(RunStarted(run_id="r1"))  # must not raise
 
     def test_after_run_no_op_when_no_webhook(self):
         from veridian.hooks.builtin.slack import SlackNotifyHook
+
         hook = SlackNotifyHook(webhook_url=None)
         hook.after_run(RunStarted(run_id="r1"))
 
     def test_priority_is_50(self):
         from veridian.hooks.builtin.slack import SlackNotifyHook
+
         assert SlackNotifyHook.priority == 50
+
+
+# ── Exception coverage ─────────────────────────────────────────────────────────
+
+
+class TestDriftDetectedException:
+    def test_drift_detected_stores_attributes(self):
+        """DriftDetected should store metric, magnitude, and direction."""
+        from veridian.core.exceptions import DriftDetected
+
+        exc = DriftDetected(metric="latency", magnitude=0.25, direction="up")
+        assert exc.metric == "latency"
+        assert exc.magnitude == 0.25
+        assert exc.direction == "up"
+        assert "latency" in str(exc)
+        assert "up" in str(exc)
+
+
+class TestVeridianEventToDict:
+    def test_to_dict_returns_serialisable_dict(self):
+        """VeridianEvent.to_dict() should return a dict with standard keys."""
+        from veridian.core.events import RunStarted
+
+        ev = RunStarted(run_id="r1", event_type="run_started")
+        d = ev.to_dict()
+        assert d["run_id"] == "r1"
+        assert d["event_type"] == "run_started"
+        assert "ts" in d

@@ -4,6 +4,7 @@ veridian.context.window
 TokenWindow — tracks a fixed token budget for context assembly.
 Used by ContextManager to decide whether optional blocks fit.
 """
+
 from __future__ import annotations
 
 __all__ = ["TokenWindow"]

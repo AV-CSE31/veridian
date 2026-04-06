@@ -8,6 +8,7 @@ catching the behavioral regression in real time.
 Usage:
     python examples/drift-detection/run_drift_demo.py
 """
+
 from __future__ import annotations
 
 import json
@@ -16,7 +17,6 @@ from pathlib import Path
 
 from veridian.core.events import RunCompleted, RunStarted, TaskCompleted, TaskFailed
 from veridian.hooks.builtin.drift_detector import DriftDetectorHook
-
 
 # ── Fake objects (same pattern as test suite) ────────────────────────────────
 

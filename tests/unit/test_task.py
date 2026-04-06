@@ -3,18 +3,27 @@ tests.unit.test_task
 ─────────────────────
 Unit tests for Task, TaskStatus state machine, TaskResult, LedgerStats.
 """
-import pytest
+
 from datetime import datetime
 
-from veridian.core.task import (
-    Task, TaskStatus, TaskResult, TaskPriority, LedgerStats
-)
+import pytest
 
+from veridian.core.task import (
+    LedgerStats,
+    PRMBudget,
+    PRMRunResult,
+    PRMScore,
+    Task,
+    TaskPriority,
+    TaskResult,
+    TaskStatus,
+    TraceStep,
+)
 
 # ── TaskStatus state machine ──────────────────────────────────────────────────
 
-class TestTaskStatusTransitions:
 
+class TestTaskStatusTransitions:
     def test_pending_to_in_progress(self):
         assert TaskStatus.PENDING.can_transition_to(TaskStatus.IN_PROGRESS)
 
@@ -70,8 +79,8 @@ class TestTaskStatusTransitions:
 
 # ── Task dataclass ────────────────────────────────────────────────────────────
 
-class TestTask:
 
+class TestTask:
     def test_auto_id_generation(self):
         t1 = Task(title="a")
         t2 = Task(title="b")
@@ -139,8 +148,8 @@ class TestTask:
 
 # ── TaskResult ────────────────────────────────────────────────────────────────
 
-class TestTaskResult:
 
+class TestTaskResult:
     def test_roundtrip_empty(self):
         r = TaskResult(raw_output="some output")
         restored = TaskResult.from_dict(r.to_dict())
@@ -154,6 +163,36 @@ class TestTaskResult:
             structured={"field": "value", "score": 0.95},
             artifacts=["output/report.json"],
             bash_outputs=[{"cmd": "pytest", "exit_code": 0}],
+            trace_steps=[
+                TraceStep(
+                    step_id="s1",
+                    role="assistant",
+                    action_type="reason",
+                    content="thinking",
+                    timestamp_ms=1000,
+                )
+            ],
+            prm_result=PRMRunResult(
+                passed=True,
+                aggregate_score=0.9,
+                aggregate_confidence=0.8,
+                threshold=0.7,
+                scored_steps=[
+                    PRMScore(
+                        step_id="s1",
+                        score=0.9,
+                        confidence=0.8,
+                        model_id="prm-model",
+                        version="1",
+                    )
+                ],
+                policy_action="allow",
+            ),
+            confidence={"composite": 0.88, "tier": "HIGH"},
+            verifier_score=0.91,
+            tool_calls=[{"name": "search_docs"}],
+            timing={"worker_ms": 123.4, "verification_ms": 5.6},
+            verification_evidence={"required_fields_present": True},
             verified=True,
             verification_error=None,
             token_usage={"input_tokens": 1000, "output_tokens": 200, "total_tokens": 1200},
@@ -165,13 +204,41 @@ class TestTaskResult:
         assert restored.artifacts == ["output/report.json"]
         assert restored.verified is True
         assert restored.token_usage["total_tokens"] == 1200
+        assert restored.trace_steps[0].step_id == "s1"
+        assert restored.prm_result is not None
+        assert restored.prm_result.policy_action == "allow"
+        assert restored.prm_result.scored_steps[0].model_id == "prm-model"
+        assert restored.confidence is not None
+        assert restored.confidence["composite"] == pytest.approx(0.88)
+        assert restored.verifier_score == pytest.approx(0.91)
+        assert restored.tool_calls[0]["name"] == "search_docs"
+        assert restored.timing["verification_ms"] == pytest.approx(5.6)
+        assert restored.verification_evidence["required_fields_present"] is True
         assert restored.verified_at.year == 2025
+
+    def test_roundtrip_preserves_unknown_fields(self):
+        payload = {
+            "raw_output": "x",
+            "structured": {},
+            "future_field": {"x": 1},
+            "new_metric": 42,
+        }
+        restored = TaskResult.from_dict(payload)
+        out = restored.to_dict()
+        assert out["future_field"] == {"x": 1}
+        assert out["new_metric"] == 42
+
+
+class TestPRMContracts:
+    def test_prm_budget_roundtrip(self):
+        b = PRMBudget(max_steps_per_call=10, max_tokens_per_call=500, max_latency_ms=1000)
+        assert PRMBudget.from_dict(b.to_dict()) == b
 
 
 # ── LedgerStats ───────────────────────────────────────────────────────────────
 
-class TestLedgerStats:
 
+class TestLedgerStats:
     def test_convenience_properties(self):
         s = LedgerStats(
             total=10,

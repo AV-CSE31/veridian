@@ -21,6 +21,7 @@ Usage:
     # Pydantic model path:
     verifier_config={"schema": "my_package.models:ClauseResult"}
 """
+
 from __future__ import annotations
 
 import importlib
@@ -71,9 +72,7 @@ def _check_json_schema(schema: dict[str, Any], data: dict[str, Any]) -> list[str
         # enum check
         enum_vals: list[Any] | None = constraints.get("enum")
         if enum_vals is not None and value not in enum_vals:
-            errors.append(
-                f"field '{field}' must be one of {enum_vals!r}, got '{value}'"
-            )
+            errors.append(f"field '{field}' must be one of {enum_vals!r}, got '{value}'")
 
         # minLength / maxLength for strings
         if isinstance(value, str):
@@ -117,6 +116,7 @@ def _validate_pydantic(model_path: str, data: dict[str, Any]) -> list[str]:
 
     try:
         from pydantic import ValidationError  # noqa: PLC0415,F401
+
         cls(**data)
         return []
     except ImportError:

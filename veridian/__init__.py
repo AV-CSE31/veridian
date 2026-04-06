@@ -34,49 +34,34 @@ PyPI:    https://pypi.org/project/veridian/
 License: MIT
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Veridian contributors"
 __license__ = "MIT"
 
-# ── Core domain models ─────────────────────────────────────────────────────────
+# ── Stable eager imports (v0.2 minimized surface) ────────────────────────────
+# Only symbols listed in __all__ are imported here. Everything else is
+# importable from its module path (e.g. ``from veridian.core.events import ...``).
+
+# Budget
+from veridian.budget import Budget, BudgetState
+
+# Events (lifecycle core only)
 from veridian.core.events import (
-    CircuitBreakerClosed,
-    CircuitBreakerOpened,
-    ContextCompacted,
-    CostGuardTriggered,
-    CostWarning,
-    HumanReviewRequested,
-    HumanReviewResumed,
-    RateLimitHit,
-    RetryScheduled,
     RunCompleted,
     RunStarted,
-    SLABreached,
-    SLAWarning,
-    TaskAbandoned,
     TaskClaimed,
     TaskCompleted,
     TaskFailed,
-    TaskSkipped,
     VeridianEvent,
-    VerificationFailed,
-    VerificationPassed,
 )
 
-# Import RunAborted from events and alias to avoid clash with the exception
-from veridian.core.events import RunAborted as RunAbortedEvent
+# Exceptions (core only)
 from veridian.core.exceptions import (
-    BlockedCommand,
-    ContextWindowExceeded,
+    BudgetExceeded,
     CostLimitExceeded,
-    ExecutorError,
-    ExecutorTimeout,
     HumanReviewRequired,
     InvalidTransition,
-    LedgerCorrupted,
     ProviderError,
-    ProviderRateLimited,
-    RunAborted,
     TaskAlreadyClaimed,
     TaskNotFound,
     VeridianConfigError,
@@ -85,12 +70,7 @@ from veridian.core.exceptions import (
     VerifierNotFound,
 )
 
-# ── Task quality gate ──────────────────────────────────────────────────────────
-from veridian.core.quality_gate import (
-    QualityScore,
-    TaskGraph,
-    TaskQualityGate,
-)
+# Task domain
 from veridian.core.task import (
     LedgerStats,
     Task,
@@ -99,24 +79,55 @@ from veridian.core.task import (
     TaskStatus,
 )
 
-# ── Ledger ─────────────────────────────────────────────────────────────────────
+# Ledger
 from veridian.ledger.ledger import TaskLedger
 
-# ── Providers ──────────────────────────────────────────────────────────────────
+# Providers
 from veridian.providers.base import LLMProvider, LLMResponse, Message
-from veridian.providers.litellm_provider import CircuitBreaker, LiteLLMProvider
+from veridian.providers.litellm_provider import LiteLLMProvider
 from veridian.providers.mock_provider import MockProvider
 
 # Import builtin verifiers so they self-register on `import veridian`
 from veridian.verify import builtin as _builtin_verifiers  # noqa: F401
 
-# ── Verification ───────────────────────────────────────────────────────────────
-from veridian.verify.base import (
-    BaseVerifier,
-    VerificationResult,
-)
-from veridian.verify.base import (
-    registry as verifier_registry,
+# Verification
+from veridian.verify.base import BaseVerifier, VerificationResult
+from veridian.verify.base import registry as verifier_registry
+
+# ── Deprecated / experimental symbols (RV3-013 + audit F2) ───────────────────
+#
+# These symbols remain importable from the top-level ``veridian`` namespace in
+# v3 for backward compatibility, but the stable home is ``veridian.experimental``
+# and they will be removed from ``veridian.*`` in a future release. Every access emits a
+# DeprecationWarning with the migration path so downstream code upgrades
+# deterministically instead of discovering the change at release time.
+
+_DEPRECATED_EXPERIMENTAL_SYMBOLS: frozenset[str] = frozenset(
+    {
+        # Adversarial evaluation pipeline
+        "AdversarialEvaluator",
+        "EvaluationResult",
+        "CalibrationProfile",
+        "GradingRubric",
+        "RubricCriterion",
+        "PipelineResult",
+        "VerificationPipeline",
+        # Sprint Contract Protocol
+        "SprintContract",
+        "ContractRegistry",
+        "SprintContractVerifier",
+        "SprintContractHook",
+        # Record/replay harness
+        "AgentRecorder",
+        "RecordedRun",
+        "ReplayAssertion",
+        "ReplayResult",
+        "Replayer",
+        # GitHub Action harness
+        "ActionConfig",
+        "ActionResult",
+        "run_action",
+    }
 )
 
 
@@ -125,6 +136,10 @@ def __getattr__(name: str) -> object:
     """
     Lazy-load heavy runner and agent modules on first access.
     This keeps `import veridian` fast and avoids circular import issues.
+
+    Removed experimental symbols (see ``_DEPRECATED_EXPERIMENTAL_SYMBOLS``)
+    fail closed with ``AttributeError`` and a migration hint to
+    ``veridian.experimental.*``.
     """
     if name in ("VeridianRunner", "VeridianConfig", "RunSummary"):
         from veridian.core.config import VeridianConfig  # noqa: PLC0415
@@ -132,6 +147,7 @@ def __getattr__(name: str) -> object:
             RunSummary,
             VeridianRunner,
         )
+
         globals()["VeridianRunner"] = VeridianRunner
         globals()["VeridianConfig"] = VeridianConfig
         globals()["RunSummary"] = RunSummary
@@ -139,12 +155,14 @@ def __getattr__(name: str) -> object:
 
     if name == "ParallelRunner":
         from veridian.loop.parallel_runner import ParallelRunner  # noqa: PLC0415
+
         globals()["ParallelRunner"] = ParallelRunner
         return ParallelRunner
 
     if name in ("InitializerAgent", "WorkerAgent"):
         from veridian.agents.initializer import InitializerAgent  # noqa: PLC0415
         from veridian.agents.worker import WorkerAgent  # noqa: PLC0415
+
         globals()["InitializerAgent"] = InitializerAgent
         globals()["WorkerAgent"] = WorkerAgent
         return globals()[name]
@@ -152,34 +170,43 @@ def __getattr__(name: str) -> object:
     if name in ("BaseHook", "HookRegistry"):
         from veridian.hooks.base import BaseHook  # noqa: PLC0415
         from veridian.hooks.registry import HookRegistry  # noqa: PLC0415
+
         globals()["BaseHook"] = BaseHook
         globals()["HookRegistry"] = HookRegistry
         return globals()[name]
 
-    if name in ("LoggingHook", "CostGuardHook", "HumanReviewHook",
-                "RateLimitHook", "SlackNotifyHook"):
+    if name in (
+        "LoggingHook",
+        "CostGuardHook",
+        "HumanReviewHook",
+        "RateLimitHook",
+        "SlackNotifyHook",
+    ):
         import veridian.hooks.builtin as _hooks  # noqa: PLC0415
+
         return getattr(_hooks, name)
 
     if name == "CrossRunConsistencyHook":
         from veridian.hooks.builtin.cross_run_consistency import (  # noqa: PLC0415
             CrossRunConsistencyHook,
         )
+
         globals()["CrossRunConsistencyHook"] = CrossRunConsistencyHook
         return CrossRunConsistencyHook
 
     if name == "VeridianTracer":
         from veridian.observability.tracer import VeridianTracer  # noqa: PLC0415
+
         globals()["VeridianTracer"] = VeridianTracer
         return VeridianTracer
 
     if name == "EntropyGC":
         from veridian.entropy.gc import EntropyGC  # noqa: PLC0415
+
         globals()["EntropyGC"] = EntropyGC
         return EntropyGC
 
-    if name in ("SemanticGroundingVerifier", "ConfidenceScore",
-                "SelfConsistencyVerifier"):
+    if name in ("SemanticGroundingVerifier", "ConfidenceScore", "SelfConsistencyVerifier"):
         from veridian.verify.builtin.confidence import (  # noqa: PLC0415
             ConfidenceScore,
             SelfConsistencyVerifier,
@@ -187,6 +214,7 @@ def __getattr__(name: str) -> object:
         from veridian.verify.builtin.semantic_grounding import (  # noqa: PLC0415
             SemanticGroundingVerifier,
         )
+
         globals()["SemanticGroundingVerifier"] = SemanticGroundingVerifier
         globals()["ConfidenceScore"] = ConfidenceScore
         globals()["SelfConsistencyVerifier"] = SelfConsistencyVerifier
@@ -198,61 +226,80 @@ def __getattr__(name: str) -> object:
             OutputSanitizer,
             TrustedExecutor,
         )
+
         globals()["TrustedExecutor"] = TrustedExecutor
         globals()["OutputSanitizer"] = OutputSanitizer
         globals()["BashOutput"] = BashOutput
         return globals()[name]
 
+    # ── v0.2 breaking change: removed deprecated experimental symbols ────────
+    # These were accessible from ``veridian.*`` in v3 with a DeprecationWarning.
+    # In v0.2 they are only available from ``veridian.experimental.*``.
+    if name in _DEPRECATED_EXPERIMENTAL_SYMBOLS:
+        raise AttributeError(
+            f"module 'veridian' no longer exports {name!r} (removed in v0.2). "
+            f"Import from veridian.experimental instead: "
+            f"`from veridian.experimental import {name}`"
+        )
+
     raise AttributeError(f"module 'veridian' has no attribute {name!r}")
 
 
+# ── Stable public API (v0.2 — minimized per Phase D of 09-foundation-cleanup) ─
+# Target: ~40 symbols (down from 123 in v3). Everything else is importable
+# from its module path but not advertised here.
 __all__ = [
     # Version
     "__version__",
-
-    # Core models
-    "Task", "TaskStatus", "TaskResult", "TaskPriority", "LedgerStats",
-
-    # Events
-    "VeridianEvent",
-    "RunStarted", "RunCompleted", "RunAbortedEvent",
-    "TaskClaimed", "TaskCompleted", "TaskFailed", "TaskAbandoned", "TaskSkipped",
-    "VerificationPassed", "VerificationFailed",
-    "CircuitBreakerOpened", "CircuitBreakerClosed",
-    "CostGuardTriggered", "CostWarning",
-    "RateLimitHit", "RetryScheduled",
-    "HumanReviewRequested", "HumanReviewResumed",
-    "SLAWarning", "SLABreached",
-    "ContextCompacted",
-
-    # Exceptions
-    "VeridianError", "VeridianConfigError", "InvalidTransition", "LedgerCorrupted",
-    "TaskNotFound", "TaskAlreadyClaimed",
-    "VerificationError", "VerifierNotFound",
-    "ProviderError", "ProviderRateLimited", "ContextWindowExceeded",
-    "ExecutorError", "ExecutorTimeout", "BlockedCommand",
-    "CostLimitExceeded", "HumanReviewRequired", "RunAborted",
-
-    # Quality gate
-    "TaskQualityGate", "TaskGraph", "QualityScore",
-
+    # Core domain models
+    "Task",
+    "TaskStatus",
+    "TaskResult",
+    "TaskPriority",
+    "LedgerStats",
     # Ledger
     "TaskLedger",
-
+    # Runner
+    "VeridianRunner",
+    "VeridianConfig",
+    "RunSummary",
+    "ParallelRunner",
     # Verification
-    "BaseVerifier", "VerificationResult", "verifier_registry",
-
+    "BaseVerifier",
+    "VerificationResult",
+    "verifier_registry",
+    # Hooks
+    "BaseHook",
+    "HookRegistry",
     # Providers
-    "LLMProvider", "LLMResponse", "Message",
-    "LiteLLMProvider", "CircuitBreaker", "MockProvider",
-
-    # Lazy-loaded (via __getattr__)
-    "VeridianRunner", "VeridianConfig", "RunSummary", "ParallelRunner",
-    "InitializerAgent", "WorkerAgent",
-    "BaseHook", "HookRegistry",
-    "LoggingHook", "CostGuardHook", "HumanReviewHook",
-    "RateLimitHook", "SlackNotifyHook", "CrossRunConsistencyHook",
-    "VeridianTracer", "EntropyGC",
-    "SemanticGroundingVerifier", "ConfidenceScore", "SelfConsistencyVerifier",
-    "TrustedExecutor", "OutputSanitizer", "BashOutput",
+    "LLMProvider",
+    "LLMResponse",
+    "Message",
+    "LiteLLMProvider",
+    "MockProvider",
+    # Events (lifecycle)
+    "VeridianEvent",
+    "RunStarted",
+    "RunCompleted",
+    "TaskClaimed",
+    "TaskCompleted",
+    "TaskFailed",
+    # Exceptions (core)
+    "VeridianError",
+    "VeridianConfigError",
+    "InvalidTransition",
+    "TaskNotFound",
+    "TaskAlreadyClaimed",
+    "VerificationError",
+    "VerifierNotFound",
+    "ProviderError",
+    "HumanReviewRequired",
+    "CostLimitExceeded",
+    "BudgetExceeded",
+    # Budget
+    "Budget",
+    "BudgetState",
 ]
+# Count: 40 symbols (was 123 in v3).
+# Everything removed here is still importable from its module path (e.g.
+# ``from veridian.core.events import SLAWarning``). See planning/MIGRATION_v3_to_v4.md.

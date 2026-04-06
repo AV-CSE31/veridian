@@ -13,6 +13,7 @@ RULES FOR ALL VERIFIERS:
    - ACTIONABLE: tell the agent what to fix and how
    - CONCISE: < 300 chars — this goes directly into the LLM context window
 """
+
 from __future__ import annotations
 
 import importlib.metadata
@@ -22,7 +23,7 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from veridian.core.exceptions import VerifierNotFound
-from veridian.core.task import Task, TaskResult
+from veridian.core.task import PRMBudget, PRMRunResult, Task, TaskResult, TraceStep
 
 log = logging.getLogger(__name__)
 
@@ -33,10 +34,20 @@ class VerificationResult:
     Returned by every verifier.
     If passed=False, error is injected verbatim into the next agent prompt.
     """
+
     passed: bool
-    error: str | None = None        # injected into LLM context on failure
+    error: str | None = None  # injected into LLM context on failure
     evidence: dict[str, Any] = field(default_factory=dict)
-    score: float | None = None      # 0.0–1.0; used by LLMJudgeVerifier
+    score: float | None = None  # 0.0–1.0; used by LLMJudgeVerifier
+
+    # Gap 3 fix: probabilistic verification support
+    # Confidence interval for constraint satisfaction probability
+    confidence_lower: float | None = None  # lower bound of CI
+    confidence_upper: float | None = None  # upper bound of CI
+    confidence_level: float | None = None  # e.g., 0.95 for 95% CI
+
+    # Execution metadata for Gap 6 (performance transparency)
+    verification_ms: float | None = None  # wall-clock time for this verification
 
 
 class BaseVerifier(ABC):
@@ -44,6 +55,7 @@ class BaseVerifier(ABC):
     Abstract base for all verifiers.
     Subclasses must define class-level `id` and `description`.
     """
+
     id: ClassVar[str]
     description: ClassVar[str] = ""
 
@@ -56,14 +68,73 @@ class BaseVerifier(ABC):
         super().__init_subclass__(**kwargs)
         # Enforce that every concrete subclass declares an id
         if not getattr(cls, "id", None) and not getattr(cls, "__abstractmethods__", None):
-                raise TypeError(
-                    f"{cls.__name__} must define a class-level 'id' string"
-                )
+            raise TypeError(f"{cls.__name__} must define a class-level 'id' string")
+
+
+class PRMVerifier(BaseVerifier):
+    """
+    Base class for Process Reward Model verifiers.
+
+    PRM verifiers score ordered trace steps and return a PRMRunResult. The
+    default BaseVerifier.verify() contract is preserved so PRM plugins remain
+    registry-compatible with existing verifier wiring.
+    """
+
+    id: ClassVar[str] = "prm"
+    description: ClassVar[str] = "Scores ordered trace steps with a Process Reward Model."
+
+    @abstractmethod
+    def score_steps(
+        self,
+        *,
+        task_id: str,
+        steps: list[TraceStep],
+        context: dict[str, Any],
+        budget: PRMBudget,
+    ) -> PRMRunResult:
+        """Return deterministic PRM scoring for a task trace."""
+        ...
+
+    def verify(self, task: Task, result: TaskResult) -> VerificationResult:
+        """
+        Adapt PRM scoring to the standard verifier contract.
+
+        This keeps PRM implementations compatible with the existing registry
+        and runner code paths while exposing richer PRMRunResult data to callers.
+        """
+
+        prm_result = self.score_steps(
+            task_id=task.id,
+            steps=list(result.trace_steps),
+            context={
+                "task_title": task.title,
+                "task_description": task.description,
+                "task_metadata": task.metadata,
+                "task_phase": task.phase,
+                "retry_count": task.retry_count,
+                "max_retries": task.max_retries,
+                "verifier_id": task.verifier_id,
+                "verifier_config": task.verifier_config,
+            },
+            budget=PRMBudget(),
+        )
+        evidence = {
+            "prm_result": prm_result.to_dict(),
+            "policy_action": prm_result.policy_action,
+            "scored_steps": [score.to_dict() for score in prm_result.scored_steps],
+        }
+        return VerificationResult(
+            passed=prm_result.passed,
+            error=prm_result.error,
+            evidence=evidence,
+            score=prm_result.aggregate_score,
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # REGISTRY
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class VerifierRegistry:
     """
@@ -110,14 +181,6 @@ class VerifierRegistry:
         if config:
             return cls(**config)
         return cls()
-
-    def list_available(self) -> list[dict[str, str]]:
-        """Return [{id, description}] for all registered verifiers."""
-        self._autodiscover()
-        return [
-            {"id": vid, "description": cls.description}
-            for vid, cls in sorted(self._classes.items())
-        ]
 
     def _autodiscover(self) -> None:
         """Load entry-point plugins. Called once on first access."""

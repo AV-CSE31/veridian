@@ -10,6 +10,7 @@ against a configurable historical window using z-score and Bayesian methods.
 Read-only: never mutates the ledger or any external state beyond its own
 history file and optional report file.
 """
+
 from __future__ import annotations
 
 import json
@@ -156,12 +157,8 @@ class DriftReport:
         else:
             lines.append("## Signals")
             lines.append("")
-            lines.append(
-                "| Metric | Baseline | Current | Z-Score | Direction | Significance |"
-            )
-            lines.append(
-                "|--------|----------|---------|---------|-----------|--------------|"
-            )
+            lines.append("| Metric | Baseline | Current | Z-Score | Direction | Significance |")
+            lines.append("|--------|----------|---------|---------|-----------|--------------|")
             for s in self.signals:
                 lines.append(
                     f"| {s.metric} | {s.baseline_mean:.4f} "
@@ -203,13 +200,9 @@ class DriftDetectorHook(BaseHook):
         report_path: Path | str | None = None,
     ) -> None:
         if window < 1:
-            raise VeridianConfigError(
-                f"drift_detector: window must be >= 1, got {window}"
-            )
+            raise VeridianConfigError(f"drift_detector: window must be >= 1, got {window}")
         if threshold < 0.0 or threshold > 1.0:
-            raise VeridianConfigError(
-                f"drift_detector: threshold must be 0.0–1.0, got {threshold}"
-            )
+            raise VeridianConfigError(f"drift_detector: threshold must be 0.0–1.0, got {threshold}")
 
         self._history_file = Path(history_file) if history_file else None
         self._window = window
@@ -258,9 +251,7 @@ class DriftDetectorHook(BaseHook):
             return
 
         verifier_id = getattr(task, "verifier_id", "unknown")
-        self._verifier_pass_counts[verifier_id] = (
-            self._verifier_pass_counts.get(verifier_id, 0) + 1
-        )
+        self._verifier_pass_counts[verifier_id] = self._verifier_pass_counts.get(verifier_id, 0) + 1
 
         retry_count = getattr(task, "retry_count", 0)
         self._total_retries += retry_count
@@ -272,7 +263,13 @@ class DriftDetectorHook(BaseHook):
 
             confidence = getattr(result, "confidence", None)
             if confidence is not None:
-                composite = getattr(confidence, "composite", None)
+                composite = None
+                if isinstance(confidence, dict):
+                    composite = confidence.get("composite")
+                elif isinstance(confidence, (int, float)):
+                    composite = float(confidence)
+                else:
+                    composite = getattr(confidence, "composite", None)
                 if composite is not None:
                     self._confidence_scores.append(float(composite))
 
@@ -307,8 +304,7 @@ class DriftDetectorHook(BaseHook):
             )
             for signal in report.signals:
                 log.warning(
-                    "drift.signal metric=%s baseline=%.4f current=%.4f "
-                    "z=%.2f direction=%s",
+                    "drift.signal metric=%s baseline=%.4f current=%.4f z=%.2f direction=%s",
                     signal.metric,
                     signal.baseline_mean,
                     signal.current_value,
@@ -343,14 +339,17 @@ class DriftDetectorHook(BaseHook):
         if self._confidence_scores:
             conf_mean = sum(self._confidence_scores) / len(self._confidence_scores)
             if len(self._confidence_scores) > 1:
-                variance = sum(
-                    (c - conf_mean) ** 2 for c in self._confidence_scores
-                ) / len(self._confidence_scores)
+                variance = sum((c - conf_mean) ** 2 for c in self._confidence_scores) / len(
+                    self._confidence_scores
+                )
                 conf_std = math.sqrt(variance)
 
         # Confidence tier counts
         tier_counts: dict[str, int] = {
-            "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNCERTAIN": 0,
+            "HIGH": 0,
+            "MEDIUM": 0,
+            "LOW": 0,
+            "UNCERTAIN": 0,
         }
         for score in self._confidence_scores:
             if score >= 0.85:
@@ -437,9 +436,7 @@ class DriftDetectorHook(BaseHook):
 
         os.replace(tmp_path, self._history_file)
 
-    def _analyze_drift(
-        self, current: RunSnapshot, history: list[RunSnapshot]
-    ) -> DriftReport:
+    def _analyze_drift(self, current: RunSnapshot, history: list[RunSnapshot]) -> DriftReport:
         """Compare current snapshot against the last N runs in the window."""
         report = DriftReport(
             run_id=current.run_id,
@@ -452,7 +449,7 @@ class DriftDetectorHook(BaseHook):
             report.overall_status = "stable"
             return report
 
-        window = history[-self._window:]
+        window = history[-self._window :]
         signals: list[DriftSignal] = []
 
         # 1. Per-verifier pass rate drift (Bayesian)
@@ -493,26 +490,35 @@ class DriftDetectorHook(BaseHook):
                 baseline_std = math.sqrt(
                     sum(
                         (
-                            (snap.verifier_stats.get(vid, {}).get("pass", 0)
-                             / max(1, snap.verifier_stats.get(vid, {}).get("pass", 0)
-                                   + snap.verifier_stats.get(vid, {}).get("fail", 0)))
+                            (
+                                snap.verifier_stats.get(vid, {}).get("pass", 0)
+                                / max(
+                                    1,
+                                    snap.verifier_stats.get(vid, {}).get("pass", 0)
+                                    + snap.verifier_stats.get(vid, {}).get("fail", 0),
+                                )
+                            )
                             - baseline_rate
-                        ) ** 2
+                        )
+                        ** 2
                         for snap in window
-                    ) / max(1, len(window))
+                    )
+                    / max(1, len(window))
                 )
                 z = (current_rate - baseline_rate) / max(baseline_std, 0.001)
 
-                signals.append(DriftSignal(
-                    metric=f"verification_pass_rate.{vid}",
-                    baseline_mean=baseline_rate,
-                    baseline_std=baseline_std,
-                    current_value=current_rate,
-                    z_score=z,
-                    magnitude=magnitude,
-                    direction="degraded",
-                    significance="significant",
-                ))
+                signals.append(
+                    DriftSignal(
+                        metric=f"verification_pass_rate.{vid}",
+                        baseline_mean=baseline_rate,
+                        baseline_std=baseline_std,
+                        current_value=current_rate,
+                        z_score=z,
+                        magnitude=magnitude,
+                        direction="degraded",
+                        significance="significant",
+                    )
+                )
 
         # 2. Confidence mean drift (z-score)
         conf_signal = self._check_z_score_drift(
@@ -549,7 +555,8 @@ class DriftDetectorHook(BaseHook):
             total_failures = sum(current.failure_modes.values())
             if total_failures >= 3:
                 dominant_mode = max(
-                    current.failure_modes, key=current.failure_modes.get  # type: ignore[arg-type]
+                    current.failure_modes,
+                    key=current.failure_modes.get,  # type: ignore[arg-type]
                 )
                 dominant_pct = current.failure_modes[dominant_mode] / total_failures
                 if dominant_pct > 0.5:
@@ -563,27 +570,27 @@ class DriftDetectorHook(BaseHook):
                                 if bmax / bt > 0.5:
                                     baseline_dominant = True
                     if not baseline_dominant:
-                        signals.append(DriftSignal(
-                            metric=f"failure_mode.{dominant_mode[:40]}",
-                            baseline_mean=0.0,
-                            baseline_std=0.0,
-                            current_value=dominant_pct,
-                            z_score=0.0,
-                            magnitude=dominant_pct,
-                            direction="degraded",
-                            significance="warning",
-                        ))
+                        signals.append(
+                            DriftSignal(
+                                metric=f"failure_mode.{dominant_mode[:40]}",
+                                baseline_mean=0.0,
+                                baseline_std=0.0,
+                                current_value=dominant_pct,
+                                z_score=0.0,
+                                magnitude=dominant_pct,
+                                direction="degraded",
+                                significance="warning",
+                            )
+                        )
 
         report.signals = signals
 
         # Only count degradation signals for overall status
         degraded_significant = sum(
-            1 for s in signals
-            if s.significance == "significant" and s.direction == "degraded"
+            1 for s in signals if s.significance == "significant" and s.direction == "degraded"
         )
         degraded_warning = sum(
-            1 for s in signals
-            if s.significance == "warning" and s.direction == "degraded"
+            1 for s in signals if s.significance == "warning" and s.direction == "degraded"
         )
 
         if degraded_significant >= 2 or (degraded_significant >= 1 and degraded_warning >= 1):

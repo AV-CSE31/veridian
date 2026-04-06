@@ -17,6 +17,7 @@ Method:
 
 No LLM calls needed — SemanticGroundingVerifier is deterministic.
 """
+
 from __future__ import annotations
 
 import random
@@ -25,19 +26,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task, TaskResult
-from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
-
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
 from examples.experiments.shared.metrics import (
     improvement_pct,
-    silent_failure_rate,
     print_result,
+    silent_failure_rate,
 )
 from examples.experiments.shared.skillnet_client import SkillNetClient
 
+from veridian.core.task import Task, TaskResult
+from veridian.verify.builtin.semantic_grounding import SemanticGroundingVerifier
 
 # ── Drift injection ───────────────────────────────────────────────────────────
+
 
 def inject_drift(structured: dict, rng: random.Random) -> dict:
     """Inject a semantic inconsistency into structured output."""
@@ -60,7 +61,9 @@ def inject_drift(structured: dict, rng: random.Random) -> dict:
     return drifted
 
 
-def build_task_result(skill: dict, drifted: bool = False, rng: random.Random = None) -> tuple[Task, TaskResult]:
+def build_task_result(
+    skill: dict, drifted: bool = False, rng: random.Random = None
+) -> tuple[Task, TaskResult]:
     """Build a Task and TaskResult from a skill record."""
     structured = dict(skill["structured_output"])
     raw = f"Completed analysis: {skill['name']}. Result is structured below."
@@ -86,15 +89,15 @@ def build_task_result(skill: dict, drifted: bool = False, rng: random.Random = N
 
 # ── Experiment ────────────────────────────────────────────────────────────────
 
+
 def run() -> ExperimentResult:
     """Run E-01 and return an ExperimentResult."""
     rng = random.Random(RANDOM_SEED)
     client = SkillNetClient()
 
     # Use legal + compliance skills (semantic grounding is most relevant there)
-    skills = (
-        client.list_skills(domain="legal", limit=50)
-        + client.list_skills(domain="compliance", limit=50)
+    skills = client.list_skills(domain="legal", limit=50) + client.list_skills(
+        domain="compliance", limit=50
     )
     rng.shuffle(skills)
     skills = skills[:100]
@@ -109,8 +112,8 @@ def run() -> ExperimentResult:
 
     # ── Baseline: no verification (all pass silently) ─────────────────────────
     baseline_silent_failures = 0
-    for i, skill in enumerate(skills):
-        if i in drift_indices:
+    for idx, _skill in enumerate(skills):
+        if idx in drift_indices:
             baseline_silent_failures += 1  # drifted output accepted silently
 
     baseline_sfr = silent_failure_rate(baseline_silent_failures, len(skills))
@@ -139,7 +142,7 @@ def run() -> ExperimentResult:
     veridian_sfr = silent_failure_rate(veridian_silent_failures, len(skills))
 
     # ── Metrics ───────────────────────────────────────────────────────────────
-    impv = improvement_pct(baseline_sfr, baseline_sfr - veridian_sfr)
+    improvement_pct(baseline_sfr, baseline_sfr - veridian_sfr)
     # H1 requires ≥40% reduction in silent failures
     sfr_reduction = improvement_pct(baseline_sfr, veridian_sfr) * -1
 

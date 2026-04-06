@@ -26,6 +26,7 @@ Circuit breaker states:
   OPEN     → endpoint down, fail immediately for cooldown_seconds
   HALF_OPEN → send one probe; close on success, re-open on failure
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -57,9 +58,10 @@ log = logging.getLogger(__name__)
 
 # ── CIRCUIT BREAKER ───────────────────────────────────────────────────────────
 
+
 class CBState(StrEnum):
-    CLOSED    = "closed"
-    OPEN      = "open"
+    CLOSED = "closed"
+    OPEN = "open"
     HALF_OPEN = "half_open"
 
 
@@ -72,9 +74,10 @@ class CircuitBreaker:
     cooldown_seconds   : seconds to wait in OPEN before probing
     half_open_successes: consecutive successes in HALF_OPEN before CLOSED
     """
+
     name: str = "default"
     failure_threshold: int = 5
-    cooldown_seconds: int  = 60
+    cooldown_seconds: int = 60
     half_open_successes: int = 2
 
     _state: CBState = field(default=CBState.CLOSED, init=False)
@@ -101,7 +104,7 @@ class CircuitBreaker:
                     log.info("circuit_breaker.half_open name=%s", self.name)
                     self._state = CBState.HALF_OPEN
                     self._half_open_ok = 0
-                    return True   # allow one probe
+                    return True  # allow one probe
                 return False
             # HALF_OPEN: allow probes through
             return True
@@ -127,7 +130,8 @@ class CircuitBreaker:
                 if self._state != CBState.OPEN:
                     log.warning(
                         "circuit_breaker.open name=%s failures=%d",
-                        self.name, self._failures,
+                        self.name,
+                        self._failures,
                     )
                     self._state = CBState.OPEN
                     self._opened_at = time.monotonic()
@@ -145,6 +149,7 @@ class CircuitBreaker:
 
 # Errors worth retrying (transient)
 _TRANSIENT_STATUS_CODES = {429, 500, 502, 503, 504}
+
 
 def _is_retryable(exc: BaseException) -> bool:
     """
@@ -164,6 +169,7 @@ def _is_retryable(exc: BaseException) -> bool:
 
 
 # ── LITELLM PROVIDER ─────────────────────────────────────────────────────────
+
 
 class LiteLLMProvider(LLMProvider):
     """
@@ -186,13 +192,13 @@ class LiteLLMProvider(LLMProvider):
 
     # Approximate context limits per model family (tokens)
     CONTEXT_LIMITS: dict[str, int] = {
-        "gemini/gemini-2.5-flash":   1_048_576,
-        "gemini/gemini-2.0-flash":   1_048_576,
-        "claude-opus-4-6":             200_000,
-        "claude-sonnet-4-6":           200_000,
-        "gpt-4o":                      128_000,
-        "gpt-4o-mini":                 128_000,
-        "default":                     100_000,
+        "gemini/gemini-2.5-flash": 1_048_576,
+        "gemini/gemini-2.0-flash": 1_048_576,
+        "claude-opus-4-6": 200_000,
+        "claude-sonnet-4-6": 200_000,
+        "gpt-4o": 128_000,
+        "gpt-4o-mini": 128_000,
+        "default": 100_000,
     }
 
     def __init__(
@@ -252,8 +258,7 @@ class LiteLLMProvider(LLMProvider):
             if cb and not cb.allow_request():
                 log.warning("circuit_breaker.blocked model=%s", model)
                 last_exc = ProviderRateLimited(
-                    f"Circuit breaker OPEN for {model}. "
-                    f"Cooldown: {cb.cooldown_seconds}s"
+                    f"Circuit breaker OPEN for {model}. Cooldown: {cb.cooldown_seconds}s"
                 )
                 continue
 
@@ -268,14 +273,14 @@ class LiteLLMProvider(LLMProvider):
                     cb.record_failure()
                 log.warning(
                     "provider.complete failed model=%s err=%s trying_fallback=%s",
-                    model, exc, bool(self.fallback_models),
+                    model,
+                    exc,
+                    bool(self.fallback_models),
                 )
                 # Only try fallback if primary exhausted all retries
                 continue
 
-        raise ProviderError(
-            f"All models failed. Last error: {last_exc}"
-        ) from last_exc
+        raise ProviderError(f"All models failed. Last error: {last_exc}") from last_exc
 
     async def complete_async(self, messages: list[Message], **kwargs: Any) -> LLMResponse:
         """Async wrapper — runs sync complete() in executor to avoid blocking."""
@@ -335,7 +340,8 @@ class LiteLLMProvider(LLMProvider):
                 with attempt:
                     log.debug(
                         "provider.call model=%s attempt=%d",
-                        model, attempt.retry_state.attempt_number,
+                        model,
+                        attempt.retry_state.attempt_number,
                     )
                     return _call()
         except RetryError as e:
@@ -346,6 +352,7 @@ class LiteLLMProvider(LLMProvider):
         """Use tiktoken if available, else character approximation."""
         try:
             import tiktoken  # noqa: PLC0415
+
             enc = tiktoken.get_encoding("cl100k_base")
             return len(enc.encode(text))
         except Exception:
@@ -356,7 +363,3 @@ class LiteLLMProvider(LLMProvider):
             if self.model.startswith(prefix):
                 return limit
         return self.CONTEXT_LIMITS["default"]
-
-    def circuit_breaker_status(self) -> list[dict[str, Any]]:
-        """Returns current state of all circuit breakers. For monitoring."""
-        return [cb.to_dict() for cb in self._circuit_breakers.values()]

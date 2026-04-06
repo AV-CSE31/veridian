@@ -15,6 +15,7 @@ Method:
 
 No LLM calls — purely deterministic trust arithmetic + TaskLedger API.
 """
+
 from __future__ import annotations
 
 import math
@@ -25,11 +26,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.ledger.ledger import TaskLedger
+from examples.experiments.shared.config import RANDOM_SEED, ExperimentResult
+from examples.experiments.shared.metrics import print_result, r_squared
 
-from examples.experiments.shared.config import ExperimentResult, RANDOM_SEED
-from examples.experiments.shared.metrics import r_squared, print_result
+from veridian.core.task import Task
+from veridian.ledger.ledger import TaskLedger
 
 
 def fit_geometric_decay(
@@ -60,7 +61,7 @@ def fit_geometric_decay(
     decay = math.exp(slope)
 
     # Compute fitted values and R²
-    fitted = [T0 * (decay ** h) for h in hop_levels]
+    fitted = [T0 * (decay**h) for h in hop_levels]
     r2 = r_squared(trust_values, fitted)
 
     return T0, decay, r2
@@ -71,10 +72,10 @@ def run() -> ExperimentResult:
     rng = random.Random(RANDOM_SEED)
 
     # Network parameters
-    n_chains = 30       # independent A→B→C→D→E chains
+    n_chains = 30  # independent A→B→C→D→E chains
     n_hops = 5
     initial_trust = 0.95
-    decay_factor = 0.80   # per-hop decay
+    decay_factor = 0.80  # per-hop decay
     noise_std = 0.03
 
     # Simulate and store trust chains in a temporary ledger
@@ -125,8 +126,9 @@ def run() -> ExperimentResult:
         for orig in sample_tasks:
             rt = retrieved_by_id.get(orig.id)
             assert rt is not None, f"Task {orig.id} not found in ledger"
-            assert rt.metadata["trust_score"] == orig.metadata["trust_score"], \
+            assert rt.metadata["trust_score"] == orig.metadata["trust_score"], (
                 f"Trust score mismatch for {orig.id}"
+            )
 
         # Aggregate per hop: mean trust across all chains
         hop_trust: dict[int, list[float]] = {h: [] for h in range(n_hops)}
@@ -135,9 +137,7 @@ def run() -> ExperimentResult:
             trust = t.metadata["trust_score"]
             hop_trust[hop].append(trust)
 
-        mean_trust_per_hop = [
-            sum(hop_trust[h]) / len(hop_trust[h]) for h in range(n_hops)
-        ]
+        mean_trust_per_hop = [sum(hop_trust[h]) / len(hop_trust[h]) for h in range(n_hops)]
         hop_levels = list(range(n_hops))
 
     # Fit geometric decay model
