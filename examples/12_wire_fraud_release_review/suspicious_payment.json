@@ -1,0 +1,17 @@
+{
+  "id": "wire-task-002",
+  "payment_id": "PAY-2026-0002",
+  "originator": "Acme Manufacturing Inc",
+  "originator_country": "US",
+  "beneficiary_name": "Asterix Trading FZE",
+  "beneficiary_country": "AE",
+  "beneficiary_account": "AE09ASTR000987654321",
+  "amount_usd": 280000,
+  "currency": "USD",
+  "is_new_beneficiary": true,
+  "callback_verified": false,
+  "email_domain_mismatch": true,
+  "urgency_language": true,
+  "sanctions_match": false,
+  "expected_outcome": "allow_after_dual_approval"
+}

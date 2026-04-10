@@ -1,6 +1,8 @@
 docs/
 planning/
-examples/
+examples/*
+!examples/12_wire_fraud_release_review/
+!examples/12_wire_fraud_release_review/**
 
 
 # Internal engineering docs (IP protected)

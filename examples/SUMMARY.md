@@ -14,10 +14,11 @@ Selection criteria:
 |---|---|---|---|---|
 | 1 | `08_deleted_databases/` | Prevents catastrophic data loss and production destruction | AST safety + threat classification + security reporting | Implemented + tests |
 | 2 | `03_hallucinated_evidence/` | Prevents legal/credibility failure from fabricated citations | Multi-layer citation verification pipeline | Implemented + tests |
-| 3 | `06_eu_ai_act/` | Direct regulatory and audit-readiness consequences | Proof chain + compliance evidence | Implemented + tests |
-| 4 | `p9_crash_recovery/` | Core runtime reliability for long-running workflows | Atomic ledger + crash resume semantics | Implemented demo |
-| 5 | `09_prm_policy_repair/` | Shows policy-driven repair/block as correctness infrastructure | PRM policy actions in runtime loop | Implemented demo |
-| 6 | `p6_aml_kyc_investigation/` | Financial compliance and investigator throughput | Composite verification + consistency + escalation | Implemented demo |
+| 3 | `12_wire_fraud_release_review/` | High-value transfer fraud has direct, irreversible monetary impact | HITL dual approval + replay-safe release activities | Implemented + tests |
+| 4 | `06_eu_ai_act/` | Direct regulatory and audit-readiness consequences | Proof chain + compliance evidence | Implemented + tests |
+| 5 | `p9_crash_recovery/` | Core runtime reliability for long-running workflows | Atomic ledger + crash resume semantics | Implemented demo |
+| 6 | `09_prm_policy_repair/` | Shows policy-driven repair/block as correctness infrastructure | PRM policy actions in runtime loop | Implemented demo |
+| 7 | `p6_aml_kyc_investigation/` | Financial compliance and investigator throughput | Composite verification + consistency + escalation | Implemented demo |
 
 ## Secondary Examples (Keep, But Do Not Lead With)
 
@@ -37,7 +38,6 @@ These are excellent next flagship candidates once runnable code and tests land:
 
 - `10_deploy_gatekeeper/`
 - `11_soc_incident_containment/`
-- `12_wire_fraud_release_review/`
 
 ## Audit Matrix (All Example Folders)
 
@@ -54,7 +54,7 @@ These are excellent next flagship candidates once runnable code and tests land:
 | `09_prm_policy_repair` | Yes | `demo.py` | No | Flagship |
 | `10_deploy_gatekeeper` | Yes | No | No | Spec-only |
 | `11_soc_incident_containment` | Yes | No | No | Spec-only |
-| `12_wire_fraud_release_review` | Yes | No | No | Spec-only |
+| `12_wire_fraud_release_review` | Yes | `pipeline.py` | Yes | Flagship |
 | `drift-detection` | Yes | `run_drift_demo.py` | No | Secondary |
 | `p6_aml_kyc_investigation` | Yes | `p6_aml_kyc.py` | No | Flagship |
 | `p9_crash_recovery` | Yes | `p9_crash_recovery.py` | No | Flagship |
@@ -64,10 +64,11 @@ These are excellent next flagship candidates once runnable code and tests land:
 
 1. `08_deleted_databases`
 2. `03_hallucinated_evidence`
-3. `06_eu_ai_act`
-4. `p9_crash_recovery`
-5. `09_prm_policy_repair`
-6. `p6_aml_kyc_investigation`
+3. `12_wire_fraud_release_review`
+4. `06_eu_ai_act`
+5. `p9_crash_recovery`
+6. `09_prm_policy_repair`
+7. `p6_aml_kyc_investigation`
 
 ## Fast Validation Commands
 
@@ -80,10 +81,12 @@ pytest examples/01_ai_code_deploy/test_solution.py \
        examples/05_financial_cascade/test_solution.py \
        examples/06_eu_ai_act/test_solution.py \
        examples/07_pilot_failure/test_solution.py \
-       examples/08_deleted_databases/test_pipeline.py -q
+       examples/08_deleted_databases/test_pipeline.py \
+       examples/12_wire_fraud_release_review/test_pipeline.py -q
 
 # Flagship runnable demos
 python examples/09_prm_policy_repair/demo.py
 python examples/p9_crash_recovery/p9_crash_recovery.py
 python examples/p6_aml_kyc_investigation/p6_aml_kyc.py
+python examples/12_wire_fraud_release_review/pipeline.py
 ```

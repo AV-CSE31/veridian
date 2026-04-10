@@ -1,0 +1,17 @@
+{
+  "id": "wire-task-003",
+  "payment_id": "PAY-2026-0003",
+  "originator": "Acme Manufacturing Inc",
+  "originator_country": "US",
+  "beneficiary_name": "Orion Holdings LLC",
+  "beneficiary_country": "RU",
+  "beneficiary_account": "RU55ORION000112233445",
+  "amount_usd": 125000,
+  "currency": "USD",
+  "is_new_beneficiary": true,
+  "callback_verified": false,
+  "email_domain_mismatch": true,
+  "urgency_language": true,
+  "sanctions_match": true,
+  "expected_outcome": "block"
+}
