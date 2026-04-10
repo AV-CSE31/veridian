@@ -63,3 +63,25 @@ pytest examples/12_wire_fraud_release_review/test_pipeline.py -q
 - blocked payment never calls the transfer gateway
 - dual-approval pause survives restart and resumes deterministically
 - replaying release flow does not duplicate external transfer calls
+
+## Truthful Claims and Boundaries
+
+Use these statements in external communication to avoid over-claiming.
+
+What we can claim now:
+
+- This is a production-pattern reference for wire-release correctness controls.
+- It demonstrates deterministic HITL pause/resume and replay-safe side-effect execution.
+- It proves key failure modes with executable tests (block, pause/resume, idempotent release).
+
+What we should not claim yet:
+
+- This is not a live banking rails integration.
+- This is not full sanctions screening infrastructure.
+- This is not a complete compliance platform with regulator-ready reporting.
+
+Current example-grade assumptions:
+
+- Uses `MockProvider` for deterministic behavior.
+- Uses a stub `WireGateway` (no external settlement network).
+- Uses scenario inputs for sanctions and approval signals.
