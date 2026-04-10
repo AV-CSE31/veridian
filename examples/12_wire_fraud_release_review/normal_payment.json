@@ -1,0 +1,17 @@
+{
+  "id": "wire-task-001",
+  "payment_id": "PAY-2026-0001",
+  "originator": "Acme Manufacturing Inc",
+  "originator_country": "US",
+  "beneficiary_name": "Northbridge Components LLC",
+  "beneficiary_country": "US",
+  "beneficiary_account": "US12NWBK000123456789",
+  "amount_usd": 45000,
+  "currency": "USD",
+  "is_new_beneficiary": false,
+  "callback_verified": true,
+  "email_domain_mismatch": false,
+  "urgency_language": false,
+  "sanctions_match": false,
+  "expected_outcome": "allow"
+}
