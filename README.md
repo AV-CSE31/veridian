@@ -4,29 +4,39 @@
 
 <h1 align="center">Veridian</h1>
 
-<p align="center"><strong>Deterministic verification and reliability infrastructure for AI agent workflows.</strong></p>
+<p align="center"><strong>Deterministic verification and replay-safe runtime for AI agent workflows.</strong></p>
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/veridian-ai.svg)](https://pypi.org/project/veridian-ai/)
 
-Veridian helps teams run agent workflows with stronger runtime guarantees:
+Veridian is a reliability layer for agent execution.
+It makes task completion deterministic: a task is not marked done unless its verifier passes.
 
-- deterministic verification of outputs
-- crash-safe task state with atomic persistence
-- replay/debug evidence for failures
-- hook-based observability and policy controls
+## Why Veridian
 
-## What Veridian is (today)
+Most agent stacks are strong at orchestration but weak at runtime guarantees.
+Veridian focuses on guarantees:
 
-Veridian is best used as a reliability and verification layer around agent tasks and workflows.
+- deterministic task verification (Python verifiers, not self-certification)
+- crash-safe task state and replay evidence
+- pause/resume and dead-letter queue operations
+- policy/hook controls with isolated hook failures
 
-It provides:
+## What Veridian Is (and Is Not)
 
-- `TaskLedger` for durable task lifecycle state
-- `VeridianRunner` / `ParallelRunner` for controlled execution
-- built-in verifier and hook registries with plugin support
-- CLI tooling for runs, status, retries, skip/reset, and entropy checks
+What it is:
+
+- a runtime correctness layer around agent tasks
+- a verification contract system for task transitions
+- a replay/debug substrate for production incidents
+
+What it is not:
+
+- not a replacement for your preferred orchestration framework
+- not a prompt-only guardrail tool
+
+Use Veridian with existing frameworks when you want stronger execution correctness.
 
 ## Install
 
@@ -37,9 +47,9 @@ pip install veridian-ai
 Optional extras:
 
 ```bash
-pip install "veridian-ai[llm]"        # LiteLLM provider
-pip install "veridian-ai[otel]"       # OpenTelemetry exporter
-pip install "veridian-ai[dashboard]"  # Dashboard features
+pip install "veridian-ai[llm]"        # LiteLLM provider support
+pip install "veridian-ai[otel]"       # OpenTelemetry exporter support
+pip install "veridian-ai[dashboard]"  # Dashboard endpoints
 pip install "veridian-ai[redis]"      # Redis storage backend
 pip install "veridian-ai[postgres]"   # Postgres storage backend
 pip install "veridian-ai[all]"        # All optional integrations
@@ -47,39 +57,28 @@ pip install "veridian-ai[all]"        # All optional integrations
 
 ## Quick Start (Python)
 
-### 1. Function-level guard
-
 ```python
-from veridian.decorator import verified
-
-
-@verified(verifiers=["not_none", "not_empty"])
-def classify_text(text: str) -> dict:
-    return {"decision": "ALLOW", "reason": "No harmful content detected."}
-
-
-result = classify_text("review this content")
-print(result)
-```
-
-### 2. Ledger-backed task execution
-
-```python
-from veridian import LiteLLMProvider, Task, TaskLedger, VeridianRunner
+from veridian.core.task import Task
+from veridian.ledger.ledger import TaskLedger
+from veridian.loop.runner import VeridianRunner
+from veridian.providers.mock_provider import MockProvider
 
 ledger = TaskLedger("ledger.json")
 ledger.add(
     [
         Task(
-            title="Run auth tests",
-            description="Run tests and confirm pass.",
-            verifier_id="bash_exit",
-            verifier_config={"command": "pytest tests/test_auth.py -q"},
+            title="Sanity check output schema",
+            description="Return JSON with keys: decision, reason.",
+            verifier_id="schema",
+            verifier_config={"required_fields": ["decision", "reason"]},
         )
     ]
 )
 
-runner = VeridianRunner(ledger=ledger, provider=LiteLLMProvider())
+provider = MockProvider().script_veridian_result(
+    structured={"decision": "allow", "reason": "policy-pass"}
+)
+runner = VeridianRunner(ledger=ledger, provider=provider)
 summary = runner.run()
 print(summary.done_count, summary.failed_count)
 ```
@@ -90,99 +89,50 @@ print(summary.done_count, summary.failed_count)
 veridian init --ledger ledger.json
 veridian status --ledger ledger.json
 veridian list --ledger ledger.json
-veridian run --ledger ledger.json --dry-run
-veridian run --ledger ledger.json --share-report
-veridian gc --ledger ledger.json
+veridian run --ledger ledger.json
+veridian replay show --ledger ledger.json
+veridian dlq status --ledger ledger.json
 ```
 
-Primary CLI commands currently available:
+Core CLI commands:
 
-- `init`
-- `status`
-- `list`
-- `run`
-- `gc`
-- `reset`
-- `skip`
-- `retry`
-- `dlq status`
-- `dlq list`
-- `dlq retry`
-- `dlq dismiss`
-- `dlq report`
-- `replay show`
-- `replay compare`
-- `replay diff`
+- `init`, `status`, `list`, `run`, `gc`, `reset`, `skip`, `retry`
+- `dlq status`, `dlq list`, `dlq retry`, `dlq dismiss`, `dlq report`
+- `replay show`, `replay compare`, `replay diff`
 
-## Release Readiness (2026-04-07)
+## Core Runtime Model
 
-Current release-gate status in this branch:
+Execution path:
 
-- `ruff check .` and `ruff format --check .` pass
-- `mypy veridian/ --strict` passes
-- full regression suite (`pytest`) passes with **2009 passed, 14 skipped**
-- unit suite (`pytest tests/unit/ -x --tb=short -q`) passes
-- integration release suite (pause/resume, replay, adapters, parity, subgraph) passes
-- packaging gates pass: `uv build` + `twine check dist/*.whl dist/*.tar.gz`
+`TaskLedger -> Runner -> Worker -> Verifier -> Ledger transition`
 
-World-class platform track status:
+Typical lifecycle:
 
-- Completed in code/tests: `WCP-001..007`, `WCP-009..010`, `WCP-012..019`, `WCP-021..029`
-- Remaining documented follow-ups: `WCP-008`, `WCP-011`, `WCP-020`
-- Newly integrated in this pass: operator plane, observability ingest/SLO/alerts, PII policy + trace filter, graph runtime, activity boundary expansion, plugin SDK/registry/certification
+`PENDING -> IN_PROGRESS -> VERIFYING -> DONE`
 
-Known local environment caveats:
+Failure and intervention paths include:
 
-- The previous `litellm_init.pth` startup warning (`WinError 206`) was traced to a compromised user-site startup hook and has been remediated in this environment.
-- Full coverage gate now passes locally (`pytest --cov=veridian --cov-fail-under=85 -q`).
-
-Recommended local hardening for contributors:
-
-- Keep user-site startup hooks (`*.pth`) minimal and auditable.
-- If local Python startup behavior looks suspicious, run gates with `PYTHONNOUSERSITE=1`.
-
-For contributor handoff docs and operational playbooks:
-
-- [planning/README.md](planning/README.md)
-- [planning/RELEASE_GATES.md](planning/RELEASE_GATES.md)
-- [planning/runbooks/README.md](planning/runbooks/README.md)
+- `FAILED` / `ABANDONED`
+- `PAUSED` with resume support
+- replay compatibility checks for drift-sensitive runs
 
 ## Built-in Components
 
-Current built-in verifiers include:
+Verifier families include:
 
-- `bash_exit`, `schema`, `quote_match`, `http_status`, `file_exists`
-- `composite`, `any_of`
-- `semantic_grounding`, `self_consistency`, `llm_judge`
-- `tool_safety`, `memory_integrity`
-- `state_diff`, `prm_reference`
+- structural and IO checks (`schema`, `file_exists`, `http_status`, `bash_exit`)
+- composition (`composite`, `any_of`)
+- quality/safety checks (`semantic_grounding`, `self_consistency`, `llm_judge`, `tool_safety`, `memory_integrity`)
 
-Current built-in hooks include:
+Hook families include:
 
-- `LoggingHook`, `CostGuardHook`, `HumanReviewHook`, `RateLimitHook`
-- `SlackNotifyHook`, `CrossRunConsistencyHook`, `AnomalyDetectorHook`
-- `IdentityGuardHook`, `AdaptiveSafetyHook`, `EvolutionMonitorHook`
-- `BehavioralFingerprintHook`, `DriftDetectorHook`, `BoundaryFluidityHook`
+- logging/cost/rate controls
+- human review and consistency checks
+- anomaly and drift-oriented safety hooks
 
-## Architecture and Maturity
+## Quality Gates
 
-Veridian is under active hardening. The core runtime path is:
-
-`TaskLedger -> Runner -> Worker -> Verifier -> Ledger update`
-
-Some advanced subsystems are implemented and evolving, but adoption should prioritize the core reliability path first. Keep production integrations claim-based and backed by tests.
-
-## Development
-
-Clone and install:
-
-```bash
-git clone https://github.com/AV-CSE31/veridian
-cd veridian
-pip install -e ".[dev]"
-```
-
-Run quality gates:
+Veridian uses claim-to-test discipline. For release work, run:
 
 ```bash
 ruff check .
@@ -192,23 +142,26 @@ pytest -q --tb=short
 pytest --cov=veridian --cov-fail-under=85 -q
 ```
 
-Pre-commit hooks:
+## Roadmap Focus
 
-```bash
-pre-commit install
-pre-commit run --all-files
-```
+Near-term focus areas:
+
+- backend migration and operations docs
+- deterministic step-level checkpoint cursor
+- public compatibility matrix and migration guides
 
 ## Contributing
 
-Contributions are welcome. For meaningful changes:
+Contributions are welcome.
 
-1. write or update tests first
-2. keep changes scoped and module-boundary aware
-3. run full quality gates before opening a PR
-4. include rollback or failure-mode notes for risky runtime changes
+Recommended PR discipline:
 
-Use GitHub issues for bugs/feature requests:
+1. add or update tests first
+2. keep PRs single-ticket and scoped
+3. update docs when behavior changes
+4. include failure-mode and rollback notes for risky runtime changes
+
+Project links:
 
 - [Issues](https://github.com/AV-CSE31/veridian/issues)
 - [Discussions](https://github.com/AV-CSE31/veridian/discussions)

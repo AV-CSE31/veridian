@@ -1,7 +1,7 @@
 """
 veridian
 ────────
-Production-grade infrastructure for reliable long-running AI agents.
+Deterministic verification and replay-safe runtime for agent workflows.
 
 The missing primitive: the verification contract between an agent and the world.
 
@@ -26,11 +26,10 @@ Quick start::
     ])
 
     summary = VeridianRunner(ledger=ledger, provider=provider).run()
-    print(f"Done: {summary.done}/{summary.total}")
+    print(f"Done: {summary.done_count}/{summary.total_tasks}")
 
-GitHub:  https://github.com/veridian-ai/veridian
-Docs:    https://veridian.readthedocs.io
-PyPI:    https://pypi.org/project/veridian/
+GitHub:  https://github.com/AV-CSE31/veridian
+PyPI:    https://pypi.org/project/veridian-ai/
 License: MIT
 """
 
