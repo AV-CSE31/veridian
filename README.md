@@ -142,6 +142,13 @@ pytest -q --tb=short
 pytest --cov=veridian --cov-fail-under=85 -q
 ```
 
+## Release Evidence
+
+Public releases require evidence-backed notes:
+
+- follow [RELEASING.md](RELEASING.md)
+- include a completed [release evidence template](.github/RELEASE_EVIDENCE_TEMPLATE.md)
+
 ## Roadmap Focus
 
 Near-term focus areas:
