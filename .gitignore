@@ -1,57 +1,53 @@
+# Private/internal workspace docs
 docs/
 planning/
-examples/*
-!examples/12_wire_fraud_release_review/
-!examples/12_wire_fraud_release_review/**
-
-
-# Internal engineering docs (IP protected)
+research/
 AGENTS.md
 CLAUDE.md
 ONBOARDING.md
 GEMINI.md
 CHANGELOG.md
 ARCHITECTURE.md
-research/
 CODEBASE_HEALTH.md
-SESSION_HANDOFF.md 
-CHANGELOG.md
+SESSION_HANDOFF.md
+
+# Keep only release showcase example
+examples/*
+!examples/12_wire_fraud_release_review/
+!examples/12_wire_fraud_release_review/**
+
+# Internal logs and reports
 cov_progress.txt
-code_review_graph.html
-GEMINI.md
-install-session-system.sh 
-inatll-veridian.sh
-install-veridian-overlay.sh 
-
-session-system.skill
-veridian-overlay.skill
-
 api_stability_progress.log
 api_stability_report.md
 api_stability_report.html
 
-mcp.json
-.claude
-.code-review-graph
-.env
-.cursorrules
-.coverage
-.codex_replace_check
+# Local agent/tooling state
+.claude/
+.code-review-graph/
+.auto-memory/
+.codex_replace_check/
 .codex_verify*/
 .tmp/
 probe_*.tmp
 .cursorrules
 .windsurfrules
 .mcp.json
+mcp.json
 code-review-graph.html
 session-system.skill
 veridian-overlay.skill
+install-session-system.sh
+install-veridian-overlay.sh
+install-veridian.sh
+inatll-veridian.sh
+logo
+logo.png
+logo*
 planning/manual_runner_*/
 planning/pytest_tmp*/
 planning/tmp_pytest/
 planning/**/pytest_tmp*/
-
-
 
 # Secrets / credentials
 .env
@@ -61,34 +57,32 @@ planning/**/pytest_tmp*/
 *.p12
 /secrets/
 
-# Python
+# Python caches and build artifacts
 __pycache__/
 *.py[cod]
 *.so
 *.egg
 *.egg-info/
-dist/
-build/
 .eggs/
+build/
+dist/
+*.whl
+*.tar.gz
 
 # Virtual environments
 .venv/
 venv/
 env/
 
-# Testing
+# Test/tool caches
 .pytest_cache/
 .coverage
 htmlcov/
 .tox/
-
-# Type checking
 .mypy_cache/
-
-# Ruff
 .ruff_cache/
 
-# Veridian runtime files (don't commit ledger state)
+# Veridian runtime-generated files
 ledger.json
 ledger.lock
 progress.md
@@ -97,34 +91,10 @@ entropy_report.md
 conflicts.jsonl
 quarantine.jsonl
 
-# Claude Code / agent metadata (never commit)
-.claude/
-.auto-memory/
-.codex_replace_check/
-.codex_verify*/
-.tmp/
-probe_*.tmp
-.cursorrules
-.windsurfrules
-.mcp.json
-code-review-graph.html
-session-system.skill
-veridian-overlay.skill
-planning/manual_runner_*/
-planning/pytest_tmp*/
-planning/tmp_pytest/
-planning/**/pytest_tmp*/
-
-# IDE
+# IDE and OS noise
 .idea/
 .vscode/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
-
-# Distribution
-*.tar.gz
-*.whl
