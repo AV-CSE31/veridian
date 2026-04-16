@@ -25,6 +25,9 @@ from veridian.verify.builtin.http import HttpStatusVerifier
 
 # LLM-based (last - never standalone)
 from veridian.verify.builtin.llm_judge import LLMJudgeVerifier
+
+# Phase 10 - MCP skill server verifiers
+from veridian.verify.builtin.mcp_tool_call import MCPToolCallVerifier
 from veridian.verify.builtin.memory_integrity import MemoryIntegrityVerifier
 from veridian.verify.builtin.prm_reference import PRMReferenceVerifier
 from veridian.verify.builtin.quote import QuoteMatchVerifier
@@ -57,6 +60,7 @@ registry.register_many(
     StateDiffVerifier,
     PRMReferenceVerifier,
     SecretsGuard,
+    MCPToolCallVerifier,
 )
 
 __all__ = [
@@ -75,4 +79,5 @@ __all__ = [
     "StateDiffVerifier",
     "PRMReferenceVerifier",
     "SecretsGuard",
+    "MCPToolCallVerifier",
 ]

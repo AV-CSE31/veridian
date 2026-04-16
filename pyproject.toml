@@ -102,6 +102,7 @@ self_consistency = "veridian.verify.builtin.confidence:SelfConsistencyVerifier"
 embedding_grounding = "veridian.verify.builtin.embedding_grounding:EmbeddingGroundingVerifier"
 tool_safety = "veridian.verify.builtin.tool_safety:ToolSafetyVerifier"
 memory_integrity = "veridian.verify.builtin.memory_integrity:MemoryIntegrityVerifier"
+mcp_tool_call = "veridian.verify.builtin.mcp_tool_call:MCPToolCallVerifier"
 
 # Third-party hooks auto-discovered via this entry point.
 [project.entry-points."veridian.hooks"]

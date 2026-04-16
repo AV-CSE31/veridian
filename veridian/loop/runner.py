@@ -61,6 +61,7 @@ from veridian.core.task import (
 )
 from veridian.hooks.registry import HookRegistry
 from veridian.loop.activity import ActivityJournal
+from veridian.loop.checkpoint_cursor import CheckpointCursorError, advance_cursor
 from veridian.loop.replay_compat import (
     build_run_replay_snapshot,
     check_replay_compatibility,
@@ -599,6 +600,36 @@ class VeridianRunner:
             # return cached side-effect outputs and avoid duplicate LLM calls.
             if activity_journal is not None:
                 result.extras["activity_journal"] = activity_journal.to_list()
+
+            # WCP-011: Advance the deterministic checkpoint cursor. Each
+            # worker attempt is one logical step; subsequent verify/policy
+            # passes stamp their own cursors below. Cross-task violations
+            # from a resumed stale result are surfaced, not swallowed.
+            try:
+                last_activity_key = (
+                    activity_journal.records[-1].idempotency_key
+                    if (activity_journal is not None and len(activity_journal) > 0)
+                    else ""
+                )
+                cursor_step_id = (
+                    result.trace_steps[-1].step_id
+                    if result.trace_steps
+                    else f"worker_attempt_{repair_attempts + 1}"
+                )
+                advance_cursor(
+                    result=result,
+                    task_id=task.id,
+                    step_id=cursor_step_id,
+                    activity_key=last_activity_key,
+                    state={
+                        "attempt": attempt,
+                        "repair_attempts": repair_attempts,
+                        "verifier_id": task.verifier_id,
+                    },
+                    metadata={"phase": "worker"},
+                )
+            except CheckpointCursorError as exc:
+                log.warning("runner.cursor_advance_failed task_id=%s err=%s", task.id, exc)
 
             self._namespace_trace_steps(result.trace_steps, attempt_number=repair_attempts + 1)
             aggregated_trace_steps.extend(result.trace_steps)
