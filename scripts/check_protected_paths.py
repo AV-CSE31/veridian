@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
-from typing import Iterable
+from collections.abc import Iterable
 
 PROTECTED_PREFIXES = (
     "planning/",
@@ -31,8 +31,7 @@ def _run_git(args: list[str]) -> list[str]:
     proc = subprocess.run(
         ["git", *args],
         check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
     return [line.strip().replace("\\", "/") for line in proc.stdout.splitlines() if line.strip()]

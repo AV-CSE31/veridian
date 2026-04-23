@@ -101,9 +101,7 @@ class CrossAgentLink:
     parent_tail_hash: str
     child_head_hash: str
     anchor_hash: str
-    created_at: str = field(
-        default_factory=lambda: datetime.now(tz=UTC).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(tz=UTC).isoformat())
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -152,18 +150,14 @@ def _compute_anchor(
 def _tail_hash(chain: ProofChain) -> str:
     entries = list(chain._entries)  # noqa: SLF001 — intentional read-only peek
     if not entries:
-        raise CrossAgentLinkError(
-            "cross-agent link requires a non-empty parent ProofChain"
-        )
+        raise CrossAgentLinkError("cross-agent link requires a non-empty parent ProofChain")
     return entries[-1].compute_hash()
 
 
 def _head_hash(chain: ProofChain) -> str:
     entries = list(chain._entries)  # noqa: SLF001 — intentional read-only peek
     if not entries:
-        raise CrossAgentLinkError(
-            "cross-agent link requires a non-empty child ProofChain"
-        )
+        raise CrossAgentLinkError("cross-agent link requires a non-empty child ProofChain")
     return entries[0].compute_hash()
 
 

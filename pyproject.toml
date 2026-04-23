@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "veridian-ai"
-version = "0.2.0"
+version = "0.3.0"
 description = "Deterministic verification and replay-safe runtime for production AI agent workflows."
 authors = [{ name = "Veridian contributors" }]
 license = { text = "MIT" }
@@ -126,7 +126,7 @@ packages = ["veridian"]
 [project.urls]
 Homepage = "https://github.com/AV-CSE31/veridian"
 Repository = "https://github.com/AV-CSE31/veridian"
-Changelog = "https://github.com/AV-CSE31/veridian/blob/main/CHANGELOG.md"
+Changelog = "https://github.com/AV-CSE31/veridian/releases"
 "Bug Tracker" = "https://github.com/AV-CSE31/veridian/issues"
 
 [tool.ruff]

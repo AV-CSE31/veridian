@@ -105,9 +105,7 @@ def _execute_until_crash(
         )
 
 
-def _resume_from_cursor(
-    result: TaskResult, journal: ActivityJournal, task_id: str
-) -> list[str]:
+def _resume_from_cursor(result: TaskResult, journal: ActivityJournal, task_id: str) -> list[str]:
     """Replay the workflow from the cursor. Returns the list of step_ids
     actually executed during resume (i.e., NOT skipped)."""
     cursor = load_cursor(result)
@@ -116,9 +114,7 @@ def _resume_from_cursor(
     for idx, (step_id, activity_key) in enumerate(_STEPS):
         if idx < resumed_from_idx:
             # Skip: already completed. Verify via journal + cursor.
-            assert journal.get(activity_key) is not None, (
-                f"step {idx} should be in journal"
-            )
+            assert journal.get(activity_key) is not None, f"step {idx} should be in journal"
             continue
         result.trace_steps.append(_mk_step(idx, step_id))
         journal.append(
@@ -153,18 +149,14 @@ class TestCrashAtStepBoundaries:
     acceptance requirement."""
 
     @pytest.mark.parametrize("crash_at", [1, 2, 3])
-    def test_crash_at_step_resumes_from_cursor(
-        self, ledger: TaskLedger, crash_at: int
-    ) -> None:
+    def test_crash_at_step_resumes_from_cursor(self, ledger: TaskLedger, crash_at: int) -> None:
         task = _seed_claimed_task(ledger)
         result = TaskResult(raw_output="")
         journal = ActivityJournal()
 
         # Pass 1: run until crash
         with pytest.raises(RuntimeError, match=f"crash at step {crash_at}"):
-            _execute_until_crash(
-                result, journal, task_id=task.id, crash_at_step=crash_at
-            )
+            _execute_until_crash(result, journal, task_id=task.id, crash_at_step=crash_at)
 
         # Persist state (what the runner would do after catching the crash)
         result.extras["activity_journal"] = journal.to_list()
@@ -183,13 +175,9 @@ class TestCrashAtStepBoundaries:
         stored_task = ledger_b.get(task.id)
         assert stored_task.result is not None
         stored_result = stored_task.result
-        stored_journal = ActivityJournal.from_list(
-            stored_result.extras.get("activity_journal", [])
-        )
+        stored_journal = ActivityJournal.from_list(stored_result.extras.get("activity_journal", []))
 
-        executed_during_resume = _resume_from_cursor(
-            stored_result, stored_journal, task_id=task.id
-        )
+        executed_during_resume = _resume_from_cursor(stored_result, stored_journal, task_id=task.id)
 
         # The resumed run must execute ONLY the steps after the crash.
         expected_resumed_steps = [sid for sid, _ in _STEPS[crash_at:]]
@@ -201,9 +189,7 @@ class TestCrashAtStepBoundaries:
         assert final_cursor.step_index == len(_STEPS) - 1
         assert final_cursor.step_id == _STEPS[-1][0]
 
-    def test_no_duplicate_activity_execution_across_restart(
-        self, ledger: TaskLedger
-    ) -> None:
+    def test_no_duplicate_activity_execution_across_restart(self, ledger: TaskLedger) -> None:
         """Core acceptance: resume must NOT re-execute completed activities.
 
         Confirmed by checking the activity_id of the replayed journal:
@@ -218,9 +204,7 @@ class TestCrashAtStepBoundaries:
             _execute_until_crash(result, journal, task_id=task.id, crash_at_step=2)
 
         # Two steps should be cached
-        original_ids = {
-            rec.idempotency_key: rec.activity_id for rec in journal.records
-        }
+        original_ids = {rec.idempotency_key: rec.activity_id for rec in journal.records}
         assert len(original_ids) == 2
 
         # Resume
@@ -236,9 +220,7 @@ class TestCrashAtStepBoundaries:
                     f"Cached step {rec.idempotency_key} was re-executed"
                 )
 
-    def test_resume_without_cursor_starts_from_step_zero(
-        self, ledger: TaskLedger
-    ) -> None:
+    def test_resume_without_cursor_starts_from_step_zero(self, ledger: TaskLedger) -> None:
         """No cursor (fresh task or pre-v0.2) resumes from step 0."""
         task = _seed_claimed_task(ledger)
         result = TaskResult(raw_output="")
@@ -252,9 +234,7 @@ class TestCursorReplayMetadata:
     """WCP-011 success criterion: `Replay metadata clearly shows cursor
     progression`."""
 
-    def test_cursor_progression_is_visible_in_trace_steps(
-        self, ledger: TaskLedger
-    ) -> None:
+    def test_cursor_progression_is_visible_in_trace_steps(self, ledger: TaskLedger) -> None:
         task = _seed_claimed_task(ledger)
         result = TaskResult(raw_output="")
         journal = ActivityJournal()
@@ -276,9 +256,7 @@ class TestCursorReplayMetadata:
             if i < len(result.trace_steps):
                 assert not is_step_completed(result, _STEPS[i][0])
 
-    def test_cursor_carries_activity_key_for_journal_correlation(
-        self, ledger: TaskLedger
-    ) -> None:
+    def test_cursor_carries_activity_key_for_journal_correlation(self, ledger: TaskLedger) -> None:
         task = _seed_claimed_task(ledger)
         result = TaskResult(raw_output="")
         journal = ActivityJournal()

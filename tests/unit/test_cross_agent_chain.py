@@ -98,7 +98,10 @@ class TestBuildLink:
         parent = _populated_chain(["p1"])
         child = _populated_chain(["c1"])
         link = build_link(
-            parent, child, parent_task_id="p1", child_task_id="c1",
+            parent,
+            child,
+            parent_task_id="p1",
+            child_task_id="c1",
             metadata={"reason": "delegate-to-search-agent"},
         )
         assert link.metadata == {"reason": "delegate-to-search-agent"}
