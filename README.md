@@ -1,27 +1,37 @@
-<p align="center">
-  <img src="logo.png" alt="Veridian" width="420">
-</p>
+# Veridian
 
-<h1 align="center">Veridian</h1>
-
-<p align="center"><strong>Deterministic verification and replay-safe runtime for AI agent workflows.</strong></p>
+**Deterministic verification and replay-safe runtime for production AI agent workflows.**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/veridian-ai.svg)](https://pypi.org/project/veridian-ai/)
 
-Veridian is a reliability layer for agent execution.
-It makes task completion deterministic: a task is not marked done unless its verifier passes.
+Veridian is the reliability layer between your agent and production.
+
+**Core contract:** a task is not marked `DONE` unless its verifier passes.  
+The model cannot self-certify completion.
+
+If this project is useful, please star it to support the roadmap.
 
 ## Why Veridian
 
-Most agent stacks are strong at orchestration but weak at runtime guarantees.
-Veridian focuses on guarantees:
+Most agent stacks are good at orchestration but weak at correctness guarantees.
+Veridian is built to fail closed, recover deterministically, and produce evidence you can audit.
+
+You get:
 
 - deterministic task verification (Python verifiers, not self-certification)
-- crash-safe task state and replay evidence
+- replay-safe execution with crash recovery
 - pause/resume and dead-letter queue operations
-- policy/hook controls with isolated hook failures
+- strict replay compatibility checks for drift-sensitive workflows
+- policy and hook controls with error isolation
+
+## What Shipped in v0.3.0
+
+- release hardened with strict gates (`ruff`, `mypy --strict`, tests, coverage)
+- packaging and release metadata updated for `0.3.0`
+- protected-path safety script and CI guardrails improved
+- production cleanup pass applied (stale local artifacts removed, hygiene tightened)
 
 ## What Veridian Is (and Is Not)
 
