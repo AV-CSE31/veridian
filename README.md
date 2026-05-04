@@ -140,6 +140,19 @@ Hook families include:
 - human review and consistency checks
 - anomaly and drift-oriented safety hooks
 
+## Integrations
+
+Veridian is designed to sit beside orchestration frameworks rather than replace
+them.
+
+- Certified adapters: [LangGraph](guides/integrations/langgraph.md),
+  [CrewAI](guides/integrations/crewai.md)
+- Universal integration patterns:
+  [OpenAI Agents SDK](guides/integrations/openai-agents-sdk.md),
+  [Pydantic AI](guides/integrations/pydantic-ai.md),
+  [Mastra](guides/integrations/mastra.md)
+- Production checklist: [integration hardening](guides/integrations/production-checklist.md)
+
 ## Quality Gates
 
 Veridian uses claim-to-test discipline. For release work, run:
