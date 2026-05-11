@@ -43,3 +43,9 @@ Every production integration should make these decisions explicit:
 - [Mastra](mastra.md)
 - [Production checklist](production-checklist.md)
 
+## Production Track
+
+The v0.4/v0.5 production track lives in [production guides](../production/).
+Until the relevant adapter or sidecar tests exist, Pydantic AI, Mastra,
+OpenAI Agents SDK, and Inspect AI must remain preview or universal patterns,
+not certified integrations.

@@ -2553,18 +2553,6 @@ wheels = [
 ]
 
 [[package]]
-name = "veridian"
-version = "0.1.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/bb/86/4192f1e63d66e2019522429dd0b1ac0d258ea5d21ec076f1a974e4e028b5/veridian-0.1.3.tar.gz", hash = "sha256:64725eb301cca20834dd58cc9ce8928bccd1df23174ab8c8a5c163c8dcc920fe", size = 3330, upload-time = "2024-07-27T12:54:29.224Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/18/b6/3e3b6b4a2876019b148b86b85c574eff429a2802dc334b864e67c6662219/veridian-0.1.3-py3-none-any.whl", hash = "sha256:8ba672890294a01f19e4aa79e008c486f0e6fc0ea3eeb2cf2f763d93f4ef318f", size = 3695, upload-time = "2024-07-27T12:54:27.925Z" },
-]
-
-[[package]]
 name = "veridian-ai"
 version = "0.3.0"
 source = { editable = "." }
@@ -2583,7 +2571,14 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
-    { name = "veridian" },
+    { name = "fastapi" },
+    { name = "litellm" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
+    { name = "opentelemetry-semantic-conventions" },
+    { name = "psycopg2" },
+    { name = "redis" },
+    { name = "uvicorn", extra = ["standard"] },
 ]
 dashboard = [
     { name = "fastapi" },
@@ -2638,7 +2633,7 @@ requires-dist = [
     { name = "tiktoken", specifier = ">=0.7" },
     { name = "typer", specifier = ">=0.12" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'dashboard'", specifier = ">=0.30" },
-    { name = "veridian", extras = ["llm", "dashboard", "redis", "postgres", "otel"], marker = "extra == 'all'" },
+    { name = "veridian-ai", extras = ["llm", "dashboard", "redis", "postgres", "otel"], marker = "extra == 'all'" },
 ]
 provides-extras = ["redis", "postgres", "otel", "llm", "dashboard", "dev", "all"]
 

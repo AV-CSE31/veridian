@@ -176,9 +176,14 @@ Public releases require evidence-backed notes:
 
 Near-term focus areas:
 
-- backend migration and operations docs
-- deterministic step-level checkpoint cursor
-- public compatibility matrix and migration guides
+- v0.4: publish the verification contract, evidence timeline, threat model,
+  and `TrustedExecutor` boundary
+- v0.5: add production integration paths for Pydantic AI durable execution,
+  Mastra sidecars, OpenAI Agents SDK guardrails, and Inspect AI evidence export
+- keep LangGraph and CrewAI as the only certified adapters until new
+  certification tests exist
+
+See the [v0.5 production roadmap](guides/production/roadmap-v0.5.md).
 
 ## Contributing
 

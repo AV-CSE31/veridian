@@ -79,7 +79,7 @@ dev = [
     "mypy>=1.10",
     "pre-commit>=3.7",
 ]
-all = ["veridian[llm,dashboard,redis,postgres,otel]"]
+all = ["veridian-ai[llm,dashboard,redis,postgres,otel]"]
 
 [project.scripts]
 veridian = "veridian.cli.main:app"
