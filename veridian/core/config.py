@@ -12,9 +12,29 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-__all__ = ["VeridianConfig"]
+__all__ = ["VeridianConfig", "default_data_dir"]
 
 _DEFAULT_MODEL = "gemini/gemini-2.5-flash"
+
+
+def default_data_dir() -> Path:
+    """Resolve the directory under which ledger/progress files live by default.
+
+    Container-friendly resolution order:
+
+    1. ``VERIDIAN_DATA_DIR`` env var, if set. Created if absent.
+    2. The current working directory (backwards-compatible default for
+       existing scripts and unit tests).
+
+    Set ``VERIDIAN_DATA_DIR=/var/lib/veridian`` in production containers
+    to persist state on a mounted volume rather than the ephemeral PWD.
+    """
+    override = os.getenv("VERIDIAN_DATA_DIR")
+    if override:
+        path = Path(override).expanduser()
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+    return Path.cwd()
 
 
 @dataclass
@@ -52,8 +72,15 @@ class VeridianConfig:
 
     # ── Storage ───────────────────────────────────────────────────────────────
     storage_backend: str = "ledger"  # "ledger" | "local_json" | "redis" | "postgres"
-    ledger_file: Path = field(default_factory=lambda: Path("ledger.json"))
-    progress_file: Path = field(default_factory=lambda: Path("progress.md"))
+    # Defaults are anchored to default_data_dir() so containers can persist
+    # state by setting ``VERIDIAN_DATA_DIR=/var/lib/veridian``. Bare paths
+    # like ``ledger.json`` continue to resolve relative to that root.
+    ledger_file: Path = field(default_factory=lambda: default_data_dir() / "ledger.json")
+    progress_file: Path = field(default_factory=lambda: default_data_dir() / "progress.md")
+    # FileLock acquire timeout for ledger writes. Tight enough that a
+    # crashed peer with a stale lock surfaces a clear Timeout instead of
+    # blocking pod startup indefinitely.
+    ledger_lock_timeout: float = 15.0
 
     # ── Context ───────────────────────────────────────────────────────────────
     context_window_tokens: int = 8000  # token budget for context assembly

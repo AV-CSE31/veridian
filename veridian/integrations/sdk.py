@@ -123,7 +123,11 @@ def start_run(
             if isinstance(config.ledger_file, Path)
             else Path(str(config.ledger_file))
         )
-        ledger = TaskLedger(path=ledger_path, progress_file=str(config.progress_file))
+        ledger = TaskLedger(
+            path=ledger_path,
+            progress_file=str(config.progress_file),
+            lock_timeout=config.ledger_lock_timeout,
+        )
 
     if verifier_registry is None:
         import veridian.verify.builtin  # noqa: F401 — trigger registration
