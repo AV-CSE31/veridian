@@ -7,7 +7,9 @@ ParallelRunner — async task execution with bounded concurrency via asyncio.Sem
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
+import signal
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -52,6 +54,42 @@ class ParallelRunner:
         self.config = config or VeridianConfig()
         self.hooks = hooks or HookRegistry()
         self._verifier_registry = verifier_registry
+        self._shutdown = False
+
+    def _install_async_shutdown_handlers(
+        self, loop: asyncio.AbstractEventLoop
+    ) -> list[int]:
+        """Register SIGINT/SIGTERM signal handlers that set ``_shutdown``.
+
+        Returns the list of signals that were successfully installed so
+        :meth:`_uninstall_async_shutdown_handlers` can remove only the
+        ones it owns. On Windows / non-main threads ``add_signal_handler``
+        raises NotImplementedError; we degrade silently in that case.
+        """
+        installed: list[int] = []
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            try:
+                loop.add_signal_handler(sig, self._on_async_shutdown_signal, sig)
+                installed.append(sig)
+            except (NotImplementedError, RuntimeError, ValueError):
+                # Non-main thread / Windows / loop closed — skip silently.
+                continue
+        return installed
+
+    def _uninstall_async_shutdown_handlers(
+        self, loop: asyncio.AbstractEventLoop, signals: list[int]
+    ) -> None:
+        for sig in signals:
+            with contextlib.suppress(Exception):
+                loop.remove_signal_handler(sig)
+
+    def _on_async_shutdown_signal(self, sig: int) -> None:
+        """SIGINT/SIGTERM handler — flag for graceful drain, no mid-batch kill."""
+        name = signal.Signals(sig).name if isinstance(sig, int) else str(sig)
+        log.warning(
+            "parallel_runner.%s_received — will stop after current batch", name.lower()
+        )
+        self._shutdown = True
 
     async def run_async(self, phase: str | None = None) -> RunSummary:
         """
@@ -84,6 +122,13 @@ class ParallelRunner:
             RunStarted(run_id=run_id, total_tasks=summary.total_tasks, phase=phase),
         )
 
+        # Install signal handlers on the running loop so a Kubernetes pod
+        # termination (SIGTERM) flips _shutdown between batches and the
+        # async runner drains gracefully instead of being torn down with
+        # in-flight asyncio tasks.
+        loop = asyncio.get_running_loop()
+        installed_signals = self._install_async_shutdown_handlers(loop)
+
         async def _dispatch(task_id: str) -> RunSummary:
             # `_run_single_task` is sync today; `to_thread` prevents event-loop
             # blocking while AsyncScheduler enforces bounded concurrency.
@@ -98,6 +143,15 @@ class ParallelRunner:
         # to return a RunSummary without mutating ledger state.
         dispatched_this_run: set[str] = set()
         while True:
+            if self._shutdown:
+                log.info(
+                    "parallel_runner.shutdown_requested run_id=%s "
+                    "completed=%d remaining=%s",
+                    run_id,
+                    summary.done_count + summary.failed_count,
+                    len(dispatched_this_run),
+                )
+                break
             task_ids = self._list_schedulable_task_ids(
                 phase=phase,
                 paused_this_run=paused_this_run,
@@ -150,6 +204,7 @@ class ParallelRunner:
 
         summary.duration_seconds = time.monotonic() - start_time
         self.hooks.fire("after_run", RunCompleted(run_id=run_id, summary=summary))
+        self._uninstall_async_shutdown_handlers(loop, installed_signals)
         return summary
 
     def _list_schedulable_task_ids(

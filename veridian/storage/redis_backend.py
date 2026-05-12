@@ -12,6 +12,7 @@ Rules:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 from typing import Any, cast
@@ -50,6 +51,8 @@ class RedisStorage(BaseStorage):
         password: str | None = None,
         ssl: bool = False,
         key_prefix: str = "",
+        max_connections: int = 32,
+        socket_timeout: float | None = 5.0,
     ) -> None:
         try:
             import redis as redis_lib
@@ -59,15 +62,34 @@ class RedisStorage(BaseStorage):
                 "Install it with: pip install veridian-ai[redis]"
             ) from exc
 
-        self._r = redis_lib.Redis(
+        # Long-lived runners reuse a bounded connection pool instead of a
+        # single per-instance connection. This prevents descriptor growth
+        # under sustained use and lets concurrent get_next/claim calls
+        # share warm connections.
+        self._pool = redis_lib.ConnectionPool(
             host=host,
             port=port,
             db=db,
             password=password,
             ssl=ssl,
             decode_responses=True,
+            max_connections=max_connections,
+            socket_timeout=socket_timeout,
         )
+        self._r = redis_lib.Redis(connection_pool=self._pool)
         self._prefix = key_prefix
+
+    def close(self) -> None:
+        """Release the underlying connection pool.
+
+        Safe to call multiple times. Recommended in long-lived hosts (e.g.
+        Kubernetes pods) before process shutdown so that connections are
+        returned cleanly to the Redis server.
+        """
+        with contextlib.suppress(Exception):
+            self._r.close()
+        with contextlib.suppress(Exception):
+            self._pool.disconnect()
 
     def _task_key(self, task_id: str) -> str:
         return f"{self._prefix}{_TASK_KEY.format(task_id=task_id)}"

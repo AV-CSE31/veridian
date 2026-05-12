@@ -145,25 +145,37 @@ class PostgresStorage(BaseStorage):
             WHERE id = %s
         """
         with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(done_sql)
-                done_ids = {row[0] for row in cur.fetchall()}
-
-                cur.execute(queue_sql)
-                rows = cur.fetchall()
-
-            for _task_id, raw_data in rows:
-                task_dict: dict[str, Any] = json.loads(raw_data)
-                deps = task_dict.get("depends_on", [])
-                if not all(dep in done_ids for dep in deps):
-                    continue
-                # Claim it
-                task = Task.from_dict(task_dict)
-                task.status = TaskStatus.IN_PROGRESS
+            try:
                 with conn.cursor() as cur:
-                    cur.execute(update_sql, (task.id,))
-                conn.commit()
-                return task
+                    cur.execute(done_sql)
+                    done_ids = {row[0] for row in cur.fetchall()}
+
+                    cur.execute(queue_sql)
+                    rows = cur.fetchall()
+
+                # The SELECT ... FOR UPDATE SKIP LOCKED above holds row-level
+                # locks until the transaction commits or rolls back. Any
+                # uncaught exception in the loop below (malformed JSON,
+                # corrupt row, etc.) would otherwise pin those locks until
+                # the connection closes; explicit rollback unblocks peers.
+                for _task_id, raw_data in rows:
+                    task_dict: dict[str, Any] = json.loads(raw_data)
+                    deps = task_dict.get("depends_on", [])
+                    if not all(dep in done_ids for dep in deps):
+                        continue
+                    # Claim it
+                    task = Task.from_dict(task_dict)
+                    task.status = TaskStatus.IN_PROGRESS
+                    with conn.cursor() as cur:
+                        cur.execute(update_sql, (task.id,))
+                    conn.commit()
+                    return task
+                # No row matched the dependency gate — release the FOR UPDATE
+                # locks before returning.
+                conn.rollback()
+            except Exception:
+                conn.rollback()
+                raise
         return None
 
     def complete(self, task_id: str, result: TaskResult) -> None:

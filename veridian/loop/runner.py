@@ -231,44 +231,50 @@ class VeridianRunner:
             RunStarted(run_id=run_id, total_tasks=summary.total_tasks, phase=phase),
         )
 
-        self._setup_signal_handler()
+        # Save the previous SIGINT handler so the runner does not leak its
+        # own handler into the caller's process. Restoration happens in
+        # ``finally`` to cover the exception paths too.
+        previous_sigint = self._setup_signal_handler()
 
-        # ── Step 3: Task loop ─────────────────────────────────────────────────
-        self._task_loop(run_id, phase, summary)
+        try:
+            # ── Step 3: Task loop ─────────────────────────────────────────────
+            self._task_loop(run_id, phase, summary)
 
-        # ── Step 4: RunCompleted hook ─────────────────────────────────────────
-        summary.duration_seconds = time.monotonic() - start_time
-        self.hooks.fire(
-            "after_run",
-            RunCompleted(run_id=run_id, summary=summary),
-        )
+            # ── Step 4: RunCompleted hook ─────────────────────────────────────
+            summary.duration_seconds = time.monotonic() - start_time
+            self.hooks.fire(
+                "after_run",
+                RunCompleted(run_id=run_id, summary=summary),
+            )
 
-        # ── Step 5: Post-run skill extraction (opt-in) ────────────────────────
-        if self.skill_library is not None:
-            try:
-                admitted = self.skill_library.post_run(self.ledger, run_id=run_id)
-                if admitted:
-                    log.info("runner.skills_admitted count=%d", len(admitted))
-            except Exception as exc:
-                log.warning("runner.skill_extraction_error err=%s", exc)
+            # ── Step 5: Post-run skill extraction (opt-in) ────────────────────
+            if self.skill_library is not None:
+                try:
+                    admitted = self.skill_library.post_run(self.ledger, run_id=run_id)
+                    if admitted:
+                        log.info("runner.skills_admitted count=%d", len(admitted))
+                except Exception as exc:
+                    log.warning("runner.skill_extraction_error err=%s", exc)
 
-        log.info(
-            "runner.complete run_id=%s done=%d failed=%d duration=%.1fs",
-            run_id,
-            summary.done_count,
-            summary.failed_count,
-            summary.duration_seconds,
-        )
-        if self._tracer is not None:
-            with contextlib.suppress(Exception):
-                self._tracer.end_trace(
-                    attributes={
-                        "veridian.done_count": summary.done_count,
-                        "veridian.failed_count": summary.failed_count,
-                        "veridian.abandoned_count": summary.abandoned_count,
-                    }
-                )
-        return summary
+            log.info(
+                "runner.complete run_id=%s done=%d failed=%d duration=%.1fs",
+                run_id,
+                summary.done_count,
+                summary.failed_count,
+                summary.duration_seconds,
+            )
+            if self._tracer is not None:
+                with contextlib.suppress(Exception):
+                    self._tracer.end_trace(
+                        attributes={
+                            "veridian.done_count": summary.done_count,
+                            "veridian.failed_count": summary.failed_count,
+                            "veridian.abandoned_count": summary.abandoned_count,
+                        }
+                    )
+            return summary
+        finally:
+            self._restore_signal_handler(previous_sigint)
 
     def _task_loop(
         self,
@@ -1334,13 +1340,32 @@ class VeridianRunner:
         with contextlib.suppress(Exception):
             self._tracer.record_event(event_type, attributes)
 
-    def _setup_signal_handler(self) -> None:
-        """Register SIGINT handler to set shutdown flag (no mid-task exit)."""
+    def _setup_signal_handler(self) -> object:
+        """Register SIGINT handler to set shutdown flag (no mid-task exit).
+
+        Returns the previously-installed handler so callers can restore it
+        when the run finishes. Returns ``None`` when handler installation
+        was not possible (e.g. running in a non-main thread).
+        """
 
         def _handler(signum: int, frame: object) -> None:
             log.warning("runner.sigint_received — will stop after current task")
             self._shutdown = True
 
-        with contextlib.suppress(OSError, ValueError):
-            # signal.signal fails in non-main threads — ignore
-            signal.signal(signal.SIGINT, _handler)
+        try:
+            return signal.signal(signal.SIGINT, _handler)
+        except (OSError, ValueError):
+            # signal.signal fails in non-main threads — return sentinel
+            return None
+
+    def _restore_signal_handler(self, previous: object) -> None:
+        """Restore a previously-installed SIGINT handler.
+
+        Idempotent and safe to call from a ``finally`` block: if
+        ``_setup_signal_handler`` returned ``None`` (non-main thread, etc.)
+        this is a no-op.
+        """
+        if previous is None:
+            return
+        with contextlib.suppress(OSError, ValueError, TypeError):
+            signal.signal(signal.SIGINT, previous)  # type: ignore[arg-type]
