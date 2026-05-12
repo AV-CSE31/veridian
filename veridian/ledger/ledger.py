@@ -131,18 +131,33 @@ class TaskLedger:
         phase: str | None = None,
         priority_gte: int | None = None,
     ) -> builtins.list[Task]:
-        """Return filtered list of tasks. Returns copies."""
+        """Return filtered list of tasks. Returns copies.
+
+        Filters are applied at the raw-dict level (cheap string comparison)
+        *before* materialising :class:`Task` instances. On large ledgers the
+        scheduler frequently calls ``list(status=PENDING)`` and skipping
+        ``Task.from_dict`` for the DONE/FAILED majority is the bigger cost
+        saving than caching the parsed JSON.
+        """
         data = self._read_raw()
-        tasks = [Task.from_dict(t) for t in data["tasks"].values()]
+        raw_tasks = data["tasks"].values()
 
-        if status is not None:
-            sv = status.value if isinstance(status, TaskStatus) else status
-            tasks = [t for t in tasks if t.status.value == sv]
-        if phase is not None:
-            tasks = [t for t in tasks if t.phase == phase]
-        if priority_gte is not None:
-            tasks = [t for t in tasks if t.priority >= priority_gte]
+        sv = (
+            status.value if isinstance(status, TaskStatus)
+            else status if isinstance(status, str)
+            else None
+        )
 
+        def _matches(raw: dict[str, Any]) -> bool:
+            if sv is not None and raw.get("status") != sv:
+                return False
+            if phase is not None and raw.get("phase") != phase:
+                return False
+            return not (
+                priority_gte is not None and raw.get("priority", 0) < priority_gte
+            )
+
+        tasks = [Task.from_dict(t) for t in raw_tasks if _matches(t)]
         tasks.sort(key=lambda t: (-t.priority, t.created_at))
         return tasks
 
@@ -507,15 +522,19 @@ class TaskLedger:
     def _write_raw(self, data: dict[str, Any]) -> None:
         """
         Atomic write via temp file + os.replace().
-        Validates JSON round-trip before renaming.
+
+        Serialization uses compact JSON (no ``indent=2``) on the hot path —
+        every state transition (claim, submit_result, mark_done, …) goes
+        through here and the indented form roughly doubles wall-clock per
+        write on multi-hundred-task ledgers. Set ``VERIDIAN_LEDGER_INDENT=1``
+        to opt back into pretty-printed output (useful when hand-inspecting
+        ledger.json in development).
         """
         data["schema_version"] = SCHEMA_VERSION
         data["updated_at"] = datetime.now(tz=UTC).isoformat()
 
-        text = json.dumps(data, indent=2, ensure_ascii=False)
-
-        # Validate round-trip
-        json.loads(text)
+        indent = 2 if os.getenv("VERIDIAN_LEDGER_INDENT") == "1" else None
+        text = json.dumps(data, indent=indent, ensure_ascii=False)
 
         # Write to temp file in same directory (required for atomic rename)
         tmp_fd, tmp_path = tempfile.mkstemp(dir=self.path.parent, suffix=".tmp", prefix="ledger_")
