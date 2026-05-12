@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import os
+from collections import deque
 from collections.abc import AsyncGenerator
 from dataclasses import asdict
 from pathlib import Path
@@ -55,6 +56,10 @@ class VeridianDashboard:
         dashboard.serve()   # blocks; runs on port 7474
     """
 
+    # Bound the recent-alerts buffer so a long-running dashboard process
+    # does not grow unbounded on a noisy task feed.
+    RECENT_ALERTS_MAX: int = 1000
+
     def __init__(
         self,
         trace_file: Path | None = None,
@@ -63,6 +68,7 @@ class VeridianDashboard:
         slo_evaluator: SLOEvaluator | None = None,
         alert_manager: AlertManager | None = None,
         ledger_path: Path | None = None,
+        recent_alerts_max: int | None = None,
     ) -> None:
         self._trace_file = trace_file or Path("veridian_trace.jsonl")
         self._port = port
@@ -71,7 +77,12 @@ class VeridianDashboard:
         self._slo_evaluator = slo_evaluator or SLOEvaluator(definitions=BUILTIN_SLOS)
         self._alert_manager = alert_manager
         self._latest_metrics: dict[str, float] = {}
-        self._recent_alerts: list[Alert] = []
+        # ``deque(maxlen=…)`` evicts the oldest entries automatically so the
+        # buffer cannot exceed ``RECENT_ALERTS_MAX`` (or the constructor
+        # override). Existing serialisations that iterate ``_recent_alerts``
+        # continue to work because deque is iterable in insertion order.
+        max_alerts = recent_alerts_max if recent_alerts_max is not None else self.RECENT_ALERTS_MAX
+        self._recent_alerts: deque[Alert] = deque(maxlen=max_alerts)
         # Optional: if supplied, /ready probes the ledger file's reachability
         # so a k8s readiness probe goes 503 → 200 only when persistence is
         # actually addressable, not just when the FastAPI process is up.
