@@ -78,14 +78,15 @@ from veridian.core.task import (
     TaskStatus,
 )
 
-# Ledger
-from veridian.ledger.ledger import TaskLedger
-
-# Providers
+# Providers (base + mock are lightweight; LiteLLMProvider is lazy via
+# __getattr__ to keep `import veridian` fast — its module pulls in tenacity
+# at top level which adds ~50-100ms to cold start).
 from veridian.providers.base import LLMProvider, LLMResponse, Message
-from veridian.providers.litellm_provider import LiteLLMProvider
 from veridian.providers.mock_provider import MockProvider
 
+# TaskLedger is lazy via __getattr__ for the same reason: it imports
+# filelock at module load and isn't needed for help text / config-only
+# import paths (e.g. ``veridian --help``).
 # Import builtin verifiers so they self-register on `import veridian`
 from veridian.verify import builtin as _builtin_verifiers  # noqa: F401
 
@@ -157,6 +158,20 @@ def __getattr__(name: str) -> object:
 
         globals()["ParallelRunner"] = ParallelRunner
         return ParallelRunner
+
+    if name == "TaskLedger":
+        # Lazy: pulls filelock at module load.
+        from veridian.ledger.ledger import TaskLedger  # noqa: PLC0415
+
+        globals()["TaskLedger"] = TaskLedger
+        return TaskLedger
+
+    if name == "LiteLLMProvider":
+        # Lazy: pulls tenacity at module load (~50-100ms).
+        from veridian.providers.litellm_provider import LiteLLMProvider  # noqa: PLC0415
+
+        globals()["LiteLLMProvider"] = LiteLLMProvider
+        return LiteLLMProvider
 
     if name in ("InitializerAgent", "WorkerAgent"):
         from veridian.agents.initializer import InitializerAgent  # noqa: PLC0415
