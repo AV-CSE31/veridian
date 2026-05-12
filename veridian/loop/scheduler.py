@@ -83,3 +83,22 @@ class AsyncScheduler:
         self._task_group_tasks = []
 
         log.info("async_scheduler.shutdown requested")
+
+    async def __aenter__(self) -> AsyncScheduler:
+        """Use the scheduler as an async context manager.
+
+        ``async with AsyncScheduler(...) as sched: await sched.run([...])``
+        guarantees pending tasks are cancelled and the shutdown event is
+        set on exit — including the exception path — so a caller that
+        abandons the scheduler mid-flight doesn't leak ``asyncio.Task``
+        objects into the event loop.
+        """
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: object | None,
+    ) -> None:
+        await self.shutdown()
