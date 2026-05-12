@@ -44,6 +44,9 @@ __license__ = "MIT"
 # Budget
 from veridian.budget import Budget, BudgetState
 
+# Verification contract (core task-completion contract)
+from veridian.core.contract import VerificationContract
+
 # Events (lifecycle core only)
 from veridian.core.events import (
     RunCompleted,
@@ -77,6 +80,10 @@ from veridian.core.task import (
     TaskResult,
     TaskStatus,
 )
+
+# Threat model registry (formal gap dataclasses + audit evidence)
+from veridian.core.threat_model import GAPS as THREAT_GAPS
+from veridian.core.threat_model import ThreatGap
 
 # Ledger
 from veridian.ledger.ledger import TaskLedger
@@ -265,6 +272,7 @@ __all__ = [
     "ParallelRunner",
     # Verification
     "BaseVerifier",
+    "VerificationContract",
     "VerificationResult",
     "verifier_registry",
     # Hooks
@@ -298,6 +306,9 @@ __all__ = [
     # Budget
     "Budget",
     "BudgetState",
+    # Threat model
+    "THREAT_GAPS",
+    "ThreatGap",
 ]
 # Count: 40 symbols (was 123 in v3).
 # Everything removed here is still importable from its module path (e.g.

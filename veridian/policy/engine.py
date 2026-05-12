@@ -83,9 +83,43 @@ class PolicyEngine:
             raise PolicyNotFound(
                 f"Policy {policy_id!r} not found. Registered: {self.list_policies()}"
             )
-        _, verifier_cls = entry
+        policy, verifier_cls = entry
         verifier: BaseVerifier = verifier_cls()
-        return verifier.verify(task, result)
+        verification = verifier.verify(task, result)
+        # Stamp policy provenance so downstream evidence can prove which
+        # policy version produced this decision. Audit traceability for
+        # the "new policy must fail old evidence" guarantee.
+        verification.evidence.setdefault("policy_id", policy.policy_id)
+        verification.evidence.setdefault("policy_version", policy.version)
+        verification.evidence.setdefault("policy_hash", policy.content_hash())
+        return verification
+
+    def is_evidence_current(
+        self,
+        policy_id: str,
+        evidence: dict[str, object],
+    ) -> bool:
+        """Return ``True`` iff ``evidence`` was produced by the currently
+        registered version of ``policy_id``.
+
+        Used to enforce the contract that a new policy version must fail
+        evidence produced under an older version of the same policy. The
+        check is content-hash based, so a metadata-only edit that does not
+        change the rules still validates.
+
+        Raises:
+            PolicyNotFound: if ``policy_id`` is not registered.
+        """
+        entry = self._registry.get(policy_id)
+        if entry is None:
+            raise PolicyNotFound(
+                f"Policy {policy_id!r} not found. Registered: {self.list_policies()}"
+            )
+        policy, _ = entry
+        return (
+            evidence.get("policy_id") == policy.policy_id
+            and evidence.get("policy_hash") == policy.content_hash()
+        )
 
     def evaluate_all(
         self,
