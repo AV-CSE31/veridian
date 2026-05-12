@@ -35,6 +35,7 @@ def _verifier_registry_loaded() -> bool:
     except Exception:
         return False
 
+
 log = logging.getLogger(__name__)
 
 __all__ = ["VeridianDashboard", "DASHBOARD_PORT"]
@@ -147,19 +148,13 @@ class VeridianDashboard:
             """
             failures: list[dict[str, str]] = []
             if not verifier_registry_ready():
-                failures.append(
-                    {"check": "verifier_registry", "reason": "no verifiers registered"}
-                )
+                failures.append({"check": "verifier_registry", "reason": "no verifiers registered"})
             if ledger_path is not None:
                 try:
                     if not ledger_path.exists():
-                        failures.append(
-                            {"check": "ledger", "reason": f"missing: {ledger_path}"}
-                        )
+                        failures.append({"check": "ledger", "reason": f"missing: {ledger_path}"})
                     elif not os.access(ledger_path, os.R_OK):
-                        failures.append(
-                            {"check": "ledger", "reason": f"unreadable: {ledger_path}"}
-                        )
+                        failures.append({"check": "ledger", "reason": f"unreadable: {ledger_path}"})
                 except Exception as exc:
                     failures.append({"check": "ledger", "reason": str(exc)})
             if failures:
@@ -189,6 +184,21 @@ class VeridianDashboard:
         async def recent_alerts() -> list[dict[str, Any]]:
             """Return recent alerts as JSON list."""
             return [asdict(a) for a in dashboard_self._recent_alerts]
+
+        @app.get("/metrics")
+        async def metrics() -> Any:
+            """OpenMetrics exposition for Prometheus / Grafana scrapers."""
+            from fastapi.responses import PlainTextResponse  # noqa: PLC0415
+
+            from veridian.observability.metrics import (  # noqa: PLC0415
+                default_registry,
+                render_openmetrics,
+            )
+
+            return PlainTextResponse(
+                content=render_openmetrics(default_registry()),
+                media_type="text/plain; version=0.0.4; charset=utf-8",
+            )
 
         return app
 

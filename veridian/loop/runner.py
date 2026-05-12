@@ -230,6 +230,7 @@ class VeridianRunner:
         if summary.total_tasks == 0:
             log.info("runner.no_tasks run_id=%s phase=%s", run_id, phase)
             summary.duration_seconds = time.monotonic() - start_time
+            self._emit_run_metrics(summary, phase)
             if self._tracer is not None:
                 with contextlib.suppress(Exception):
                     self._tracer.end_trace(attributes={"veridian.total_tasks": 0})
@@ -273,6 +274,7 @@ class VeridianRunner:
                 summary.failed_count,
                 summary.duration_seconds,
             )
+            self._emit_run_metrics(summary, phase)
             if self._tracer is not None:
                 with contextlib.suppress(Exception):
                     self._tracer.end_trace(
@@ -1349,6 +1351,42 @@ class VeridianRunner:
             return
         with contextlib.suppress(Exception):
             self._tracer.record_event(event_type, attributes)
+
+    def _emit_run_metrics(self, summary: "RunSummary", phase: str | None) -> None:
+        """Update the process-local metrics registry with run totals.
+
+        Counters are cumulative across all runs (Prometheus expects that
+        shape); the duration histogram records the wall-clock per run.
+        Failures here are silently swallowed because metrics emission must
+        never break a run.
+        """
+        try:
+            from veridian.observability.metrics import default_registry  # noqa: PLC0415
+
+            registry = default_registry()
+            labels = {"phase": phase or ""}
+            registry.counter(
+                "veridian_tasks_done_total",
+                "Tasks completed successfully across all runs.",
+            ).inc(summary.done_count, labels)
+            registry.counter(
+                "veridian_tasks_failed_total",
+                "Tasks that exhausted retries without becoming DONE.",
+            ).inc(summary.failed_count, labels)
+            registry.counter(
+                "veridian_tasks_abandoned_total",
+                "Tasks routed to the DLQ after max_retries.",
+            ).inc(summary.abandoned_count, labels)
+            registry.counter(
+                "veridian_runs_total",
+                "Number of run() invocations completed.",
+            ).inc(1, labels)
+            registry.histogram(
+                "veridian_run_duration_seconds",
+                "Wall-clock duration of run() in seconds.",
+            ).observe(summary.duration_seconds, labels)
+        except Exception:  # pragma: no cover — metrics must never break a run
+            log.debug("runner.metrics_emit_failed", exc_info=True)
 
     def _setup_signal_handler(self) -> object:
         """Register SIGINT handler to set shutdown flag (no mid-task exit).

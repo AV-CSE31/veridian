@@ -62,8 +62,23 @@ def main(
         is_eager=True,
         help="Show version and exit.",
     ),
+    log_level: str = typer.Option(
+        "INFO",
+        "--log-level",
+        envvar="VERIDIAN_LOG_LEVEL",
+        help="Python logging level for all veridian.* loggers (DEBUG/INFO/WARN/ERROR).",
+    ),
+    log_format: str = typer.Option(
+        "text",
+        "--log-format",
+        envvar="VERIDIAN_LOG_FORMAT",
+        help="Log output format: 'text' (default) or 'json' for log-aggregator-friendly output.",
+    ),
 ) -> None:
     """Veridian — deterministic verification for autonomous AI agents."""
+    from veridian.observability.logging_config import configure_logging
+
+    configure_logging(level=log_level, json_format=log_format.lower() == "json", force=True)
 
 
 # ---------------------------------------------------------------------------
