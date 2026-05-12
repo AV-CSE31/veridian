@@ -14,11 +14,13 @@ separate from anything the agent may have executed.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from typing import ClassVar
 
 from veridian.core.exceptions import VeridianConfigError
 from veridian.core.task import Task, TaskResult
+from veridian.loop.trusted_executor import DEFAULT_BLOCKLIST, DEFAULT_ENV_ALLOWLIST
 from veridian.verify.base import BaseVerifier, VerificationResult
 
 
@@ -40,12 +42,23 @@ class BashExitCodeVerifier(BaseVerifier):
         command: str,
         expected_exit: int = 0,
         timeout_seconds: int = 60,
+        blocklist: list[str] | None = None,
+        env_allowlist: tuple[str, ...] | None = None,
+        inherit_env: bool = False,
     ) -> None:
         """
         Args:
             command: Shell command to execute. Must be non-empty.
             expected_exit: Expected exit code. Default 0 (success).
             timeout_seconds: Maximum execution time. Must be > 0.
+            blocklist: Substrings that, if present in the command, cause the
+                verifier to reject it as misconfigured. Defaults to
+                :data:`~veridian.loop.trusted_executor.DEFAULT_BLOCKLIST`.
+            env_allowlist: Environment variables passed to the child process.
+                Parent env is NOT inherited by default, preventing accidental
+                leakage of credentials into shell commands.
+            inherit_env: Set to ``True`` to inherit the full parent env. Only
+                use in trusted, non-adversarial contexts.
         """
         if not command or not command.strip():
             raise VeridianConfigError(
@@ -56,19 +69,39 @@ class BashExitCodeVerifier(BaseVerifier):
             raise VeridianConfigError(
                 f"BashExitCodeVerifier: 'timeout_seconds' must be > 0, got {timeout_seconds}."
             )
+        self.blocklist = list(blocklist) if blocklist is not None else list(DEFAULT_BLOCKLIST)
+        normalised = " ".join(command.lower().split())
+        for blocked in self.blocklist:
+            if blocked.lower() in normalised:
+                raise VeridianConfigError(
+                    f"BashExitCodeVerifier: command rejected by blocklist "
+                    f"(matched {blocked!r}). Adjust the command or pass a "
+                    "custom `blocklist=` to override."
+                )
         self.command = command
         self.expected_exit = expected_exit
         self.timeout_seconds = timeout_seconds
+        self.env_allowlist = (
+            env_allowlist if env_allowlist is not None else DEFAULT_ENV_ALLOWLIST
+        )
+        self.inherit_env = inherit_env
 
     def verify(self, task: Task, result: TaskResult) -> VerificationResult:
         """Run self.command in a subprocess and check its exit code."""
+        if self.inherit_env:
+            child_env: dict[str, str] | None = None
+        else:
+            child_env = {
+                key: os.environ[key] for key in self.env_allowlist if key in os.environ
+            }
         try:
-            proc = subprocess.run(  # noqa: S602  (shell=True is intentional for flexibility)
+            proc = subprocess.run(  # noqa: S602  (blocklist + env scrub above)
                 self.command,
                 shell=True,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
+                env=child_env,
             )
         except subprocess.TimeoutExpired:
             return VerificationResult(

@@ -83,6 +83,26 @@ from datetime import UTC, datetime
 log = logging.getLogger(__name__)
 
 
+# Default env-var allowlist passed to child bash processes. The parent
+# environment is *not* inherited by default — preventing accidental leakage of
+# credentials like ``OPENAI_API_KEY`` / ``AWS_SECRET_ACCESS_KEY`` / ``GITHUB_TOKEN``
+# into shell commands the agent writes.
+DEFAULT_ENV_ALLOWLIST: tuple[str, ...] = (
+    "PATH",
+    "HOME",
+    "USER",
+    "LOGNAME",
+    "SHELL",
+    "TERM",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "TZ",
+    "PWD",
+    "TMPDIR",
+)
+
+
 # ── BashOutput dataclass ──────────────────────────────────────────────────────
 
 
@@ -321,12 +341,21 @@ class TrustedExecutor:
         sensitivity: str = "medium",
         quarantine_log_path: str | None = None,
         task_id: str = "unknown",  # set by runner before each task
+        env_allowlist: tuple[str, ...] | None = None,
+        inherit_env: bool = False,
     ) -> None:
         self.blocklist = blocklist if blocklist is not None else DEFAULT_BLOCKLIST
         self.timeout_seconds = timeout_seconds
         self.max_output_bytes = max_output_bytes
         self.working_dir = working_dir or os.getcwd()
         self.task_id = task_id
+        # Child-process environment is scrubbed to an allowlist by default so
+        # secrets in the parent process (API keys, cloud creds, GitHub tokens)
+        # do not leak into agent-issued bash commands.
+        self.env_allowlist = (
+            env_allowlist if env_allowlist is not None else DEFAULT_ENV_ALLOWLIST
+        )
+        self.inherit_env = inherit_env
         self.sanitizer = OutputSanitizer(
             sensitivity=sensitivity,
             max_output_bytes=max_output_bytes,
@@ -351,14 +380,24 @@ class TrustedExecutor:
 
         # Execute
         start = time.monotonic()
+        # Build a minimal env dict from the allowlist unless the caller
+        # explicitly opts into inheriting the full parent env. This is the
+        # primary defence against credential leakage to agent-issued shells.
+        if self.inherit_env:
+            child_env: dict[str, str] | None = None
+        else:
+            child_env = {
+                key: os.environ[key] for key in self.env_allowlist if key in os.environ
+            }
         try:
             proc = subprocess.run(
                 command,
-                shell=True,
+                shell=True,  # noqa: S602 - blocklist + env scrub above
                 capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
                 cwd=self.working_dir,
+                env=child_env,
             )
             duration_ms = (time.monotonic() - start) * 1000
             stdout = proc.stdout
