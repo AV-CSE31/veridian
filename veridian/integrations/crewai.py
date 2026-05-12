@@ -17,7 +17,7 @@ from typing import Any
 
 from veridian.core.exceptions import VeridianError
 from veridian.core.task import Task, TraceStep
-from veridian.integrations.langgraph import VerificationContract, VerificationError
+from veridian.integrations.langgraph import NodeVerificationContract, VerificationError
 from veridian.integrations.sdk import (
     RunContext,
     persist_state,
@@ -74,8 +74,8 @@ SUPPORTED_VERSIONS: tuple[tuple[int, int], ...] = (
 _MIN_SUPPORTED = SUPPORTED_VERSIONS[0]
 
 
-# Reuse the LangGraph contract shape - same primitives, different wrapper.
-CrewVerificationContract = VerificationContract
+# Reuse the LangGraph per-node contract shape - same primitives, different wrapper.
+CrewVerificationContract = NodeVerificationContract
 
 
 @dataclass

@@ -32,7 +32,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from veridian.agents.worker import WorkerAgent
 from veridian.context.manager import ContextManager
@@ -103,6 +103,19 @@ class RunSummary:
         }
 
 
+class _TracerProtocol(Protocol):
+    """Structural type for the tracer dependency used by VeridianRunner.
+
+    Defined locally so the runner does not import the concrete
+    ``VeridianTracer`` at type-check time and so alternative tracer
+    implementations (e.g. test doubles) can satisfy the contract structurally.
+    """
+
+    def start_trace(self, run_id: str, attributes: dict[str, Any] | None = ...) -> None: ...
+    def end_trace(self, attributes: dict[str, Any] | None = ...) -> None: ...
+    def record_event(self, event_type: str, attributes: dict[str, Any]) -> None: ...
+
+
 class VeridianRunner:
     """
     Synchronous task execution loop.
@@ -135,7 +148,7 @@ class VeridianRunner:
         self._run_id = str(uuid.uuid4())[:8]
         # Audit F1: DLQ for abandoned tasks — opt-in; None = disabled.
         self._dlq = dlq
-        self._tracer: Any | None = None
+        self._tracer: _TracerProtocol | None = None
         self._prm_backend_failures = 0
         self._prm_circuit_open = False
         self._prm_circuit_threshold = 3

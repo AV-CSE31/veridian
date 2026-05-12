@@ -32,4 +32,6 @@ paths for the most dangerous competitors:
 - [Evidence timeline](evidence-timeline.md)
 - [TrustedExecutor](trusted-executor.md)
 - [Threat model](threat-model.md)
+- [Drift detection](drift-guide.md)
+- [Skill library](skill-guide.md)
 - [v0.5 roadmap](roadmap-v0.5.md)
