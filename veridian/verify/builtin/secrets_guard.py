@@ -134,6 +134,7 @@ class SecretsGuard(BaseVerifier):
         "Scans agent outputs for leaked secrets: API keys, tokens, passwords, "
         "connection strings, and high-entropy strings."
     )
+    shareable: ClassVar[bool] = True  # stateless: patterns compiled at module load
 
     def __init__(
         self,

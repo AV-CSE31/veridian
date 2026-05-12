@@ -130,7 +130,17 @@ class VeridianRunner:
         self.provider = provider
         self.config = config or VeridianConfig()
         self.hooks = hooks or HookRegistry()
-        self._verifier_registry = verifier_registry
+        # Resolve the verifier registry up-front so the built-ins are loaded
+        # before the first task. The lazy path (resolve-on-first-verify)
+        # otherwise pushes import + registration cost into the hot loop and
+        # makes the first task latency non-deterministic.
+        if verifier_registry is None:
+            import veridian.verify.builtin  # noqa: F401, PLC0415  — trigger self-registration
+            from veridian.verify.base import registry as _builtin_registry  # noqa: PLC0415
+
+            self._verifier_registry = _builtin_registry
+        else:
+            self._verifier_registry = verifier_registry
         self._shutdown = False
         self._run_id = str(uuid.uuid4())[:8]
         # Audit F1: DLQ for abandoned tasks — opt-in; None = disabled.
