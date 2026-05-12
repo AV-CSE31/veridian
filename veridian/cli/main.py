@@ -321,12 +321,16 @@ def run(
     from veridian.verify.base import VerifierRegistry
 
     led = _load_ledger(ledger)
-    config = VeridianConfig(
-        dry_run=dry_run,
-        max_parallel=max_parallel,
-    )
+    # Pick up VERIDIAN_* env vars first (ConfigMap / 12-factor path),
+    # then let explicit CLI flags override. Build the overrides as a
+    # plain dict typed Any-valued so mypy doesn't conflate the CLI
+    # values with the `prefix`/`env` parameters of from_env.
+    from typing import Any as _Any
+
+    overrides: dict[str, _Any] = {"dry_run": dry_run, "max_parallel": max_parallel}
     if model:
-        config.model = model
+        overrides["model"] = model
+    config = VeridianConfig.from_env(**overrides)
 
     from veridian.providers.base import LLMProvider
 

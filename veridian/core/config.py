@@ -9,10 +9,70 @@ if not set explicitly (per CLAUDE.md §7 rule 15: never hardcode model names).
 from __future__ import annotations
 
 import os
+import types
+import typing
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
+
+from veridian.core.exceptions import VeridianConfigError
 
 __all__ = ["VeridianConfig", "default_data_dir", "safe_report_path"]
+
+
+_TRUE_LITERALS = frozenset({"1", "true", "yes", "on", "y", "t"})
+_FALSE_LITERALS = frozenset({"0", "false", "no", "off", "n", "f"})
+_NONE_LITERALS = frozenset({"", "none", "null"})
+
+
+def _unwrap_optional(hint: Any) -> Any:
+    """If ``hint`` is ``T | None`` / ``Optional[T]`` return ``T`` else ``hint``."""
+    origin = typing.get_origin(hint)
+    if origin is typing.Union or origin is types.UnionType:
+        args = [a for a in typing.get_args(hint) if a is not type(None)]
+        if len(args) == 1:
+            return args[0]
+    return hint
+
+
+def _coerce_env_value(raw: str, hint: Any, env_key: str) -> Any:
+    """Coerce an environment-variable string to the dataclass field type.
+
+    Handles ``int``, ``float``, ``bool``, ``str``, ``Path``, and the
+    ``T | None`` shape used pervasively by :class:`VeridianConfig`.
+    Unsupported types fall back to passing the raw string through —
+    the dataclass constructor will then raise its own TypeError, which
+    is preferable to a silent miscoercion.
+    """
+    stripped = raw.strip()
+    target = _unwrap_optional(hint)
+
+    # Optional fields: empty/"none" clears the override.
+    nullable = target is not hint
+    if nullable and stripped.lower() in _NONE_LITERALS:
+        return None
+
+    if target is bool:
+        lowered = stripped.lower()
+        if lowered in _TRUE_LITERALS:
+            return True
+        if lowered in _FALSE_LITERALS:
+            return False
+        raise VeridianConfigError(
+            f"Env var {env_key}={raw!r} is not a valid boolean "
+            f"(expected one of {sorted(_TRUE_LITERALS | _FALSE_LITERALS)})"
+        )
+    if target is int:
+        return int(stripped)
+    if target is float:
+        return float(stripped)
+    if target is Path:
+        return Path(stripped).expanduser()
+    if target is str:
+        return stripped
+    # Unknown / complex type — pass through. The dataclass will reject
+    # mismatches at construction.
+    return raw
 
 
 def safe_report_path(user_path: str | Path, default_dir: Path | None = None) -> Path:
@@ -158,6 +218,58 @@ class VeridianConfig:
     # ── Secrets management (opt-in, Phase 8) ─────────────────────────────
     secrets_env_prefix: str = "VERIDIAN_"  # prefix for EnvSecretsProvider
     identity_guard_enabled: bool = True  # enable IdentityGuardHook
+
+    @classmethod
+    def from_env(
+        cls,
+        prefix: str = "VERIDIAN_",
+        env: dict[str, str] | None = None,
+        **overrides: Any,
+    ) -> VeridianConfig:
+        """Construct a :class:`VeridianConfig` from environment variables.
+
+        For every dataclass field ``foo_bar`` the helper reads
+        ``${prefix}FOO_BAR`` (uppercase) from the environment and coerces
+        the string to the field's declared type. Anything passed in
+        ``**overrides`` wins over the env var, which in turn wins over
+        the dataclass default.
+
+        Type coercion handles ``int``, ``float``, ``bool``, ``Path``,
+        and ``str``; ``bool`` accepts ``1/0/true/false/yes/no/on/off``
+        case-insensitively. ``None``-valued env strings (``""`` or
+        ``"none"``) clear optional fields.
+
+        This makes ``VeridianConfig`` Kubernetes ConfigMap / 12-factor
+        friendly: a Deployment manifest can set
+        ``VERIDIAN_MAX_PARALLEL=8``, ``VERIDIAN_MAX_COST_USD=25.0``,
+        ``VERIDIAN_TRACE_FILE=/var/log/veridian.jsonl`` and the runner
+        picks them up without code changes.
+        """
+        import dataclasses
+        import typing
+
+        source = os.environ if env is None else env
+        kwargs: dict[str, Any] = {}
+
+        # Build {field_name: type_hint} so we can coerce env strings.
+        type_hints = typing.get_type_hints(cls)
+        for f in dataclasses.fields(cls):
+            env_key = f"{prefix}{f.name.upper()}"
+            if env_key not in source:
+                continue
+            raw = source[env_key]
+            hint = type_hints.get(f.name, str)
+            try:
+                kwargs[f.name] = _coerce_env_value(raw, hint, env_key)
+            except VeridianConfigError:
+                raise
+            except Exception as exc:
+                raise VeridianConfigError(
+                    f"Env var {env_key}={raw!r} could not be coerced to {hint}: {exc}"
+                ) from exc
+
+        kwargs.update(overrides)
+        return cls(**kwargs)
 
     def __post_init__(self) -> None:
         """Validate fields that would otherwise produce confusing runtime
