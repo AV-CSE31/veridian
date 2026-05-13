@@ -56,6 +56,65 @@ from veridian.providers.base import LLMProvider, LLMResponse, Message
 log = logging.getLogger(__name__)
 
 
+# ── MODEL ALLOWLIST ───────────────────────────────────────────────────────────
+#
+# A model string is more than a label: LiteLLM parses it to choose which
+# provider endpoint to hit. An attacker who can influence ``VERIDIAN_MODEL``
+# (or the ``model=`` constructor arg) could redirect every LLM call to an
+# attacker-controlled proxy and exfiltrate the entire prompt corpus.
+#
+# We pin allowed model prefixes by default and let operators expand via
+# ``VERIDIAN_ALLOWED_MODELS`` (comma-separated prefixes). Setting
+# ``VERIDIAN_ALLOWED_MODELS=*`` disables the guard for development.
+
+_DEFAULT_ALLOWED_MODEL_PREFIXES: tuple[str, ...] = (
+    "gemini/",
+    "claude-",
+    "anthropic/",
+    "gpt-",
+    "openai/",
+    "azure/",
+    "bedrock/",
+    "vertex_ai/",
+    "ollama/",
+    "mock",  # MockProvider models in tests
+)
+
+
+def _allowed_model_prefixes() -> tuple[str, ...]:
+    """Return the active model-prefix allowlist, respecting environment override."""
+    override = os.getenv("VERIDIAN_ALLOWED_MODELS")
+    if not override:
+        return _DEFAULT_ALLOWED_MODEL_PREFIXES
+    if override.strip() == "*":
+        return ()
+    return tuple(p.strip() for p in override.split(",") if p.strip())
+
+
+def _validate_model_string(model: str) -> None:
+    """Reject model strings that look like raw URLs or fall outside the allowlist.
+
+    Raises:
+        ProviderError: when ``model`` does not match an allowed prefix and
+            the allowlist is not disabled via ``VERIDIAN_ALLOWED_MODELS=*``.
+    """
+    if "://" in model or model.startswith(("//", "http", "https")):
+        raise ProviderError(
+            f"model={model!r} looks like a URL; refusing to use it as an LLM "
+            "endpoint. Configure a provider/model identifier (e.g. "
+            "'gemini/gemini-2.5-flash') and set base URLs via the provider SDK."
+        )
+    prefixes = _allowed_model_prefixes()
+    if not prefixes:  # explicit wildcard override
+        return
+    if not any(model.startswith(prefix) for prefix in prefixes):
+        raise ProviderError(
+            f"model={model!r} is not in the allowed-prefix list "
+            f"({sorted(prefixes)}). Set VERIDIAN_ALLOWED_MODELS to expand the "
+            "allowlist, or VERIDIAN_ALLOWED_MODELS=* to disable the guard."
+        )
+
+
 # ── CIRCUIT BREAKER ───────────────────────────────────────────────────────────
 
 
@@ -221,6 +280,9 @@ class LiteLLMProvider(LLMProvider):
         context_window_budget: int | None = None,
     ) -> None:
         self.model: str = model or os.getenv("VERIDIAN_MODEL") or self.DEFAULT_MODEL
+        _validate_model_string(self.model)
+        for fb in fallback_models or []:
+            _validate_model_string(fb)
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.timeout = timeout

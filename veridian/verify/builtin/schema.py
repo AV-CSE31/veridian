@@ -141,6 +141,7 @@ class SchemaVerifier(BaseVerifier):
         "Validate structured output against required fields, JSON Schema, "
         "or a Pydantic model. Returns field-level error messages."
     )
+    shareable: ClassVar[bool] = True  # stateless: schema is bound in __init__
 
     def __init__(
         self,

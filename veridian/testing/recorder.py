@@ -22,8 +22,6 @@ Usage::
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -140,27 +138,39 @@ class AgentRecorder:
     # ── Internal ──────────────────────────────────────────────────────────────
 
     def _atomic_append(self, data: dict[str, Any]) -> None:
-        """Atomically append one JSON line to the trace file."""
+        """Append one JSON line to the trace file under a FileLock.
+
+        Previously this method read the entire trace file into memory,
+        concatenated the new line, and rewrote the whole file through a
+        temp file + ``os.replace``. That gave O(n) cost per append and an
+        O(n²) cost across n records, which dominated long replay suites.
+
+        The new path opens the trace file in binary-append mode under a
+        process-cross FileLock so concurrent recorders serialise on the
+        lock instead of racing on the temp-file rename. Crash safety is
+        preserved by writing a complete newline-terminated JSON line
+        before releasing the lock; a partial line on power loss is
+        detected and skipped by the existing tolerant loader in
+        :meth:`load`.
+        """
         self.trace_dir.mkdir(parents=True, exist_ok=True)
-        line = json.dumps(data, ensure_ascii=False) + "\n"
+        line = (json.dumps(data, ensure_ascii=False) + "\n").encode("utf-8")
 
-        # Read existing + append (atomic via temp file + os.replace)
-        existing = b""
-        if self._trace_file.exists():
-            existing = self._trace_file.read_bytes()
-
-        new_content = existing + line.encode("utf-8")
-
-        fd, tmp = tempfile.mkstemp(dir=self.trace_dir, prefix=".trace_", suffix=".tmp")
+        lock_path = self._trace_file.with_suffix(self._trace_file.suffix + ".lock")
+        filelock_cls: Any
         try:
-            os.write(fd, new_content)
-            os.close(fd)
-            os.replace(tmp, self._trace_file)
-        except Exception:
-            import contextlib
+            from filelock import FileLock as filelock_cls  # noqa: PLC0415
+        except ImportError:
+            filelock_cls = None
 
-            with contextlib.suppress(OSError):
-                os.close(fd)
-            with contextlib.suppress(OSError):
-                os.unlink(tmp)
-            raise
+        if filelock_cls is None:
+            # Best-effort: behave like the old code path when filelock is
+            # not installed. Recorders are a dev/testing surface so this
+            # fallback keeps the constructor usable in slim environments.
+            with self._trace_file.open("ab") as fh:
+                fh.write(line)
+            return
+
+        lock = filelock_cls(str(lock_path), timeout=15.0)
+        with lock, self._trace_file.open("ab") as fh:
+            fh.write(line)

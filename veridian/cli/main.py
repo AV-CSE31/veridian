@@ -62,8 +62,23 @@ def main(
         is_eager=True,
         help="Show version and exit.",
     ),
+    log_level: str = typer.Option(
+        "INFO",
+        "--log-level",
+        envvar="VERIDIAN_LOG_LEVEL",
+        help="Python logging level for all veridian.* loggers (DEBUG/INFO/WARN/ERROR).",
+    ),
+    log_format: str = typer.Option(
+        "text",
+        "--log-format",
+        envvar="VERIDIAN_LOG_FORMAT",
+        help="Log output format: 'text' (default) or 'json' for log-aggregator-friendly output.",
+    ),
 ) -> None:
     """Veridian — deterministic verification for autonomous AI agents."""
+    from veridian.observability.logging_config import configure_logging
+
+    configure_logging(level=log_level, json_format=log_format.lower() == "json", force=True)
 
 
 # ---------------------------------------------------------------------------
@@ -306,12 +321,16 @@ def run(
     from veridian.verify.base import VerifierRegistry
 
     led = _load_ledger(ledger)
-    config = VeridianConfig(
-        dry_run=dry_run,
-        max_parallel=max_parallel,
-    )
+    # Pick up VERIDIAN_* env vars first (ConfigMap / 12-factor path),
+    # then let explicit CLI flags override. Build the overrides as a
+    # plain dict typed Any-valued so mypy doesn't conflate the CLI
+    # values with the `prefix`/`env` parameters of from_env.
+    from typing import Any as _Any
+
+    overrides: dict[str, _Any] = {"dry_run": dry_run, "max_parallel": max_parallel}
     if model:
-        config.model = model
+        overrides["model"] = model
+    config = VeridianConfig.from_env(**overrides)
 
     from veridian.providers.base import LLMProvider
 

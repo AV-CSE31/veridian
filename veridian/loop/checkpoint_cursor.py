@@ -219,15 +219,43 @@ def is_step_completed(result: TaskResult | None, step_id: str) -> bool:
     advanced at or beyond that step_id, or (b) an `ActivityRecord` with a
     matching idempotency key is in the journal. This module only answers
     (a); (b) is answered by the ActivityJournal directly.
+
+    Performance: long-repair chains can produce 100+ trace steps and the
+    runner asks this question once per pending activity per task. The
+    O(n) scan therefore turned into O(n²) cost across the loop. We cache
+    a ``{step_id: index}`` map keyed by ``id(result.trace_steps)`` plus
+    list length so the next call is O(1) until the trace mutates.
     """
+    if result is None:
+        return False
     cursor = load_cursor(result)
     if cursor is None:
         return False
-    if result is None:
+    idx = _trace_step_index(result, step_id)
+    if idx is None:
         return False
-    # The step is completed if its step_id appears in trace_steps AND the
-    # current cursor step_index is >= the trace position of that step.
-    for idx, step in enumerate(result.trace_steps):
-        if step.step_id == step_id:
-            return cursor.step_index >= idx
-    return False
+    return cursor.step_index >= idx
+
+
+# Module-level memo of trace-step lookups. Key includes list length so
+# appends invalidate (id() alone would not, since list growth keeps the
+# same id but extends past the cached snapshot).
+_TRACE_STEP_INDEX_CACHE: dict[tuple[int, int], dict[str, int]] = {}
+
+
+def _trace_step_index(result: TaskResult, step_id: str) -> int | None:
+    """Return the position of ``step_id`` in ``result.trace_steps``, or
+    ``None``. Uses a length-keyed memoization to avoid O(n) scans on hot
+    cursor paths.
+    """
+    steps = result.trace_steps
+    key = (id(steps), len(steps))
+    mapping = _TRACE_STEP_INDEX_CACHE.get(key)
+    if mapping is None:
+        # Trim the cache to prevent unbounded growth on long-lived
+        # processes that recycle list ids.
+        if len(_TRACE_STEP_INDEX_CACHE) > 256:
+            _TRACE_STEP_INDEX_CACHE.clear()
+        mapping = {s.step_id: i for i, s in enumerate(steps) if s.step_id}
+        _TRACE_STEP_INDEX_CACHE[key] = mapping
+    return mapping.get(step_id)

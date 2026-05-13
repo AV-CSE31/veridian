@@ -28,6 +28,7 @@ paths for the most dangerous competitors:
 
 ## Pages
 
+- [Deployment runbook](deployment.md) — Docker / Kubernetes / `VERIDIAN_*` env matrix
 - [Verification contract](verification-contract.md)
 - [Evidence timeline](evidence-timeline.md)
 - [TrustedExecutor](trusted-executor.md)

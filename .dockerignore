@@ -1,0 +1,63 @@
+# Build context hygiene: keep image small and avoid leaking
+# developer-machine secrets / caches.
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Python caches and build artefacts
+__pycache__/
+*.py[cod]
+*.pyc.*
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+.tox/
+.nox/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual envs / package managers
+.venv/
+venv/
+env/
+.python-version
+uv.lock
+poetry.lock
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Tests and docs are useful inside the image only for ``--help``; CI
+# images that need them can override this with an explicit COPY.
+tests/
+docs/
+examples/
+
+# Local-only state that must never enter the build context
+ledger.json
+ledger.json.lock
+progress.md
+veridian_trace.jsonl
+dlq.json
+skills.json
+*.local
+.env
+.env.*
+/secrets/
+
+# Container-specific
+Dockerfile.dev
+docker-compose*.yml

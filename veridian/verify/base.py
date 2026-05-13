@@ -17,6 +17,7 @@ RULES FOR ALL VERIFIERS:
 from __future__ import annotations
 
 import importlib.metadata
+import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -58,6 +59,14 @@ class BaseVerifier(ABC):
 
     id: ClassVar[str]
     description: ClassVar[str] = ""
+
+    # Opt-in: when True, ``VerifierRegistry.get()`` may return a single shared
+    # instance for repeated ``(verifier_id, config)`` pairs instead of
+    # constructing a new one per call. Verifiers must be stateless across
+    # ``verify()`` calls to set this safely — i.e. they may compile regexes,
+    # cache schemas, or load reference data in ``__init__`` but must not
+    # accumulate per-call state on instance attributes.
+    shareable: ClassVar[bool] = False
 
     @abstractmethod
     def verify(self, task: Task, result: TaskResult) -> VerificationResult:
@@ -150,6 +159,12 @@ class VerifierRegistry:
     def __init__(self) -> None:
         self._classes: dict[str, type[BaseVerifier]] = {}
         self._discovered = False
+        # Cache for verifiers that opt-in to instance reuse. Keyed by
+        # (verifier_id, canonical-serialised config); values are the
+        # already-constructed BaseVerifier instance. Verifiers participate by
+        # setting ``shareable = True`` on the class (default False) — see
+        # BaseVerifier.shareable for the contract.
+        self._instance_cache: dict[tuple[str, str], BaseVerifier] = {}
 
     def register(self, cls: type[BaseVerifier]) -> None:
         """Register a verifier class. Raises if id already registered."""
@@ -158,15 +173,41 @@ class VerifierRegistry:
         if cls.id in self._classes:
             log.debug("verifier.register override id=%s", cls.id)
         self._classes[cls.id] = cls
+        # Invalidate any cached instance for this id — re-registration usually
+        # means a definition swap (tests, hot-reload), so we don't want to
+        # hand out the old class instance.
+        for key in [k for k in self._instance_cache if k[0] == cls.id]:
+            self._instance_cache.pop(key, None)
         log.debug("verifier.register id=%s class=%s", cls.id, cls.__name__)
 
     def register_many(self, *classes: type[BaseVerifier]) -> None:
         for cls in classes:
             self.register(cls)
 
+    def _config_key(self, config: dict[str, Any] | None) -> str:
+        """Canonical, hashable key for a verifier config dict.
+
+        Returns an empty string for ``None``/empty configs and a stable
+        ``json.dumps`` for anything serialisable. Non-JSON-serialisable
+        configs (rare) fall through to a sentinel that disables caching.
+        """
+        if not config:
+            return ""
+        try:
+            return json.dumps(config, sort_keys=True, default=str)
+        except (TypeError, ValueError):
+            return "__unhashable__"
+
     def get(self, verifier_id: str, config: dict[str, Any] | None = None) -> BaseVerifier:
         """
         Instantiate and return a verifier by ID.
+
+        Verifiers can opt in to instance-level caching by setting
+        ``shareable = True`` on the class. The cache is keyed by
+        ``(verifier_id, canonical_config_json)`` so two callers asking for
+        the same configuration share one instance. This avoids regex
+        recompilation and other per-construction setup on hot paths.
+
         Raises VerifierNotFound if not registered.
         """
         self._autodiscover()
@@ -178,6 +219,17 @@ class VerifierRegistry:
                 f"Available: {available}. "
                 f"Register with verifier_registry.register(MyVerifier)."
             )
+
+        if getattr(cls, "shareable", False):
+            key = (verifier_id, self._config_key(config))
+            if key[1] != "__unhashable__":
+                cached = self._instance_cache.get(key)
+                if cached is not None:
+                    return cached
+                instance = cls(**config) if config else cls()
+                self._instance_cache[key] = instance
+                return instance
+
         if config:
             return cls(**config)
         return cls()

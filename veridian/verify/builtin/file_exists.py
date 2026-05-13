@@ -34,6 +34,7 @@ class FileExistsVerifier(BaseVerifier):
         "Verify that all expected output files exist on disk. "
         "Optionally require files to be non-empty."
     )
+    shareable: ClassVar[bool] = True  # stateless: file list bound in __init__
 
     def __init__(
         self,

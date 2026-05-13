@@ -14,7 +14,10 @@ Usage:
 
 from __future__ import annotations
 
+import ipaddress
+import os
 from typing import TYPE_CHECKING, ClassVar
+from urllib.parse import urlparse
 
 from veridian.core.exceptions import VeridianConfigError
 from veridian.core.task import Task, TaskResult
@@ -22,6 +25,38 @@ from veridian.verify.base import BaseVerifier, VerificationResult
 
 if TYPE_CHECKING:
     from veridian.loop.activity import ActivityJournal
+
+
+_PRIVATE_NETWORKS: tuple[ipaddress.IPv4Network, ...] = (
+    ipaddress.IPv4Network("10.0.0.0/8"),
+    ipaddress.IPv4Network("172.16.0.0/12"),
+    ipaddress.IPv4Network("192.168.0.0/16"),
+    ipaddress.IPv4Network("127.0.0.0/8"),
+    # AWS / GCP / Azure metadata endpoint
+    ipaddress.IPv4Network("169.254.0.0/16"),
+)
+
+
+def _is_blocked_host(hostname: str) -> bool:
+    """Return True if ``hostname`` resolves to a private / loopback / link-local
+    address that an HTTP verifier should not contact by default.
+
+    This is a defence against SSRF where a task config could otherwise be
+    weaponised to probe internal services or cloud metadata endpoints.
+    Hostnames that don't parse as IPs are not blocked at this layer (we do
+    not perform DNS to keep the verifier stateless); operators relying on
+    this guard should still keep their hostnames pinned to public services.
+    """
+    blocked_literals = {"localhost", "::1"}
+    if hostname.lower() in blocked_literals:
+        return True
+    try:
+        ip = ipaddress.ip_address(hostname)
+    except ValueError:
+        return False
+    if isinstance(ip, ipaddress.IPv4Address):
+        return any(ip in net for net in _PRIVATE_NETWORKS)
+    return ip.is_loopback or ip.is_link_local or ip.is_private
 
 
 class HttpStatusVerifier(BaseVerifier):
@@ -42,6 +77,7 @@ class HttpStatusVerifier(BaseVerifier):
         expected_statuses: list[int] | None = None,
         timeout_seconds: int = 10,
         method: str = "GET",
+        allow_private_targets: bool = False,
     ) -> None:
         """
         Args:
@@ -49,6 +85,11 @@ class HttpStatusVerifier(BaseVerifier):
             expected_statuses: Acceptable HTTP status codes. Defaults to [200].
             timeout_seconds: Request timeout in seconds.
             method: HTTP method. Default GET.
+            allow_private_targets: When ``False`` (default) the verifier
+                rejects URLs whose host is a loopback / private / link-local
+                address. Set to ``True`` (or export
+                ``VERIDIAN_HTTP_ALLOW_PRIVATE=1``) for intentional internal
+                probes. Defence-in-depth against SSRF via task config.
         """
         if not url or not url.strip():
             raise VeridianConfigError(
@@ -59,10 +100,22 @@ class HttpStatusVerifier(BaseVerifier):
             raise VeridianConfigError(
                 f"HttpStatusVerifier: 'timeout_seconds' must be > 0, got {timeout_seconds}."
             )
+        env_allow = os.getenv("VERIDIAN_HTTP_ALLOW_PRIVATE", "").strip() == "1"
+        if not (allow_private_targets or env_allow):
+            parsed = urlparse(url)
+            host = parsed.hostname or ""
+            if _is_blocked_host(host):
+                raise VeridianConfigError(
+                    f"HttpStatusVerifier refuses to target host {host!r} — "
+                    "loopback / private / link-local addresses are blocked "
+                    "to prevent SSRF. Pass allow_private_targets=True or "
+                    "set VERIDIAN_HTTP_ALLOW_PRIVATE=1 to opt in."
+                )
         self.url = url
         self.expected_statuses: list[int] = expected_statuses if expected_statuses else [200]
         self.timeout_seconds = timeout_seconds
         self.method = method.upper()
+        self.allow_private_targets = allow_private_targets
 
     def verify(self, task: Task, result: TaskResult) -> VerificationResult:
         """Make HTTP request and check status code.

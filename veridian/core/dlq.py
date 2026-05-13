@@ -182,21 +182,59 @@ class DeadLetterQueue:
         self,
         storage_path: str | Path = "dlq.json",
         max_retries: int = 3,
+        max_age_days: float | None = None,
     ) -> None:
         """
         Args:
             storage_path: Path to the JSON file backing the DLQ.
             max_retries: Maximum retry count before a TRANSIENT entry is
                 considered permanently exhausted and is_retryable() returns False.
+            max_age_days: Optional TTL. When set, ``purge_expired()`` and the
+                load path drop entries older than this many days. ``None``
+                (default) preserves entries indefinitely — the legacy
+                behaviour.
         """
         if max_retries <= 0:
             raise VeridianConfigError(
                 f"DeadLetterQueue: 'max_retries' must be > 0, got {max_retries}."
             )
+        if max_age_days is not None and max_age_days <= 0:
+            raise VeridianConfigError(
+                "DeadLetterQueue: 'max_age_days' must be > 0 when provided, "
+                f"got {max_age_days}."
+            )
         self.storage_path = Path(storage_path)
         self.max_retries = max_retries
+        self.max_age_days = max_age_days
         self._entries: dict[str, DLQEntry] = {}
         self._load()
+        # Apply TTL once on load so a restarted operator finds a tidy queue.
+        if self.max_age_days is not None:
+            self.purge_expired()
+
+    def purge_expired(self) -> int:
+        """Drop entries older than ``max_age_days``.
+
+        Returns the number of entries removed. No-op (returns 0) when
+        ``max_age_days`` is None. Persists the new state when at least one
+        entry was removed.
+        """
+        if self.max_age_days is None:
+            return 0
+        from datetime import timedelta  # local: avoid module-load cost
+
+        cutoff = datetime.now(tz=UTC) - timedelta(days=self.max_age_days)
+        stale_ids = [
+            task_id
+            for task_id, entry in self._entries.items()
+            if entry.timestamp < cutoff
+        ]
+        for task_id in stale_ids:
+            del self._entries[task_id]
+        if stale_ids:
+            self._persist()
+            log.info("dlq.purged count=%d max_age_days=%.1f", len(stale_ids), self.max_age_days)
+        return len(stale_ids)
 
     # ── Public API ────────────────────────────────────────────────────────────
 

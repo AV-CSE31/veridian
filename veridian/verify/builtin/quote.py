@@ -86,6 +86,7 @@ class QuoteMatchVerifier(BaseVerifier):
         "Verify that a quoted excerpt from structured output appears verbatim "
         "in the source document (PDF, DOCX, TXT, MD). Whitespace-normalised match."
     )
+    shareable: ClassVar[bool] = True  # stateless: paths bound in __init__
 
     def __init__(
         self,

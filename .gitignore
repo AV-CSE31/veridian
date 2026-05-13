@@ -60,6 +60,7 @@ planning/**/pytest_tmp*/
 # Python caches and build artifacts
 __pycache__/
 *.py[cod]
+*.pyc.*
 *.so
 *.egg
 *.egg-info/

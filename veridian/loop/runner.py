@@ -143,7 +143,17 @@ class VeridianRunner:
         self.provider = provider
         self.config = config or VeridianConfig()
         self.hooks = hooks or HookRegistry()
-        self._verifier_registry = verifier_registry
+        # Resolve the verifier registry up-front so the built-ins are loaded
+        # before the first task. The lazy path (resolve-on-first-verify)
+        # otherwise pushes import + registration cost into the hot loop and
+        # makes the first task latency non-deterministic.
+        if verifier_registry is None:
+            import veridian.verify.builtin  # noqa: F401, PLC0415  — trigger self-registration
+            from veridian.verify.base import registry as _builtin_registry  # noqa: PLC0415
+
+            self._verifier_registry = _builtin_registry
+        else:
+            self._verifier_registry = verifier_registry
         self._shutdown = False
         self._run_id = str(uuid.uuid4())[:8]
         # Audit F1: DLQ for abandoned tasks — opt-in; None = disabled.
@@ -152,6 +162,11 @@ class VeridianRunner:
         self._prm_backend_failures = 0
         self._prm_circuit_open = False
         self._prm_circuit_threshold = 3
+        self._prm_circuit_opened_at: float | None = None
+        # When the circuit opens, refuse traffic until the cooldown elapses.
+        # After the cooldown, allow a single probe call; success closes the
+        # circuit, failure re-opens it for another cooldown window.
+        self._prm_circuit_cooldown_seconds: float = 60.0
         if self.config.trace_file:
             with contextlib.suppress(Exception):
                 from veridian.observability.tracer import VeridianTracer  # noqa: PLC0415
@@ -233,6 +248,7 @@ class VeridianRunner:
         if summary.total_tasks == 0:
             log.info("runner.no_tasks run_id=%s phase=%s", run_id, phase)
             summary.duration_seconds = time.monotonic() - start_time
+            self._emit_run_metrics(summary, phase)
             if self._tracer is not None:
                 with contextlib.suppress(Exception):
                     self._tracer.end_trace(attributes={"veridian.total_tasks": 0})
@@ -244,44 +260,51 @@ class VeridianRunner:
             RunStarted(run_id=run_id, total_tasks=summary.total_tasks, phase=phase),
         )
 
-        self._setup_signal_handler()
+        # Save the previous SIGINT handler so the runner does not leak its
+        # own handler into the caller's process. Restoration happens in
+        # ``finally`` to cover the exception paths too.
+        previous_sigint = self._setup_signal_handler()
 
-        # ── Step 3: Task loop ─────────────────────────────────────────────────
-        self._task_loop(run_id, phase, summary)
+        try:
+            # ── Step 3: Task loop ─────────────────────────────────────────────
+            self._task_loop(run_id, phase, summary)
 
-        # ── Step 4: RunCompleted hook ─────────────────────────────────────────
-        summary.duration_seconds = time.monotonic() - start_time
-        self.hooks.fire(
-            "after_run",
-            RunCompleted(run_id=run_id, summary=summary),
-        )
+            # ── Step 4: RunCompleted hook ─────────────────────────────────────
+            summary.duration_seconds = time.monotonic() - start_time
+            self.hooks.fire(
+                "after_run",
+                RunCompleted(run_id=run_id, summary=summary),
+            )
 
-        # ── Step 5: Post-run skill extraction (opt-in) ────────────────────────
-        if self.skill_library is not None:
-            try:
-                admitted = self.skill_library.post_run(self.ledger, run_id=run_id)
-                if admitted:
-                    log.info("runner.skills_admitted count=%d", len(admitted))
-            except Exception as exc:
-                log.warning("runner.skill_extraction_error err=%s", exc)
+            # ── Step 5: Post-run skill extraction (opt-in) ────────────────────
+            if self.skill_library is not None:
+                try:
+                    admitted = self.skill_library.post_run(self.ledger, run_id=run_id)
+                    if admitted:
+                        log.info("runner.skills_admitted count=%d", len(admitted))
+                except Exception as exc:
+                    log.warning("runner.skill_extraction_error err=%s", exc)
 
-        log.info(
-            "runner.complete run_id=%s done=%d failed=%d duration=%.1fs",
-            run_id,
-            summary.done_count,
-            summary.failed_count,
-            summary.duration_seconds,
-        )
-        if self._tracer is not None:
-            with contextlib.suppress(Exception):
-                self._tracer.end_trace(
-                    attributes={
-                        "veridian.done_count": summary.done_count,
-                        "veridian.failed_count": summary.failed_count,
-                        "veridian.abandoned_count": summary.abandoned_count,
-                    }
-                )
-        return summary
+            log.info(
+                "runner.complete run_id=%s done=%d failed=%d duration=%.1fs",
+                run_id,
+                summary.done_count,
+                summary.failed_count,
+                summary.duration_seconds,
+            )
+            self._emit_run_metrics(summary, phase)
+            if self._tracer is not None:
+                with contextlib.suppress(Exception):
+                    self._tracer.end_trace(
+                        attributes={
+                            "veridian.done_count": summary.done_count,
+                            "veridian.failed_count": summary.failed_count,
+                            "veridian.abandoned_count": summary.abandoned_count,
+                        }
+                    )
+            return summary
+        finally:
+            self._restore_signal_handler(previous_sigint)
 
     def _task_loop(
         self,
@@ -948,37 +971,60 @@ class VeridianRunner:
         prm_error = None
 
         if self._prm_circuit_open:
-            decision = evaluate_prm_policy(
-                None,
-                policy_config,
-                repair_attempts_used=repair_attempts,
+            # Cooldown probe: if the configured cooldown has elapsed, allow a
+            # single probe call through. The probe's actual scoring runs in
+            # the regular path below; on success the failure counter is
+            # cleared, on failure the circuit re-opens with a fresh
+            # ``_prm_circuit_opened_at`` timestamp. This prevents a run from
+            # being permanently poisoned by a transient PRM backend outage.
+            now = time.monotonic()
+            opened_at = self._prm_circuit_opened_at
+            cooldown_elapsed = (
+                opened_at is not None
+                and (now - opened_at) >= self._prm_circuit_cooldown_seconds
             )
-            reason = f"PRM backend circuit open after {self._prm_backend_failures} failures"
-            result.prm_result = PRMRunResult(
-                passed=decision.passed,
-                aggregate_score=0.0,
-                aggregate_confidence=0.0,
-                threshold=policy_config.threshold,
-                scored_steps=[],
-                policy_action=decision.action,
-                repair_hint=None,
-                error=reason,
-            )
-            self._set_prm_checkpoint(result, checkpoint)
-            self._record_prm_event(
-                "veridian.prm.policy_decision",
-                {
-                    "task.id": task.id,
-                    "run.id": self._run_id,
-                    "prm.model_id": current_snapshot.get("model_id", ""),
-                    "prm.version": current_snapshot.get("version", ""),
-                    "prm.aggregate_score": 0.0,
-                    "prm.aggregate_confidence": 0.0,
-                    "prm.policy_action": decision.action,
-                    "prm.error": reason,
-                },
-            )
-            return decision.action, reason, None
+            if cooldown_elapsed:
+                log.info(
+                    "runner.prm_circuit_probe_attempt task=%s elapsed=%.1fs",
+                    task.id,
+                    (now - opened_at) if opened_at is not None else 0.0,
+                )
+                self._prm_circuit_open = False
+                # Fall through to the normal scoring path below.
+            else:
+                decision = evaluate_prm_policy(
+                    None,
+                    policy_config,
+                    repair_attempts_used=repair_attempts,
+                )
+                reason = (
+                    f"PRM backend circuit open after {self._prm_backend_failures} failures"
+                )
+                result.prm_result = PRMRunResult(
+                    passed=decision.passed,
+                    aggregate_score=0.0,
+                    aggregate_confidence=0.0,
+                    threshold=policy_config.threshold,
+                    scored_steps=[],
+                    policy_action=decision.action,
+                    repair_hint=None,
+                    error=reason,
+                )
+                self._set_prm_checkpoint(result, checkpoint)
+                self._record_prm_event(
+                    "veridian.prm.policy_decision",
+                    {
+                        "task.id": task.id,
+                        "run.id": self._run_id,
+                        "prm.model_id": current_snapshot.get("model_id", ""),
+                        "prm.version": current_snapshot.get("version", ""),
+                        "prm.aggregate_score": 0.0,
+                        "prm.aggregate_confidence": 0.0,
+                        "prm.policy_action": decision.action,
+                        "prm.error": reason,
+                    },
+                )
+                return decision.action, reason, None
 
         if delta_steps:
             try:
@@ -1095,6 +1141,7 @@ class VeridianRunner:
                 checkpoint["prm_run_history"] = history[-50:]
                 self._prm_backend_failures = 0
                 self._prm_circuit_open = False
+                self._prm_circuit_opened_at = None
                 self._record_prm_event(
                     "veridian.prm.score_steps",
                     {
@@ -1114,6 +1161,7 @@ class VeridianRunner:
                 self._prm_backend_failures += 1
                 if self._prm_backend_failures >= self._prm_circuit_threshold:
                     self._prm_circuit_open = True
+                    self._prm_circuit_opened_at = time.monotonic()
                 log.warning("runner.prm_error task_id=%s err=%s", task.id, prm_error)
                 self._record_prm_event(
                     "veridian.prm.score_steps",
@@ -1347,13 +1395,68 @@ class VeridianRunner:
         with contextlib.suppress(Exception):
             self._tracer.record_event(event_type, attributes)
 
-    def _setup_signal_handler(self) -> None:
-        """Register SIGINT handler to set shutdown flag (no mid-task exit)."""
+    def _emit_run_metrics(self, summary: RunSummary, phase: str | None) -> None:
+        """Update the process-local metrics registry with run totals.
+
+        Counters are cumulative across all runs (Prometheus expects that
+        shape); the duration histogram records the wall-clock per run.
+        Failures here are silently swallowed because metrics emission must
+        never break a run.
+        """
+        try:
+            from veridian.observability.metrics import default_registry  # noqa: PLC0415
+
+            registry = default_registry()
+            labels = {"phase": phase or ""}
+            registry.counter(
+                "veridian_tasks_done_total",
+                "Tasks completed successfully across all runs.",
+            ).inc(summary.done_count, labels)
+            registry.counter(
+                "veridian_tasks_failed_total",
+                "Tasks that exhausted retries without becoming DONE.",
+            ).inc(summary.failed_count, labels)
+            registry.counter(
+                "veridian_tasks_abandoned_total",
+                "Tasks routed to the DLQ after max_retries.",
+            ).inc(summary.abandoned_count, labels)
+            registry.counter(
+                "veridian_runs_total",
+                "Number of run() invocations completed.",
+            ).inc(1, labels)
+            registry.histogram(
+                "veridian_run_duration_seconds",
+                "Wall-clock duration of run() in seconds.",
+            ).observe(summary.duration_seconds, labels)
+        except Exception:  # pragma: no cover — metrics must never break a run
+            log.debug("runner.metrics_emit_failed", exc_info=True)
+
+    def _setup_signal_handler(self) -> object:
+        """Register SIGINT handler to set shutdown flag (no mid-task exit).
+
+        Returns the previously-installed handler so callers can restore it
+        when the run finishes. Returns ``None`` when handler installation
+        was not possible (e.g. running in a non-main thread).
+        """
 
         def _handler(signum: int, frame: object) -> None:
             log.warning("runner.sigint_received — will stop after current task")
             self._shutdown = True
 
-        with contextlib.suppress(OSError, ValueError):
-            # signal.signal fails in non-main threads — ignore
-            signal.signal(signal.SIGINT, _handler)
+        try:
+            return signal.signal(signal.SIGINT, _handler)
+        except (OSError, ValueError):
+            # signal.signal fails in non-main threads — return sentinel
+            return None
+
+    def _restore_signal_handler(self, previous: object) -> None:
+        """Restore a previously-installed SIGINT handler.
+
+        Idempotent and safe to call from a ``finally`` block: if
+        ``_setup_signal_handler`` returned ``None`` (non-main thread, etc.)
+        this is a no-op.
+        """
+        if previous is None:
+            return
+        with contextlib.suppress(OSError, ValueError, TypeError):
+            signal.signal(signal.SIGINT, previous)  # type: ignore[arg-type]

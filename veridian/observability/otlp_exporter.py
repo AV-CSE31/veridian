@@ -27,15 +27,55 @@ Usage::
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from veridian.observability.tracer import VeridianTracer
 
 log = logging.getLogger(__name__)
 
 __all__ = ["OTLPConfig", "VerificationSpan", "configure_otlp_tracer"]
+
+
+_LOOPBACK_HOSTS: frozenset[str] = frozenset(
+    {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+)
+
+
+def _validate_otlp_endpoint(endpoint: str, *, allow_http: bool) -> None:
+    """Reject endpoints that could exfiltrate spans to attacker-controlled hosts.
+
+    Veridian spans carry verifier ids, task descriptions, and error messages.
+    A misconfigured ``OTLPConfig.endpoint`` is a covert exfiltration channel,
+    so:
+
+    * the endpoint must parse as an http(s) URL with a host,
+    * non-http schemes (``file://``, ``ftp://``, ...) are always rejected,
+    * plain ``http://`` is allowed only for loopback hosts (localhost,
+      127.0.0.1, ::1) — matching the local-collector sidecar pattern,
+    * external ``http://`` requires opt-in via ``allow_http=True`` or
+      ``VERIDIAN_OTLP_ALLOW_HTTP=1``.
+    """
+    parsed = urlparse(endpoint)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError(
+            f"OTLP endpoint must be an http(s) URL with a host; got {endpoint!r}"
+        )
+    if parsed.scheme == "http" and parsed.hostname not in _LOOPBACK_HOSTS:
+        if allow_http or os.getenv("VERIDIAN_OTLP_ALLOW_HTTP", "").strip() == "1":
+            log.warning(
+                "otlp_exporter: non-loopback HTTP endpoint %r accepted via opt-in",
+                endpoint,
+            )
+            return
+        raise ValueError(
+            f"OTLP endpoint {endpoint!r} uses plain HTTP to a non-loopback host. "
+            "Use HTTPS, or pass allow_http=True / set VERIDIAN_OTLP_ALLOW_HTTP=1 "
+            "to explicitly opt in."
+        )
 
 
 # ── OTLPConfig ────────────────────────────────────────────────────────────────
@@ -105,6 +145,7 @@ def configure_otlp_tracer(
     config: OTLPConfig | None = None,
     trace_file: Path | None = None,
     use_otel: bool = True,
+    allow_http: bool = False,
 ) -> VeridianTracer:
     """
     Create and return a ``VeridianTracer`` configured with an OTLP HTTP exporter.
@@ -120,8 +161,14 @@ def configure_otlp_tracer(
         Path for the JSONL fallback trace file.
     use_otel:
         Pass ``False`` to skip OTel SDK initialisation (useful in tests).
+    allow_http:
+        Permit plain-HTTP endpoints. Default ``False``: production traces
+        carry verifier ids, task descriptions, and error messages, so the
+        transport must be encrypted unless the operator explicitly opts in
+        (e.g. for a sidecar collector on localhost).
     """
     cfg = config or OTLPConfig()
+    _validate_otlp_endpoint(cfg.endpoint, allow_http=allow_http)
 
     if use_otel:
         _try_configure_sdk(cfg)
