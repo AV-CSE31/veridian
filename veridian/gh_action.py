@@ -37,6 +37,7 @@ Usage (programmatic)::
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import sys
@@ -163,8 +164,6 @@ def _write_result(path: str, result: ActionResult) -> None:
         os.close(fd)
         os.replace(tmp, out)
     except Exception:
-        import contextlib
-
         with contextlib.suppress(OSError):
             os.close(fd)
         with contextlib.suppress(OSError):

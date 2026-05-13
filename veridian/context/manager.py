@@ -164,11 +164,40 @@ class ContextManager:
         return "\n".join(lines)
 
     def _build_environment_block(self, context_files: list[str]) -> str:
-        """Build [ENVIRONMENT] block from context_files, respecting token budget."""
+        """Build [ENVIRONMENT] block from context_files, respecting token budget.
+
+        Path safety (Phase 6.B): each entry is resolved and confirmed to
+        live within the configured ``VERIDIAN_DATA_DIR`` (or the current
+        working directory if unset). Without this check, a task config
+        could feed ``context_files=["/etc/passwd"]`` and leak secrets
+        into the prompt. Operators that genuinely need cross-tree
+        context can set ``VERIDIAN_CONTEXT_ALLOW_OUTSIDE_DATA_DIR=1``.
+        """
+        import os  # noqa: PLC0415
+
+        from veridian.core.config import default_data_dir  # noqa: PLC0415
+
+        allow_outside = os.getenv("VERIDIAN_CONTEXT_ALLOW_OUTSIDE_DATA_DIR", "").strip() == "1"
+        root = default_data_dir().resolve()
+
         parts = ["[ENVIRONMENT]"]
         for fpath in context_files:
             try:
-                content = Path(fpath).read_text(encoding="utf-8")
+                candidate = Path(fpath).expanduser()
+                if not candidate.is_absolute():
+                    candidate = root / candidate
+                resolved = candidate.resolve()
+                if not allow_outside:
+                    try:
+                        resolved.relative_to(root)
+                    except ValueError:
+                        log.warning(
+                            "context.file_blocked path=%s reason=outside_data_dir root=%s",
+                            fpath,
+                            root,
+                        )
+                        continue
+                content = resolved.read_text(encoding="utf-8")
                 tokens = self._count(content)
                 if self.window.fits(tokens):
                     parts.append(f"--- {fpath} ---\n{content}")

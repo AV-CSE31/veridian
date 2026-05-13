@@ -264,6 +264,11 @@ class VeridianTracer:
             )
             try:
                 os.write(fd, new_content)
+                # fsync before rename so a power loss can't leave the
+                # renamed file empty despite the "atomic" guarantee.
+                # Phase 6.B durability fix.
+                with contextlib.suppress(OSError):
+                    os.fsync(fd)
                 os.close(fd)
                 os.replace(tmp, self._trace_file)
             except Exception:

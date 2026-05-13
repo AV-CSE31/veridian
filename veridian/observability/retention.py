@@ -12,15 +12,14 @@ Rules:
 
 from __future__ import annotations
 
-import contextlib
 import json
 import logging
-import os
-import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from veridian.core.atomic_io import atomic_write_text
 
 log = logging.getLogger(__name__)
 
@@ -125,21 +124,14 @@ class RetentionManager:
 
     @staticmethod
     def _atomic_write(path: Path, events: list[dict[str, Any]]) -> None:
-        """Rewrite *path* atomically with the retained events."""
-        content = "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in events)
+        """Rewrite *path* atomically with the retained events.
 
-        fd, tmp = tempfile.mkstemp(
-            dir=path.parent,
-            prefix=".retention_",
-            suffix=".tmp",
-        )
+        Delegates to the shared :func:`atomic_write_text` helper after
+        the Phase 6.A consolidation — the JSONL formatting still happens
+        here so callers don't need to know the line shape.
+        """
+        content = "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in events)
         try:
-            os.write(fd, content.encode())
-            os.close(fd)
-            os.replace(tmp, path)
-        except Exception:
-            with contextlib.suppress(OSError):
-                os.close(fd)
-            with contextlib.suppress(OSError):
-                os.unlink(tmp)
+            atomic_write_text(path, content)
+        except OSError:
             log.exception("Failed to atomically rewrite %s during retention enforcement", path)

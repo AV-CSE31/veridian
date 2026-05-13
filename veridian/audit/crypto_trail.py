@@ -286,6 +286,15 @@ class CryptoAuditTrail:
             encoding="utf-8",
         ) as f:
             f.write(raw)
+            f.flush()
+            # fsync before rename so the audit chain survives a crash
+            # between flush and rename. Audit trails are tamper-evident
+            # logs — losing the latest entry on power loss undermines
+            # the integrity claim. Phase 6.B durability fix.
+            import contextlib  # noqa: PLC0415
+
+            with contextlib.suppress(OSError):
+                os.fsync(f.fileno())
             tmp = Path(f.name)
         os.replace(tmp, path)
 

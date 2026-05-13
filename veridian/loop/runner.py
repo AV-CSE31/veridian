@@ -802,7 +802,13 @@ class VeridianRunner:
                 summary.failed_count += 1
 
     def _verify(self, task: Task, result: TaskResult) -> tuple[bool, str, dict[str, Any]]:
-        """Run verifier and return (passed, error_message, verify_meta)."""
+        """Run verifier and return (passed, error_message, verify_meta).
+
+        Emits Phase 5.C per-verifier metrics:
+        * ``veridian_verifier_duration_seconds{verifier_id,outcome}``
+        * ``veridian_verifier_invocations_total{verifier_id,outcome}``
+        where ``outcome`` is one of ``pass`` / ``fail`` / ``error``.
+        """
         verify_start = time.perf_counter()
         if not self._verifier_registry:
             # Use the global registry with all built-in verifiers loaded
@@ -826,6 +832,11 @@ class VeridianRunner:
             config = task.verifier_config or {}
             verifier = self._verifier_registry.get(task.verifier_id, config or None)
             vresult = verifier.verify(task, result)
+            self._emit_verifier_metrics(
+                verifier_id=task.verifier_id,
+                outcome="pass" if vresult.passed else "fail",
+                duration=time.perf_counter() - verify_start,
+            )
             return (
                 vresult.passed,
                 vresult.error or "",
@@ -836,6 +847,11 @@ class VeridianRunner:
                 },
             )
         except Exception as exc:
+            self._emit_verifier_metrics(
+                verifier_id=task.verifier_id,
+                outcome="error",
+                duration=time.perf_counter() - verify_start,
+            )
             log.warning("runner.verify_error task_id=%s err=%s", task.id, exc)
             return (
                 False,
@@ -846,6 +862,23 @@ class VeridianRunner:
                     "verification_ms": round((time.perf_counter() - verify_start) * 1000, 1),
                 },
             )
+
+    def _emit_verifier_metrics(self, *, verifier_id: str, outcome: str, duration: float) -> None:
+        """Record a single verifier invocation on the shared metrics registry."""
+        try:
+            from veridian.observability.metrics import default_registry  # noqa: PLC0415
+
+            reg = default_registry()
+            reg.histogram(
+                "veridian_verifier_duration_seconds",
+                "Per-verifier wall-clock duration labelled by outcome.",
+            ).observe(duration, labels={"verifier_id": verifier_id, "outcome": outcome})
+            reg.counter(
+                "veridian_verifier_invocations_total",
+                "Total verifier invocations split by outcome.",
+            ).inc(labels={"verifier_id": verifier_id, "outcome": outcome})
+        except Exception:  # pragma: no cover
+            log.debug("runner.verifier_metrics_emit_failed", exc_info=True)
 
     def _build_confidence(
         self,
@@ -980,8 +1013,7 @@ class VeridianRunner:
             now = time.monotonic()
             opened_at = self._prm_circuit_opened_at
             cooldown_elapsed = (
-                opened_at is not None
-                and (now - opened_at) >= self._prm_circuit_cooldown_seconds
+                opened_at is not None and (now - opened_at) >= self._prm_circuit_cooldown_seconds
             )
             if cooldown_elapsed:
                 log.info(
@@ -997,9 +1029,7 @@ class VeridianRunner:
                     policy_config,
                     repair_attempts_used=repair_attempts,
                 )
-                reason = (
-                    f"PRM backend circuit open after {self._prm_backend_failures} failures"
-                )
+                reason = f"PRM backend circuit open after {self._prm_backend_failures} failures"
                 result.prm_result = PRMRunResult(
                     passed=decision.passed,
                     aggregate_score=0.0,
@@ -1400,6 +1430,9 @@ class VeridianRunner:
 
         Counters are cumulative across all runs (Prometheus expects that
         shape); the duration histogram records the wall-clock per run.
+        The queue-depth gauge is set to the remaining PENDING task count
+        so dashboards / autoscalers can react to backlog.
+
         Failures here are silently swallowed because metrics emission must
         never break a run.
         """
@@ -1428,6 +1461,16 @@ class VeridianRunner:
                 "veridian_run_duration_seconds",
                 "Wall-clock duration of run() in seconds.",
             ).observe(summary.duration_seconds, labels)
+            # Sample the remaining queue depth at the end of the run so the
+            # gauge gives operators an actionable backlog signal.
+            try:
+                pending = self.ledger.list(status=TaskStatus.PENDING)
+                registry.gauge(
+                    "veridian_queue_depth",
+                    "Tasks remaining in PENDING state, sampled per run.",
+                ).set(float(len(pending)), labels)
+            except Exception:  # pragma: no cover — gauge is best-effort
+                pass
         except Exception:  # pragma: no cover — metrics must never break a run
             log.debug("runner.metrics_emit_failed", exc_info=True)
 

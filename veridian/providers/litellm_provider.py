@@ -210,6 +210,47 @@ class CircuitBreaker:
 _TRANSIENT_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
+def _emit_provider_metrics(
+    *,
+    model: str,
+    outcome: str,
+    duration: float,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+) -> None:
+    """Record one provider-call outcome on the shared metrics registry.
+
+    Best-effort: failures here never propagate. The metrics module is
+    stdlib-only so this won't ImportError, but the catch-all keeps the
+    call site honest about its non-critical status.
+    """
+    try:
+        from veridian.observability.metrics import default_registry  # noqa: PLC0415
+
+        reg = default_registry()
+        reg.histogram(
+            "veridian_provider_latency_seconds",
+            "LLM provider wall-clock latency per call, labelled by outcome.",
+        ).observe(duration, labels={"model": model, "outcome": outcome})
+        if input_tokens or output_tokens:
+            counter = reg.counter(
+                "veridian_provider_tokens_total",
+                "Provider tokens consumed across all calls.",
+            )
+            if input_tokens:
+                counter.inc(
+                    float(input_tokens),
+                    labels={"model": model, "direction": "input"},
+                )
+            if output_tokens:
+                counter.inc(
+                    float(output_tokens),
+                    labels={"model": model, "direction": "output"},
+                )
+    except Exception:  # pragma: no cover — metrics must never break a call
+        log.debug("provider.metrics_emit_failed", exc_info=True)
+
+
 def _is_retryable(exc: BaseException) -> bool:
     """
     True → tenacity will retry.
@@ -311,6 +352,13 @@ class LiteLLMProvider(LLMProvider):
         """
         Synchronous completion with full resilience stack.
         Tries primary model, then fallbacks on exhausted retries.
+
+        Emits Prometheus metrics (Phase 5.B):
+        * ``veridian_provider_latency_seconds{model,outcome}`` — wall-clock
+          per call, labelled by success/error so a degrading endpoint shows
+          up immediately.
+        * ``veridian_provider_tokens_total{model,direction}`` — running
+          token totals split into ``input`` / ``output``.
         """
         models_to_try = [self.model] + self.fallback_models
         last_exc: Exception | None = None
@@ -322,17 +370,31 @@ class LiteLLMProvider(LLMProvider):
                 last_exc = ProviderRateLimited(
                     f"Circuit breaker OPEN for {model}. Cooldown: {cb.cooldown_seconds}s"
                 )
+                _emit_provider_metrics(model=model, outcome="circuit_open", duration=0.0)
                 continue
 
+            start = time.perf_counter()
             try:
                 response = self._complete_with_retry(model, messages, **kwargs)
                 if cb:
                     cb.record_success()
+                _emit_provider_metrics(
+                    model=model,
+                    outcome="success",
+                    duration=time.perf_counter() - start,
+                    input_tokens=response.input_tokens,
+                    output_tokens=response.output_tokens,
+                )
                 return response
             except Exception as exc:
                 last_exc = exc
                 if cb:
                     cb.record_failure()
+                _emit_provider_metrics(
+                    model=model,
+                    outcome="error",
+                    duration=time.perf_counter() - start,
+                )
                 log.warning(
                     "provider.complete failed model=%s err=%s trying_fallback=%s",
                     model,

@@ -304,7 +304,13 @@ class OutputSanitizer:
         return issues
 
     def _log_quarantine(self, task_id: str, cmd: str, content: str, reason: str) -> None:
-        """Append quarantine event to JSONL log."""
+        """Append quarantine event to JSONL log.
+
+        Quarantine events are security-critical evidence — losing the
+        last entry on a power loss would defeat the purpose. The
+        ``flush`` + ``fsync`` pair (Phase 6.B) guarantees the kernel has
+        the bytes on disk before this method returns.
+        """
         try:
             entry = {
                 "ts": datetime.now(tz=UTC).isoformat(),
@@ -313,9 +319,15 @@ class OutputSanitizer:
                 "reason": reason,
                 "content_preview": content[:200],
             }
-            assert self.quarantine_log_path is not None
+            if self.quarantine_log_path is None:
+                return
+            import contextlib  # noqa: PLC0415
+
             with open(self.quarantine_log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
+                f.flush()
+                with contextlib.suppress(OSError):
+                    os.fsync(f.fileno())
         except Exception as e:
             log.debug("trusted_executor: quarantine log write failed: %s", e)
 

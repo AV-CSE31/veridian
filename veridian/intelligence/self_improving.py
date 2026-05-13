@@ -17,13 +17,12 @@ from __future__ import annotations
 
 import json
 import logging
-import os
-import tempfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from veridian.core.atomic_io import atomic_write_json
 from veridian.core.exceptions import SelfImprovingError, VeridianConfigError
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import BaseVerifier, VerificationResult
@@ -141,13 +140,8 @@ class FeedbackStore:
         )
 
     def _atomic_write(self, data: list[dict[str, Any]]) -> None:
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            "w", dir=self._path.parent, delete=False, suffix=".tmp"
-        ) as f:
-            json.dump(data, f, indent=2)
-            tmp = Path(f.name)
-        os.replace(tmp, self._path)
+        """Atomically persist records via the shared helper (Phase 6.A)."""
+        atomic_write_json(self._path, data)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

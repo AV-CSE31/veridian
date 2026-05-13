@@ -6,12 +6,10 @@ Shareable markdown report generation for completed Veridian runs.
 
 from __future__ import annotations
 
-import contextlib
-import os
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+from veridian.core.atomic_io import atomic_write_text
 from veridian.core.exceptions import DashboardError
 from veridian.ledger.ledger import TaskLedger
 from veridian.loop.runner import RunSummary
@@ -142,21 +140,11 @@ def _record_share_event(
 
 
 def _atomic_write(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = ""
-    try:
-        with tempfile.NamedTemporaryFile(
-            "w",
-            dir=path.parent,
-            delete=False,
-            suffix=".tmp",
-            encoding="utf-8",
-        ) as handle:
-            handle.write(content)
-            tmp_path = handle.name
-        os.replace(tmp_path, path)
-    except OSError:
-        with contextlib.suppress(OSError):
-            if tmp_path:
-                os.unlink(tmp_path)
-        raise
+    """Thin alias kept for callers that imported it via this module.
+
+    The actual implementation lives in :func:`veridian.core.atomic_io.atomic_write_text`
+    after the Phase 6.A consolidation; this file kept the symbol so
+    downstream code that did ``from veridian.dashboard.share_report import
+    _atomic_write`` keeps working.
+    """
+    atomic_write_text(path, content)
