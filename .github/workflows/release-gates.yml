@@ -55,6 +55,7 @@ jobs:
                  tests/integration/test_certification_matrix.py \
                  tests/integration/test_parallel_parity.py \
                  tests/integration/test_subgraph.py \
+                 tests/integration/test_v05_adapter_stubs.py \
                  -x --tb=short -q
 
       - name: Gate 5 — Coverage
@@ -62,3 +63,37 @@ jobs:
 
       - name: Gate 6 — API stability pin
         run: pytest tests/unit/test_api_stability.py tests/unit/test_release_claims.py -x
+
+  # Cross-platform durability — Veridian ships explicit Windows/POSIX
+  # branches in TaskLedger (atomic-rename retry) and FileLock; the strict
+  # gate above only runs on ubuntu, so we validate the platform-specific
+  # paths on a focused subset of tests.
+  cross-platform-durability:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Ledger durability tests
+        run: |
+          pytest tests/unit/test_ledger.py \
+                 tests/unit/test_ledger_corruption_recovery.py \
+                 tests/unit/test_ledger_pause_resume.py \
+                 tests/unit/test_checkpoint_cursor.py \
+                 -x --tb=short -q
+
+      - name: Core API stability
+        run: pytest tests/unit/test_api_stability.py -x

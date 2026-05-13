@@ -44,6 +44,9 @@ __license__ = "MIT"
 # Budget
 from veridian.budget import Budget, BudgetState
 
+# Verification contract (core task-completion contract)
+from veridian.core.contract import VerificationContract
+
 # Events (lifecycle core only)
 from veridian.core.events import (
     RunCompleted,
@@ -78,15 +81,18 @@ from veridian.core.task import (
     TaskStatus,
 )
 
+# Threat model registry (formal gap dataclasses + audit evidence — from main)
+from veridian.core.threat_model import GAPS as THREAT_GAPS
+from veridian.core.threat_model import ThreatGap
+
 # Providers (base + mock are lightweight; LiteLLMProvider is lazy via
 # __getattr__ to keep `import veridian` fast — its module pulls in tenacity
-# at top level which adds ~50-100ms to cold start).
+# at top level which adds ~50-100ms to cold start). TaskLedger is lazy for
+# the same reason (it imports filelock at module load) and isn't needed for
+# help text / config-only import paths (e.g. ``veridian --help``).
 from veridian.providers.base import LLMProvider, LLMResponse, Message
 from veridian.providers.mock_provider import MockProvider
 
-# TaskLedger is lazy via __getattr__ for the same reason: it imports
-# filelock at module load and isn't needed for help text / config-only
-# import paths (e.g. ``veridian --help``).
 # Import builtin verifiers so they self-register on `import veridian`
 from veridian.verify import builtin as _builtin_verifiers  # noqa: F401
 
@@ -280,6 +286,7 @@ __all__ = [
     "ParallelRunner",
     # Verification
     "BaseVerifier",
+    "VerificationContract",
     "VerificationResult",
     "verifier_registry",
     # Hooks
@@ -313,6 +320,9 @@ __all__ = [
     # Budget
     "Budget",
     "BudgetState",
+    # Threat model
+    "THREAT_GAPS",
+    "ThreatGap",
 ]
 # Count: 40 symbols (was 123 in v3).
 # Everything removed here is still importable from its module path (e.g.

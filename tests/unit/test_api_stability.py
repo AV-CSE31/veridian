@@ -31,6 +31,7 @@ _EXPECTED_STABLE_ALL = sorted(
         "RunSummary",
         "ParallelRunner",
         "BaseVerifier",
+        "VerificationContract",
         "VerificationResult",
         "verifier_registry",
         "BaseHook",
@@ -59,6 +60,8 @@ _EXPECTED_STABLE_ALL = sorted(
         "BudgetExceeded",
         "Budget",
         "BudgetState",
+        "THREAT_GAPS",
+        "ThreatGap",
     ]
 )
 

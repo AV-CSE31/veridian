@@ -26,6 +26,7 @@ from veridian.integrations.sdk import (
 __all__ = [
     "LangGraphAdapterError",
     "LangGraphCompatibilityWarning",
+    "NodeVerificationContract",
     "VerificationContract",
     "VerificationError",
     "VeridianLangGraph",
@@ -35,8 +36,13 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class VerificationContract:
-    """Per-node verification rules applied at edge transitions."""
+class NodeVerificationContract:
+    """Per-node verifier bindings applied at LangGraph edge transitions.
+
+    This is the *graph-shape* contract: which verifier runs for which node id.
+    For the task-level contract (failure semantics, policy versioning, replay
+    fingerprint), see :class:`veridian.core.contract.VerificationContract`.
+    """
 
     verifiers: dict[str, str] = field(default_factory=dict)
     verifier_configs: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -44,6 +50,12 @@ class VerificationContract:
 
     def has_verifier_for(self, node_id: str) -> bool:
         return node_id in self.verifiers
+
+
+# Backwards-compatible alias. ``VerificationContract`` was the original public
+# name for the per-node binding type; downstream code may still import it from
+# this module. The task-level contract lives in ``veridian.core.contract``.
+VerificationContract = NodeVerificationContract
 
 
 class LangGraphAdapterError(VeridianError):
@@ -75,13 +87,13 @@ class VeridianLangGraph:
         sdk_context: RunContext,
         *,
         task: Task,
-        contract: VerificationContract | None = None,
+        contract: NodeVerificationContract | None = None,
         on_node_complete: Callable[[str, Any], None] | None = None,
     ) -> None:
         self.graph = graph
         self.ctx = sdk_context
         self.task = task
-        self.contract = contract or VerificationContract()
+        self.contract = contract or NodeVerificationContract()
         self.on_node_complete = on_node_complete
 
     def invoke(self, state: Any) -> Any:
