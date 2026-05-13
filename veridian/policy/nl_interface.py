@@ -17,8 +17,6 @@ from __future__ import annotations
 import importlib
 import json
 import logging
-import os
-import tempfile
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -27,6 +25,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from veridian.core.atomic_io import atomic_write_json
 from veridian.core.exceptions import NLPolicyError, PolicyNotFound
 
 log = logging.getLogger(__name__)
@@ -308,13 +307,12 @@ class PolicyStore:
             return {}
 
     def _atomic_write(self, data: dict[str, Any]) -> None:
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            "w", dir=self._path.parent, delete=False, suffix=".tmp"
-        ) as f:
-            json.dump(data, f, indent=2)
-            tmp = Path(f.name)
-        os.replace(tmp, self._path)
+        """Atomically persist ``data`` to ``self._path``.
+
+        Delegates to the shared :func:`atomic_write_json` helper after
+        the Phase 6.A consolidation.
+        """
+        atomic_write_json(self._path, data)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

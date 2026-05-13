@@ -196,15 +196,42 @@ class VeridianDashboard:
             """Return recent alerts as JSON list."""
             return [asdict(a) for a in dashboard_self._recent_alerts]
 
+        metrics_token = os.getenv("VERIDIAN_METRICS_TOKEN", "").strip()
+
         @app.get("/metrics")
-        async def metrics() -> Any:
-            """OpenMetrics exposition for Prometheus / Grafana scrapers."""
+        async def metrics(request: Any) -> Any:
+            """OpenMetrics exposition for Prometheus / Grafana scrapers.
+
+            When ``VERIDIAN_METRICS_TOKEN`` is set, the endpoint requires a
+            matching ``Authorization: Bearer <token>`` header. The default
+            (no env var) keeps the legacy behaviour: open access on the
+            dashboard's bound interface. Operators exposing the dashboard
+            beyond localhost should always set the token.
+            """
+            from fastapi import HTTPException  # noqa: PLC0415
             from fastapi.responses import PlainTextResponse  # noqa: PLC0415
 
             from veridian.observability.metrics import (  # noqa: PLC0415
                 default_registry,
                 render_openmetrics,
             )
+
+            if metrics_token:
+                header = request.headers.get("authorization", "")
+                if not header.startswith("Bearer "):
+                    raise HTTPException(
+                        status_code=401,
+                        detail={"error": "missing bearer token"},
+                    )
+                presented = header[len("Bearer ") :]
+                # Constant-time compare so we don't leak token length.
+                import hmac  # noqa: PLC0415
+
+                if not hmac.compare_digest(presented, metrics_token):
+                    raise HTTPException(
+                        status_code=403,
+                        detail={"error": "invalid metrics token"},
+                    )
 
             return PlainTextResponse(
                 content=render_openmetrics(default_registry()),

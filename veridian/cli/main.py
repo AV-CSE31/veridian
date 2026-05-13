@@ -24,6 +24,27 @@ app.add_typer(dlq_app, name="dlq")
 console = Console()
 
 # ---------------------------------------------------------------------------
+# Exit codes
+# ---------------------------------------------------------------------------
+#
+# Distinct exit codes so wrappers (CI, cron, k8s job) can branch on the
+# failure class. POSIX-aligned where reasonable; values >= 64 follow the
+# BSD ``sysexits.h`` tradition that most ops tools recognise.
+#
+# Operators should check ``EXIT_TRANSIENT`` (75) for retry-worthy failures
+# and ``EXIT_CONFIG`` (65) for "fix your manifest" failures.
+
+EXIT_OK = 0  # success
+EXIT_GENERIC = 1  # unspecified failure
+EXIT_USAGE = 64  # bad CLI arguments / usage
+EXIT_CONFIG = 65  # VeridianConfig validation failed
+EXIT_NO_INPUT = 66  # required file missing (ledger, etc.)
+EXIT_DEPENDENCY = 69  # optional dep (litellm, FastAPI, …) not installed
+EXIT_INTERNAL = 70  # unexpected runtime error
+EXIT_TRANSIENT = 75  # provider down / lock contention — safe to retry
+
+
+# ---------------------------------------------------------------------------
 # Shared options
 # ---------------------------------------------------------------------------
 
@@ -35,7 +56,7 @@ def _load_ledger(ledger_path: str) -> TaskLedger:
     p = Path(ledger_path)
     if not p.exists():
         console.print(f"[red]Error:[/red] Ledger not found at {p}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=EXIT_NO_INPUT)
     return TaskLedger(path=p)
 
 
@@ -94,7 +115,7 @@ def init(
     p = Path(ledger)
     if p.exists():
         console.print(f"[red]Error:[/red] Ledger already exists at {p}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=EXIT_USAGE)
 
     p.parent.mkdir(parents=True, exist_ok=True)
     # Create the canonical on-disk schema via TaskLedger itself so
@@ -265,7 +286,7 @@ def skip(
         console.print(f"[green]Skipped task '{task_id}'.[/green]")
     except Exception as e:
         console.print(f"[red]Error:[/red] Task not found: {task_id}")
-        raise typer.Exit(code=1) from e
+        raise typer.Exit(code=EXIT_NO_INPUT) from e
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +312,7 @@ def retry(
         console.print(f"[green]Reset task '{task_id}' to pending.[/green]")
     except Exception as e:
         console.print(f"[red]Error:[/red] Task not found: {task_id}")
-        raise typer.Exit(code=1) from e
+        raise typer.Exit(code=EXIT_NO_INPUT) from e
 
 
 # ---------------------------------------------------------------------------
@@ -347,7 +368,7 @@ def run(
             console.print(
                 "[red]Error:[/red] LLM provider not installed. Run: pip install veridian-ai[llm]"
             )
-            raise typer.Exit(code=1) from exc
+            raise typer.Exit(code=EXIT_DEPENDENCY) from exc
 
     runner_inst = VeridianRunner(
         ledger=led,

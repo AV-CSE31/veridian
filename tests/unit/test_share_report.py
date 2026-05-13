@@ -122,8 +122,13 @@ class TestGenerateShareReport:
             duration_seconds=12.4,
         )
 
+        # Phase 6.A: atomic-write lives in core.atomic_io after consolidation;
+        # patch the new home so the simulated disk-full surfaces correctly.
         with (
-            patch("veridian.dashboard.share_report.os.replace", side_effect=OSError("disk full")),
+            patch(
+                "veridian.core.atomic_io.os.replace",
+                side_effect=OSError("disk full"),
+            ),
             pytest.raises(DashboardError),
         ):
             generate_share_report(ledger=ledger, summary=summary)
