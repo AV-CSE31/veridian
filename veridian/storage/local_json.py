@@ -72,6 +72,11 @@ class LocalJSONStorage(BaseStorage):
         )
         try:
             os.write(fd, content)
+            # fsync before rename so a power loss can't leave the renamed
+            # file empty despite the atomic-rename contract. Phase 6.B
+            # durability fix.
+            with __import__("contextlib").suppress(OSError):
+                os.fsync(fd)
             os.close(fd)
             os.replace(tmp, self._file)
         except Exception:
