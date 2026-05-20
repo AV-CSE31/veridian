@@ -16,16 +16,12 @@ from __future__ import annotations
 
 import ipaddress
 import os
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 from urllib.parse import urlparse
 
 from veridian.core.exceptions import VeridianConfigError
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import BaseVerifier, VerificationResult
-
-if TYPE_CHECKING:
-    from veridian.loop.activity import ActivityJournal
-
 
 _PRIVATE_NETWORKS: tuple[ipaddress.IPv4Network, ...] = (
     ipaddress.IPv4Network("10.0.0.0/8"),
@@ -118,57 +114,11 @@ class HttpStatusVerifier(BaseVerifier):
         self.allow_private_targets = allow_private_targets
 
     def verify(self, task: Task, result: TaskResult) -> VerificationResult:
-        """Make HTTP request and check status code.
-
-        WCP-010: When an ActivityJournal is available in result.extras, the HTTP
-        call is routed through http_activity() for replay safety. Otherwise falls
-        back to direct httpx call for backward compatibility.
-        """
-        activity_journal = self._get_activity_journal(result)
-        if activity_journal is not None:
-            return self._verify_via_boundary(task, result, activity_journal)
+        """Make HTTP request and check status code."""
         return self._verify_direct(task, result)
 
-    def _get_activity_journal(self, result: TaskResult) -> ActivityJournal | None:
-        """Extract ActivityJournal from result extras if present."""
-        from veridian.loop.activity import ActivityJournal  # noqa: PLC0415
-
-        raw = result.extras.get("_activity_journal_ref")
-        if isinstance(raw, ActivityJournal):
-            return raw
-        return None
-
-    def _verify_via_boundary(
-        self,
-        task: Task,
-        result: TaskResult,
-        journal: ActivityJournal,
-    ) -> VerificationResult:
-        """WCP-010: Route HTTP call through activity boundary for replay safety."""
-        from veridian.loop.activity import RetryPolicy  # noqa: PLC0415
-        from veridian.loop.activity_boundary import http_activity  # noqa: PLC0415
-
-        activity_id = f"{task.id}_{self.id}_{self.url}"
-        try:
-            resp_data = http_activity(
-                journal=journal,
-                activity_id=activity_id,
-                method=self.method,
-                url=self.url,
-                timeout=self.timeout_seconds,
-                retry_policy=RetryPolicy(max_attempts=1, backoff_seconds=0.0),
-            )
-        except Exception as exc:
-            return VerificationResult(
-                passed=False,
-                error=f"HTTP {self.method} {self.url} failed: {str(exc)[:150]}"[:300],
-            )
-
-        actual = resp_data["status_code"]
-        return self._evaluate_status(actual)
-
     def _verify_direct(self, task: Task, result: TaskResult) -> VerificationResult:
-        """Legacy direct HTTP call path (no activity journal available)."""
+        """Direct HTTP call path."""
         import httpx  # noqa: PLC0415
 
         try:

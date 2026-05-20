@@ -59,14 +59,14 @@ class TestLedgerPause:
         """If a task already has a TaskResult (e.g. from checkpoint_result), pause
         must append to it rather than overwrite."""
         task = _claimed_task(ledger)
-        existing = TaskResult(raw_output="partial", extras={"prm_checkpoint": {"foo": "bar"}})
+        existing = TaskResult(raw_output="partial", extras={"checkpoint": {"foo": "bar"}})
         ledger.checkpoint_result(task.id, existing)
 
         paused = ledger.pause(task.id, reason="pause after partial work")
 
         assert paused.result is not None
         assert paused.result.raw_output == "partial"
-        assert paused.result.extras["prm_checkpoint"] == {"foo": "bar"}
+        assert paused.result.extras["checkpoint"] == {"foo": "bar"}
         assert paused.result.extras["pause_payload"]["reason"] == "pause after partial work"
 
     def test_pause_rejects_non_in_progress_task(self, ledger: TaskLedger) -> None:

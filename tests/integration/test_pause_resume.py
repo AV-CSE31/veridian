@@ -10,7 +10,7 @@ Proves that:
 - reset_in_progress() on startup preserves the PAUSED state.
 - A second runner picks up the PAUSED task via get_next(include_paused=True)
   and completes it.
-- TaskPaused and TaskResumed events are delivered to observability hooks.
+- TaskPaused and TaskResumed events are delivered to hooks.
 """
 
 from __future__ import annotations

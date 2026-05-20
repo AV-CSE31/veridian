@@ -3,12 +3,10 @@ veridian.core.atomic_io
 ───────────────────────
 Single shared implementation of "write-via-temp-then-rename" for any
 file that must appear on disk atomically: traces, ledger fragments,
-reports, dashboards, drafts, …
+reports, drafts, …
 
-Before Phase 6.A four near-identical helpers lived in
-``observability.retention``, ``dashboard.share_report``,
-``policy.nl_interface``, and ``intelligence.self_improving``. They have
-all been collapsed into :func:`atomic_write_text`, which:
+Before Phase 6.A several near-identical helpers lived across platform
+subsystems. They have been collapsed into :func:`atomic_write_text`, which:
 
 * mkdir-p's the parent directory,
 * writes the payload to a sibling temp file (so ``os.replace`` is
@@ -54,8 +52,7 @@ def atomic_write_text(path: Path | str, content: str, *, encoding: str = "utf-8"
         path: Destination. Parent directory is created if absent.
         content: Full file contents. Empty string is allowed.
         encoding: Text encoding. Defaults to UTF-8 — overriding is rarely
-            needed but kept for parity with the dashboard helper that
-            this consolidates.
+            needed but kept for compatibility with existing callers.
 
     Raises:
         OSError: if the underlying rename fails (after temp-file cleanup).

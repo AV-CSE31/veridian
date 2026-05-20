@@ -35,41 +35,24 @@ classifiers = [
 ]
 
 dependencies = [
-    # Data validation
-    "pydantic>=2.5",
-    # Resilience: retry + backoff
-    "tenacity>=9.0",
     # Cross-process file locking for atomic ledger writes
     "filelock>=3.13",
-    # CLI and terminal output
-    "rich>=13.7",
-    "typer>=0.12",
-    # HTTP (HttpStatusVerifier, SlackNotifyHook)
-    "httpx>=0.27",
-    # PDF parsing (QuoteMatchVerifier)
-    "pypdf>=4.3",
-    # Token counting
-    "tiktoken>=0.7",
-    # Knowledge graph
-    "networkx>=3.2",
-    # Agent identity (Ed25519)
-    "cryptography>=42.0",
 ]
 
 [project.optional-dependencies]
-redis = ["redis>=5.0"]
-postgres = ["psycopg2>=2.9"]
-otel = [
-    "opentelemetry-sdk>=1.25",
-    "opentelemetry-exporter-otlp-proto-http>=1.25",
-    "opentelemetry-semantic-conventions>=0.46b0",
-]
 llm = [
     "litellm>=1.55.0",
+    "tenacity>=9.0",
+    "tiktoken>=0.7",
 ]
-dashboard = [
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.30",
+pdf = [
+    "pypdf>=4.3",
+]
+http = [
+    "httpx>=0.27",
+]
+pydantic = [
+    "pydantic>=2.5",
 ]
 dev = [
     "pytest>=8.2",
@@ -79,10 +62,7 @@ dev = [
     "mypy>=1.10",
     "pre-commit>=3.7",
 ]
-all = ["veridian-ai[llm,dashboard,redis,postgres,otel]"]
-
-[project.scripts]
-veridian = "veridian.cli.main:app"
+all = ["veridian-ai[http,llm,pdf,pydantic]"]
 
 # Third-party verifiers auto-discovered at import time via this entry point.
 # In your package's pyproject.toml:
@@ -96,29 +76,6 @@ http_status = "veridian.verify.builtin.http:HttpStatusVerifier"
 file_exists = "veridian.verify.builtin.file_exists:FileExistsVerifier"
 composite = "veridian.verify.builtin.composite:CompositeVerifier"
 any_of = "veridian.verify.builtin.any_of:AnyOfVerifier"
-llm_judge = "veridian.verify.builtin.llm_judge:LLMJudgeVerifier"
-semantic_grounding = "veridian.verify.builtin.semantic_grounding:SemanticGroundingVerifier"
-self_consistency = "veridian.verify.builtin.confidence:SelfConsistencyVerifier"
-embedding_grounding = "veridian.verify.builtin.embedding_grounding:EmbeddingGroundingVerifier"
-tool_safety = "veridian.verify.builtin.tool_safety:ToolSafetyVerifier"
-memory_integrity = "veridian.verify.builtin.memory_integrity:MemoryIntegrityVerifier"
-mcp_tool_call = "veridian.verify.builtin.mcp_tool_call:MCPToolCallVerifier"
-
-# Third-party hooks auto-discovered via this entry point.
-[project.entry-points."veridian.hooks"]
-evolution_monitor = "veridian.hooks.builtin.evolution_monitor:EvolutionMonitorHook"
-behavioral_fingerprint = "veridian.hooks.builtin.behavioral_fingerprint:BehavioralFingerprintHook"
-identity_guard = "veridian.hooks.builtin.identity_guard:IdentityGuardHook"
-adaptive_safety = "veridian.hooks.builtin.adaptive_safety:AdaptiveSafetyHook"
-anomaly_detector = "veridian.hooks.builtin.anomaly_detector:AnomalyDetectorHook"
-
-# Secrets providers auto-discovered via this entry point.
-[project.entry-points."veridian.secrets"]
-env = "veridian.secrets.env_provider:EnvSecretsProvider"
-
-# Storage backends auto-discovered via this entry point.
-[project.entry-points."veridian.storage"]
-local_json = "veridian.storage.local_json:LocalJSONStorage"
 
 [tool.hatch.build.targets.wheel]
 packages = ["veridian"]
@@ -138,20 +95,12 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["B008", "E501", "B905"]
 
 [tool.ruff.lint.per-file-ignores]
-"examples/*" = ["E402"]
 "tests/*" = ["E402"]
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-# FastAPI's dynamic @app.get() decorators are not typed in the stubs;
-# disabling this check only for the dashboard avoids version-skew between
-# mypy releases that use [misc] vs [untyped-decorator] for the same error.
-module = "veridian.observability.dashboard"
-disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -164,13 +113,7 @@ path = "veridian/__init__.py"
 [tool.coverage.run]
 source = ["veridian"]
 omit = [
-    "veridian/cli/*",
     "tests/*",
-    # Optional backends require external services (Redis, Postgres, FastAPI/uvicorn)
-    # These are covered by integration tests that need running service dependencies.
-    "veridian/storage/redis_backend.py",
-    "veridian/storage/postgres_backend.py",
-    "veridian/observability/dashboard.py",
 ]
 
 [tool.coverage.report]

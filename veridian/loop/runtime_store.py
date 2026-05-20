@@ -23,9 +23,8 @@ __all__ = ["RuntimeStore"]
 class RuntimeStore(Protocol):
     """Runner-facing storage contract.
 
-    Backends implementing this protocol can power VeridianRunner,
-    ParallelRunner, and SDK persistence without exposing backend-specific
-    internals to orchestration logic.
+    Backends implementing this protocol can power VeridianRunner without
+    exposing backend-specific internals to orchestration logic.
     """
 
     def get(self, task_id: str) -> Task: ...

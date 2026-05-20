@@ -1,7 +1,7 @@
 """
 veridian.context.manager
 ─────────────────────────
-ContextManager — assembles the worker agent prompt in a frozen 6-block order.
+ContextManager — assembles the worker prompt in a frozen 6-block order.
 
 BLOCK ORDER IS A FROZEN CONTRACT (CLAUDE.md §2.4). Do NOT reorder.
   1. [SYSTEM]       worker.md system prompt      — always included, never compacted
@@ -18,14 +18,13 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from veridian.context.compactor import ContextCompactor
 from veridian.context.window import TokenWindow
 
 __all__ = ["ContextManager"]
 
 log = logging.getLogger(__name__)
 
-_WORKER_PROMPT_PATH = Path(__file__).parent.parent / "agents" / "prompts" / "worker.md"
+_WORKER_PROMPT_PATH = Path(__file__).parent / "prompts" / "worker.md"
 
 _OUTPUT_FORMAT = """\
 Output your final answer inside this exact XML block. No content after it.
@@ -60,7 +59,6 @@ class ContextManager:
         self.window = window or TokenWindow(capacity=8000)
         self._provider = provider
         self._progress_path = progress_path
-        self._compactor = ContextCompactor(self.window, provider)
 
     def build_worker_context(
         self,

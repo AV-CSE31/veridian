@@ -20,8 +20,35 @@ from typing import ClassVar
 
 from veridian.core.exceptions import VeridianConfigError
 from veridian.core.task import Task, TaskResult
-from veridian.loop.trusted_executor import DEFAULT_BLOCKLIST, DEFAULT_ENV_ALLOWLIST
 from veridian.verify.base import BaseVerifier, VerificationResult
+
+DEFAULT_ENV_ALLOWLIST: tuple[str, ...] = (
+    "PATH",
+    "HOME",
+    "USER",
+    "LOGNAME",
+    "SHELL",
+    "TERM",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "TZ",
+    "PWD",
+    "TMPDIR",
+)
+
+DEFAULT_BLOCKLIST: tuple[str, ...] = (
+    "rm -rf /",
+    "rm -rf ~",
+    "sudo rm",
+    ":(){ :|:& };:",
+    "> /dev/sda",
+    "mkfs",
+    "dd if=/dev/zero",
+    "chmod 777 /",
+    "wget http",
+    "curl http://",
+)
 
 
 class BashExitCodeVerifier(BaseVerifier):
@@ -52,8 +79,7 @@ class BashExitCodeVerifier(BaseVerifier):
             expected_exit: Expected exit code. Default 0 (success).
             timeout_seconds: Maximum execution time. Must be > 0.
             blocklist: Substrings that, if present in the command, cause the
-                verifier to reject it as misconfigured. Defaults to
-                :data:`~veridian.loop.trusted_executor.DEFAULT_BLOCKLIST`.
+                verifier to reject it as misconfigured.
             env_allowlist: Environment variables passed to the child process.
                 Parent env is NOT inherited by default, preventing accidental
                 leakage of credentials into shell commands.

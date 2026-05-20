@@ -6,20 +6,16 @@ Acceptance tests for Phase 4 stretch items:
 * ``HttpStatusVerifier`` refuses URLs targeting loopback / private /
   link-local hosts by default, with an opt-in for intentional internal
   probes.
-* ``AsyncScheduler`` supports the async context-manager protocol and
-  releases pending tasks on exit.
 """
 
 from __future__ import annotations
 
-import asyncio
 import os
 from unittest.mock import patch
 
 import pytest
 
 from veridian.core.exceptions import VeridianConfigError
-from veridian.loop.scheduler import AsyncScheduler
 from veridian.verify.builtin.http import HttpStatusVerifier
 
 # ── HttpStatusVerifier SSRF guard ───────────────────────────────────────────
@@ -65,35 +61,3 @@ class TestHttpVerifierSSRFGuard:
         assert v.url == "https://example.internal.corp/api"
 
 
-# ── AsyncScheduler context manager ───────────────────────────────────────────
-
-
-class TestAsyncSchedulerContextManager:
-    async def test_async_with_works_for_normal_run(self) -> None:
-        async def one() -> int:
-            return 42
-
-        async with AsyncScheduler(max_concurrency=2) as sched:
-            results = await sched.run([one])
-        assert results == [42]
-
-    async def test_shutdown_called_on_exception_exit(self) -> None:
-        sched = AsyncScheduler(max_concurrency=1)
-        sched._shutdown_event = asyncio.Event()
-
-        with pytest.raises(RuntimeError, match="boom"):
-            async with sched:
-                raise RuntimeError("boom")
-
-        assert sched._shutdown_event.is_set()
-
-    async def test_shutdown_idempotent_inside_context(self) -> None:
-        async def one() -> int:
-            return 1
-
-        async with AsyncScheduler(max_concurrency=1) as sched:
-            await sched.run([one])
-            # Manual shutdown plus exit-shutdown must not raise.
-            await sched.shutdown()
-        # Trailing shutdown after context exit is also safe.
-        await sched.shutdown()

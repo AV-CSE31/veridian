@@ -68,12 +68,12 @@ class TaskPriority(int, Enum):
     DEFERRED = 0
 
 
-# ── PRM EVIDENCE TYPES ────────────────────────────────────────────────────────
+# ── TRACE EVIDENCE TYPES ────────────────────────────────────────────────────────
 
 
 @dataclass
 class TraceStep:
-    """Single reasoning/process step for PRM and replay analysis."""
+    """Single reasoning/process step for replay and audit analysis."""
 
     step_id: str
     role: str
@@ -119,104 +119,7 @@ class TraceStep:
         )
 
 
-@dataclass
-class PRMScore:
-    """Step-level PRM scoring output."""
-
-    step_id: str
-    score: float
-    confidence: float
-    model_id: str
-    version: str
-    failure_mode: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "step_id": self.step_id,
-            "score": self.score,
-            "confidence": self.confidence,
-            "model_id": self.model_id,
-            "version": self.version,
-            "failure_mode": self.failure_mode,
-        }
-
-    @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> PRMScore:
-        return cls(
-            step_id=str(d.get("step_id", "")),
-            score=float(d.get("score", 0.0)),
-            confidence=float(d.get("confidence", 0.0)),
-            model_id=str(d.get("model_id", "")),
-            version=str(d.get("version", "")),
-            failure_mode=d.get("failure_mode"),
-        )
-
-
-@dataclass
-class PRMRunResult:
-    """Aggregate PRM result for a task/run segment."""
-
-    passed: bool
-    aggregate_score: float
-    aggregate_confidence: float
-    threshold: float
-    scored_steps: list[PRMScore] = field(default_factory=list)
-    policy_action: str = "allow"
-    repair_hint: str | None = None
-    error: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "passed": self.passed,
-            "aggregate_score": self.aggregate_score,
-            "aggregate_confidence": self.aggregate_confidence,
-            "threshold": self.threshold,
-            "scored_steps": [s.to_dict() for s in self.scored_steps],
-            "policy_action": self.policy_action,
-            "repair_hint": self.repair_hint,
-            "error": self.error,
-        }
-
-    @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> PRMRunResult:
-        scored = d.get("scored_steps", []) or []
-        return cls(
-            passed=bool(d.get("passed", False)),
-            aggregate_score=float(d.get("aggregate_score", 0.0)),
-            aggregate_confidence=float(d.get("aggregate_confidence", 0.0)),
-            threshold=float(d.get("threshold", 0.0)),
-            scored_steps=[PRMScore.from_dict(s) for s in scored if isinstance(s, dict)],
-            policy_action=str(d.get("policy_action", "allow")),
-            repair_hint=d.get("repair_hint"),
-            error=d.get("error"),
-        )
-
-
-@dataclass
-class PRMBudget:
-    """PRM runtime budget controls."""
-
-    max_steps_per_call: int = 0
-    max_tokens_per_call: int = 0
-    max_latency_ms: int = 0
-    max_total_cost_usd: float = 0.0
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "max_steps_per_call": self.max_steps_per_call,
-            "max_tokens_per_call": self.max_tokens_per_call,
-            "max_latency_ms": self.max_latency_ms,
-            "max_total_cost_usd": self.max_total_cost_usd,
-        }
-
-    @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> PRMBudget:
-        return cls(
-            max_steps_per_call=int(d.get("max_steps_per_call", 0)),
-            max_tokens_per_call=int(d.get("max_tokens_per_call", 0)),
-            max_latency_ms=int(d.get("max_latency_ms", 0)),
-            max_total_cost_usd=float(d.get("max_total_cost_usd", 0.0)),
-        )
+# ── RESULT ───────────────────────────────────────────────────────────────────
 
 
 # ── RESULT ───────────────────────────────────────────────────────────────────
@@ -239,7 +142,6 @@ class TaskResult:
 
     # Runtime evidence envelope (consumed by hooks/analytics)
     trace_steps: list[TraceStep] = field(default_factory=list)
-    prm_result: PRMRunResult | None = None
     confidence: dict[str, Any] | None = None
     verifier_score: float | None = None
     tool_calls: list[Any] = field(default_factory=list)
@@ -263,7 +165,6 @@ class TaskResult:
             "artifacts": self.artifacts,
             "bash_outputs": self.bash_outputs,
             "trace_steps": [s.to_dict() for s in self.trace_steps],
-            "prm_result": self.prm_result.to_dict() if self.prm_result else None,
             "confidence": self.confidence,
             "verifier_score": self.verifier_score,
             "tool_calls": self.tool_calls,
@@ -286,8 +187,6 @@ class TaskResult:
         r.trace_steps = [
             TraceStep.from_dict(s) for s in (d.get("trace_steps", []) or []) if isinstance(s, dict)
         ]
-        if isinstance(d.get("prm_result"), dict):
-            r.prm_result = PRMRunResult.from_dict(d["prm_result"])
         r.confidence = d.get("confidence")
         r.verifier_score = d.get("verifier_score")
         r.tool_calls = d.get("tool_calls", [])
@@ -304,7 +203,6 @@ class TaskResult:
             "artifacts",
             "bash_outputs",
             "trace_steps",
-            "prm_result",
             "confidence",
             "verifier_score",
             "tool_calls",

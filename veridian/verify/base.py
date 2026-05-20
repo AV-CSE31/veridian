@@ -1,17 +1,17 @@
 """
 veridian.verify.base
-────────────────────
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 BaseVerifier ABC and VerificationResult.
 
 RULES FOR ALL VERIFIERS:
-1. NEVER call an LLM (except LLMJudgeVerifier, which is last-resort only).
-2. Must be stateless — all config via __init__ or verify() params.
+1. Keep verifier behavior deterministic for the same task/result/config input.
+2. Must be stateless â€” all config via __init__ or verify() params.
 3. Must complete in < verification_timeout_seconds.
-4. Must be idempotent — safe to call multiple times with same args.
+4. Must be idempotent â€” safe to call multiple times with same args.
 5. Error messages must be:
    - SPECIFIC: say exactly what failed, not "verification failed"
    - ACTIONABLE: tell the agent what to fix and how
-   - CONCISE: < 300 chars — this goes directly into the LLM context window
+   - CONCISE: < 300 chars â€” this goes directly into the LLM context window
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from veridian.core.exceptions import VerifierNotFound
-from veridian.core.task import PRMBudget, PRMRunResult, Task, TaskResult, TraceStep
+from veridian.core.task import Task, TaskResult
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class VerificationResult:
     passed: bool
     error: str | None = None  # injected into LLM context on failure
     evidence: dict[str, Any] = field(default_factory=dict)
-    score: float | None = None  # 0.0–1.0; used by LLMJudgeVerifier
+    score: float | None = None  # 0.0-1.0 numeric verifier score
 
     # Gap 3 fix: probabilistic verification support
     # Confidence interval for constraint satisfaction probability
@@ -63,7 +63,7 @@ class BaseVerifier(ABC):
     # Opt-in: when True, ``VerifierRegistry.get()`` may return a single shared
     # instance for repeated ``(verifier_id, config)`` pairs instead of
     # constructing a new one per call. Verifiers must be stateless across
-    # ``verify()`` calls to set this safely — i.e. they may compile regexes,
+    # ``verify()`` calls to set this safely â€” i.e. they may compile regexes,
     # cache schemas, or load reference data in ``__init__`` but must not
     # accumulate per-call state on instance attributes.
     shareable: ClassVar[bool] = False
@@ -80,69 +80,9 @@ class BaseVerifier(ABC):
             raise TypeError(f"{cls.__name__} must define a class-level 'id' string")
 
 
-class PRMVerifier(BaseVerifier):
-    """
-    Base class for Process Reward Model verifiers.
-
-    PRM verifiers score ordered trace steps and return a PRMRunResult. The
-    default BaseVerifier.verify() contract is preserved so PRM plugins remain
-    registry-compatible with existing verifier wiring.
-    """
-
-    id: ClassVar[str] = "prm"
-    description: ClassVar[str] = "Scores ordered trace steps with a Process Reward Model."
-
-    @abstractmethod
-    def score_steps(
-        self,
-        *,
-        task_id: str,
-        steps: list[TraceStep],
-        context: dict[str, Any],
-        budget: PRMBudget,
-    ) -> PRMRunResult:
-        """Return deterministic PRM scoring for a task trace."""
-        ...
-
-    def verify(self, task: Task, result: TaskResult) -> VerificationResult:
-        """
-        Adapt PRM scoring to the standard verifier contract.
-
-        This keeps PRM implementations compatible with the existing registry
-        and runner code paths while exposing richer PRMRunResult data to callers.
-        """
-
-        prm_result = self.score_steps(
-            task_id=task.id,
-            steps=list(result.trace_steps),
-            context={
-                "task_title": task.title,
-                "task_description": task.description,
-                "task_metadata": task.metadata,
-                "task_phase": task.phase,
-                "retry_count": task.retry_count,
-                "max_retries": task.max_retries,
-                "verifier_id": task.verifier_id,
-                "verifier_config": task.verifier_config,
-            },
-            budget=PRMBudget(),
-        )
-        evidence = {
-            "prm_result": prm_result.to_dict(),
-            "policy_action": prm_result.policy_action,
-            "scored_steps": [score.to_dict() for score in prm_result.scored_steps],
-        }
-        return VerificationResult(
-            passed=prm_result.passed,
-            error=prm_result.error,
-            evidence=evidence,
-            score=prm_result.aggregate_score,
-        )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # REGISTRY
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class VerifierRegistry:
@@ -162,7 +102,7 @@ class VerifierRegistry:
         # Cache for verifiers that opt-in to instance reuse. Keyed by
         # (verifier_id, canonical-serialised config); values are the
         # already-constructed BaseVerifier instance. Verifiers participate by
-        # setting ``shareable = True`` on the class (default False) — see
+        # setting ``shareable = True`` on the class (default False) â€” see
         # BaseVerifier.shareable for the contract.
         self._instance_cache: dict[tuple[str, str], BaseVerifier] = {}
 
@@ -173,7 +113,7 @@ class VerifierRegistry:
         if cls.id in self._classes:
             log.debug("verifier.register override id=%s", cls.id)
         self._classes[cls.id] = cls
-        # Invalidate any cached instance for this id — re-registration usually
+        # Invalidate any cached instance for this id â€” re-registration usually
         # means a definition swap (tests, hot-reload), so we don't want to
         # hand out the old class instance.
         for key in [k for k in self._instance_cache if k[0] == cls.id]:
@@ -252,5 +192,5 @@ class VerifierRegistry:
             log.debug("verifier.autodiscover eps failed: %s", e)
 
 
-# Module-level singleton — import this everywhere
+# Module-level singleton â€” import this everywhere
 registry = VerifierRegistry()
