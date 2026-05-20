@@ -13,8 +13,7 @@ SESSION_HANDOFF.md
 
 # Keep only release showcase example
 examples/*
-!examples/12_wire_fraud_release_review/
-!examples/12_wire_fraud_release_review/**
+!examples/release_gate.py
 
 # Internal logs and reports
 cov_progress.txt

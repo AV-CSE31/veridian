@@ -254,5 +254,10 @@ def test_deleted_platform_packages_stay_removed() -> None:
     assert removed.isdisjoint(existing)
 
 
-def test_examples_stay_out_of_runtime_repo() -> None:
-    assert not (ROOT / "examples").exists()
+def test_examples_stay_small_and_release_focused() -> None:
+    example_files = {
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "examples").rglob("*")
+        if path.is_file()
+    }
+    assert example_files == {"examples/release_gate.py"}
