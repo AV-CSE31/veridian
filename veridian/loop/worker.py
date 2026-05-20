@@ -1,13 +1,13 @@
 """
 veridian.loop.worker
-───────────────────────
-WorkerAgent — drives the agent-task interaction loop.
+---------------------------------------------------------------------
+WorkerAgent --- drives the agent-task interaction loop.
 
-Loop contract (CLAUDE.md §6):
+Loop contract:
   - Iterate until: result found OR len(messages) > config.max_turns_per_task
-  - No result + no bash commands → append nudge message
+  - No result + no bash commands --- append nudge message
   - Result regex: <veridian:result>\\s*(\\{.*?\\})\\s*</veridian:result>  (DOTALL)
-  - Never hardcode max_turns — always read from VeridianConfig
+  - Never hardcode max_turns --- always read from VeridianConfig
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ __all__ = ["WorkerAgent", "_RESULT_RE"]
 
 log = logging.getLogger(__name__)
 
-# Frozen contract — do NOT modify this regex (CLAUDE.md §6)
+# Frozen contract - do NOT modify this regex.
 _RESULT_RE = re.compile(
     r"<veridian:result>\s*(\{.*?\})\s*</veridian:result>",
     re.DOTALL,
@@ -44,9 +44,9 @@ class WorkerAgent:
     The loop:
       1. Build context (injected ContextManager) or fallback to simple prompt
       2. Call provider.complete()
-      3. If result found → return TaskResult
-      4. If bash commands found → continue loop (executor handles separately)
-      5. If neither → append nudge and continue
+      3. If result found --- return TaskResult
+      4. If bash commands found --- continue loop (executor handles separately)
+      5. If neither --- append nudge and continue
       6. Exit when max_turns_per_task exceeded
     """
 
@@ -147,10 +147,10 @@ class WorkerAgent:
             # Append assistant response to conversation
             messages.append({"role": "assistant", "content": content})
 
-            # Check for bash commands — if present, loop continues (executor handles)
+            # Check for bash commands --- if present, loop continues (executor handles)
             has_bash = bool(_BASH_RE.search(content))
 
-            # If no result and no bash → nudge agent
+            # If no result and no bash --- nudge agent
             if not has_bash and not match:
                 messages.append({"role": "user", "content": _NUDGE_MESSAGE})
 

@@ -1,7 +1,7 @@
 """
 veridian.verify.builtin.http
-─────────────────────────────
-HttpStatusVerifier — make an HTTP request and verify the response status code.
+---------------------------------------------------------------------------------------
+HttpStatusVerifier --- make an HTTP request and verify the response status code.
 
 Usage:
     verifier_id="http_status"
@@ -102,7 +102,7 @@ class HttpStatusVerifier(BaseVerifier):
             host = parsed.hostname or ""
             if _is_blocked_host(host):
                 raise VeridianConfigError(
-                    f"HttpStatusVerifier refuses to target host {host!r} — "
+                    f"HttpStatusVerifier refuses to target host {host!r} --- "
                     "loopback / private / link-local addresses are blocked "
                     "to prevent SSRF. Pass allow_private_targets=True or "
                     "set VERIDIAN_HTTP_ALLOW_PRIVATE=1 to opt in."

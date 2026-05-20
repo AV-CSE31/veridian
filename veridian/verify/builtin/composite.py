@@ -1,7 +1,7 @@
 """
 veridian.verify.builtin.composite
-──────────────────────────────────
-CompositeVerifier — AND chain: run all verifiers in order, stop on first failure.
+------------------------------------------------------------------------------------------------------
+CompositeVerifier --- AND chain: run all verifiers in order, stop on first failure.
 
 Errors are prefixed with "[Step N/total] verifier_id: ..." to pinpoint
 which step failed and give the agent a clear fix target.

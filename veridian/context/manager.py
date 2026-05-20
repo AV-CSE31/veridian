@@ -1,14 +1,14 @@
 """
 veridian.context.manager
-─────────────────────────
-ContextManager — assembles the worker prompt in a frozen 6-block order.
+---------------------------------------------------------------------------
+ContextManager --- assembles the worker prompt in a frozen 6-block order.
 
-BLOCK ORDER IS A FROZEN CONTRACT (CLAUDE.md §2.4). Do NOT reorder.
-  1. [SYSTEM]       worker.md system prompt      — always included, never compacted
+BLOCK ORDER IS A FROZEN CONTRACT. Do NOT reorder.
+  1. [SYSTEM]       worker.md system prompt      --- always included, never compacted
   2. [ORIENTATION]  run summary + progress.md tail
   3. [TASK]         title, description, verifier_id, required_fields
-  4. [RETRY ERROR]  last_error ≤ 300 chars       — ONLY if attempt > 0
-  5. [ENVIRONMENT]  context_files                — ONLY if token budget allows
+  4. [RETRY ERROR]  last_error --- 300 chars       --- ONLY if attempt > 0
+  5. [ENVIRONMENT]  context_files                --- ONLY if token budget allows
   6. [OUTPUT FMT]   veridian:result XML format
 """
 
@@ -47,7 +47,7 @@ class ContextManager:
 
         cm = ContextManager(window=TokenWindow(8000))
         messages = cm.build_worker_context(task, run_id="r1", attempt=0)
-        # → [{"role": "system", ...}, {"role": "user", ...}]
+        # --- [{"role": "system", ...}, {"role": "user", ...}]
     """
 
     def __init__(
@@ -75,28 +75,28 @@ class ContextManager:
         self.window.reset()
         messages: list[dict[str, str]] = []
 
-        # ── Block 1: [SYSTEM] — always included, never compacted ──────────────
+        # ------ Block 1: [SYSTEM] --- always included, never compacted ------------------------------------------
         system_content = self._load_system_prompt()
         messages.append({"role": "system", "content": system_content})
         self.window.consume(self._count(system_content))
 
-        # ── Build user message from blocks 2–6 ────────────────────────────────
+        # ------ Build user message from blocks 2---6 ------------------------------------------------------------------------------------------------
         parts: list[str] = []
 
-        # ── Block 2: [ORIENTATION] ────────────────────────────────────────────
+        # ------ Block 2: [ORIENTATION] ------------------------------------------------------------------------------------------------------------------------------------
         parts.append(self._build_orientation(run_id, run_summary))
 
-        # ── Block 3: [TASK] ───────────────────────────────────────────────────
+        # ------ Block 3: [TASK] ---------------------------------------------------------------------------------------------------------------------------------------------------------
         parts.append(self._build_task_block(task))
 
-        # ── Block 4: [RETRY ERROR] — only when attempt > 0 ───────────────────
+        # ------ Block 4: [RETRY ERROR] --- only when attempt > 0 ---------------------------------------------------------
         if attempt > 0:
             last_error = getattr(task, "last_error", None) or ""
             if last_error:
                 error_text = str(last_error)[:300]
                 parts.append(f"[RETRY ERROR]\n{error_text}")
 
-        # ── Block 5: [ENVIRONMENT] — only if budget allows ───────────────────
+        # ------ Block 5: [ENVIRONMENT] --- only if budget allows ---------------------------------------------------------
         metadata: dict[str, Any] = getattr(task, "metadata", {}) or {}
         context_files: list[str] = metadata.get("context_files", []) or []
         if context_files:
@@ -104,7 +104,7 @@ class ContextManager:
             if env_block:
                 parts.append(env_block)
 
-        # ── Block 6: [OUTPUT FMT] — always included ───────────────────────────
+        # ------ Block 6: [OUTPUT FMT] --- always included ---------------------------------------------------------------------------------
         parts.append(f"[OUTPUT FMT]\n{_OUTPUT_FORMAT}")
 
         user_content = "\n\n".join(parts)
@@ -113,7 +113,7 @@ class ContextManager:
 
         return messages
 
-    # ── Private helpers ───────────────────────────────────────────────────────
+    # ------ Private helpers ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def _load_system_prompt(self) -> str:
         """Load worker.md; fall back to minimal prompt if not found."""

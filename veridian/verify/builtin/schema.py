@@ -1,7 +1,7 @@
 """
 veridian.verify.builtin.schema
-──────────────────────────────
-SchemaVerifier — validate result.structured against a JSON Schema dict
+------------------------------------------------------------------------------------------
+SchemaVerifier --- validate result.structured against a JSON Schema dict
 or a Pydantic model (referenced as "module.path:ClassName").
 
 Usage:

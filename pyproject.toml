@@ -55,12 +55,14 @@ pydantic = [
     "pydantic>=2.5",
 ]
 dev = [
+    "build>=1.2",
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
     "pytest-cov>=5.0",
     "ruff>=0.5",
     "mypy>=1.10",
     "pre-commit>=3.7",
+    "twine>=5.1",
 ]
 all = ["veridian-ai[http,llm,pdf,pydantic]"]
 
@@ -76,6 +78,22 @@ http_status = "veridian.verify.builtin.http:HttpStatusVerifier"
 file_exists = "veridian.verify.builtin.file_exists:FileExistsVerifier"
 composite = "veridian.verify.builtin.composite:CompositeVerifier"
 any_of = "veridian.verify.builtin.any_of:AnyOfVerifier"
+
+[tool.hatch.build]
+exclude = [
+    "/.claude",
+    "/docs",
+    "/guides",
+    "/planning",
+    "/research",
+    "/AGENTS.md",
+    "/CLAUDE.md",
+    "/ONBOARDING.md",
+    "/GEMINI.md",
+    "/ARCHITECTURE.md",
+    "/CODEBASE_HEALTH.md",
+    "/SESSION_HANDOFF.md",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["veridian"]

@@ -1,6 +1,6 @@
 """
 tests.unit.test_phase1a_security_guards
-───────────────────────────────────────
+---------------------------------------------------------------------------------------------------------------------
 Acceptance tests for the Phase 1.A security hardening additions:
 
 * BashExitCodeVerifier scrubs the child-process env so
@@ -35,7 +35,8 @@ def _python_cmd(code: str) -> str:
         return subprocess.list2cmdline(args)
     return " ".join(shlex.quote(arg) for arg in args)
 
-# ── BashExitCodeVerifier ────────────────────────────────────────────────────
+
+# ------ BashExitCodeVerifier ------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestBashExitCodeVerifierGuards:
@@ -68,7 +69,7 @@ class TestBashExitCodeVerifierGuards:
         assert outcome.passed  # secrets were stripped, grep finds nothing
 
 
-# ── LiteLLM model allowlist ─────────────────────────────────────────────────
+# ------ LiteLLM model allowlist ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -127,5 +128,3 @@ class TestModelAllowlist:
                 model="gemini/gemini-2.5-flash",
                 fallback_models=["https://attacker.example/v1"],
             )
-
-

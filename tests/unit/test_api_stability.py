@@ -21,9 +21,11 @@ _EXPECTED_STABLE_ALL = sorted(
         "Message",
         "MockProvider",
         "LiteLLMProvider",
+        "VerifiedCall",
         "VeridianError",
         "VerificationError",
         "ProviderError",
+        "verified",
     ]
 )
 

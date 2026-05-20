@@ -1,5 +1,6 @@
 # Private/internal workspace docs
 docs/
+guides/
 planning/
 research/
 AGENTS.md
@@ -13,7 +14,7 @@ SESSION_HANDOFF.md
 
 # Keep only release showcase example
 examples/*
-!examples/release_gate.py
+!examples/decorator_release_gate.py
 
 # Internal logs and reports
 cov_progress.txt

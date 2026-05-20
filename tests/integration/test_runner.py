@@ -1,8 +1,8 @@
 """
 tests.integration.test_runner
-──────────────────────────────
+------------------------------------------------------------------------------------------
 Integration tests for VeridianRunner.
-Full pipeline: task → execution → verification → DONE.
+Full pipeline: task --- execution --- verification --- DONE.
 """
 
 import json
@@ -20,7 +20,7 @@ from veridian.loop.runner import RunSummary, VeridianRunner
 from veridian.providers.base import LLMResponse
 from veridian.providers.mock_provider import MockProvider
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# ------ Fixtures ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -70,12 +70,12 @@ def make_result_response(structured: dict, tool_calls: list | None = None) -> LL
     )
 
 
-# ── Full pipeline ─────────────────────────────────────────────────────────────
+# ------ Full pipeline ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestVeridianRunnerHappyPath:
     def test_full_pipeline_single_task_done(self, config, ledger, mock_provider, tmp_path):
-        """Full pipeline: task → worker → verification → DONE."""
+        """Full pipeline: task --- worker --- verification --- DONE."""
         task = make_task("Test task", id="t1", description="Do the thing")
         ledger.add([task])
 
@@ -112,7 +112,7 @@ class TestVeridianRunnerHappyPath:
         task = make_task("stale task", id="stale")
         ledger.add([task])
         ledger.claim(task.id, "crashed-runner")
-        # Task is IN_PROGRESS — reset_in_progress should reset it
+        # Task is IN_PROGRESS --- reset_in_progress should reset it
         mock_provider.script([make_result_response({"summary": "ok"})])
         runner = VeridianRunner(ledger=ledger, provider=mock_provider, config=config)
         summary = runner.run()
@@ -189,5 +189,3 @@ class TestRunSummary:
         assert hasattr(summary, "failed_count")
         assert hasattr(summary, "run_id")
         assert summary.run_id != ""
-
-

@@ -1,6 +1,6 @@
 """
 tests.unit.test_circuit_breaker
-────────────────────────────────
+------------------------------------------------------------------------------------------------
 Tests for the circuit breaker and retry resilience layer in LiteLLMProvider.
 """
 
@@ -50,12 +50,12 @@ class TestCircuitBreaker:
         )
         cb.record_failure()
         time.sleep(0.01)
-        cb.allow_request()  # → HALF_OPEN
+        cb.allow_request()  # --- HALF_OPEN
         assert cb.state == CBState.HALF_OPEN
 
         cb.record_success()  # 1/2
         assert cb.state == CBState.HALF_OPEN
-        cb.record_success()  # 2/2 → CLOSED
+        cb.record_success()  # 2/2 --- CLOSED
         assert cb.state == CBState.CLOSED
 
     def test_reopens_on_half_open_failure(self):
@@ -66,8 +66,8 @@ class TestCircuitBreaker:
         )
         cb.record_failure()
         time.sleep(0.01)
-        cb.allow_request()  # → HALF_OPEN
-        cb.record_failure()  # → OPEN again
+        cb.allow_request()  # --- HALF_OPEN
+        cb.record_failure()  # --- OPEN again
         assert cb.state == CBState.OPEN
 
     def test_blocked_while_open(self):

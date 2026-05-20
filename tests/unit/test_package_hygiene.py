@@ -1,6 +1,6 @@
 """
 tests.unit.test_package_hygiene
-────────────────────────────────
+------------------------------------------------------------------------------------------------
 F1 from the 2026-04-06 cleanup audit: prevent the recurrence of duplicate
 ``x/x`` nested package trees that shipped by accident as
 ``veridian/explain/explain/`` and ``veridian/intelligence/intelligence/``.
@@ -45,7 +45,7 @@ class TestNoDuplicatePackageNesting:
             if pkg_dir.name == parent.name:
                 offenders.append(str(pkg_dir.relative_to(_PACKAGE_ROOT)))
         assert not offenders, (
-            "Duplicate nested package trees detected — remove them:\n"
+            "Duplicate nested package trees detected --- remove them:\n"
             + "\n".join(f"  - veridian/{p}" for p in offenders)
         )
 
@@ -59,6 +59,5 @@ class TestNoDuplicatePackageNesting:
         present = [str(p.relative_to(_PACKAGE_ROOT.parent)) for p in banned if p.exists()]
         assert not present, (
             "The following duplicate package trees must stay deleted "
-            "per planning/08-code-cleanup-and-competitive-audit-2026-04-06.md "
-            f"section A: {present}"
+            f"per the cleanup audit: {present}"
         )

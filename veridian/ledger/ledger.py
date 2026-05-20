@@ -1,11 +1,11 @@
 """
 veridian.ledger.ledger
-─────────────────────
-TaskLedger — the single source of truth for all task state.
+---------------------------------------------------------------
+TaskLedger --- the single source of truth for all task state.
 
 RULES:
 - Ledger is the ONLY object allowed to transition task status.
-- All writes are atomic (temp-file → rename via os.replace).
+- All writes are atomic (temp-file --- rename via os.replace).
 - FileLock ensures single writer across processes.
 - reset_in_progress() MUST be called at the start of every run().
 """
@@ -71,7 +71,7 @@ class TaskLedger:
         if not self.path.exists():
             self._write_raw({"schema_version": SCHEMA_VERSION, "tasks": {}})
 
-    # ── READ INTERFACE ────────────────────────────────────────────────────────
+    # ------ READ INTERFACE ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def get(self, task_id: str) -> Task:
         """Return a copy of the task. Raises TaskNotFound if missing."""
@@ -99,7 +99,7 @@ class TaskLedger:
         tasks = [Task.from_dict(t) for t in data["tasks"].values()]
         done_ids = {t.id for t in tasks if t.status == TaskStatus.DONE}
 
-        # RV3-001: Resume-first policy — surface PAUSED tasks before PENDING ones.
+        # RV3-001: Resume-first policy --- surface PAUSED tasks before PENDING ones.
         if include_paused:
             paused = [
                 t
@@ -143,8 +143,10 @@ class TaskLedger:
         raw_tasks = data["tasks"].values()
 
         sv = (
-            status.value if isinstance(status, TaskStatus)
-            else status if isinstance(status, str)
+            status.value
+            if isinstance(status, TaskStatus)
+            else status
+            if isinstance(status, str)
             else None
         )
 
@@ -153,9 +155,7 @@ class TaskLedger:
                 return False
             if phase is not None and raw.get("phase") != phase:
                 return False
-            return not (
-                priority_gte is not None and raw.get("priority", 0) < priority_gte
-            )
+            return not (priority_gte is not None and raw.get("priority", 0) < priority_gte)
 
         tasks = [Task.from_dict(t) for t in raw_tasks if _matches(t)]
         tasks.sort(key=lambda t: (-t.priority, t.created_at))
@@ -201,7 +201,7 @@ class TaskLedger:
                 seen.append(t.phase)
         return seen
 
-    # ── WRITE INTERFACE ───────────────────────────────────────────────────────
+    # ------ WRITE INTERFACE ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def add(self, tasks: builtins.list[Task], skip_duplicates: bool = True) -> int:
         """
@@ -222,7 +222,7 @@ class TaskLedger:
 
     def claim(self, task_id: str, runner_id: str) -> Task:
         """
-        Transition PENDING → IN_PROGRESS. Idempotent for the same runner.
+        Transition PENDING --- IN_PROGRESS. Idempotent for the same runner.
         Raises TaskAlreadyClaimed if another runner holds it.
         Returns the updated task.
         """
@@ -236,7 +236,7 @@ class TaskLedger:
                     raise TaskAlreadyClaimed(
                         f"Task {task_id} is already claimed by {task.claimed_by!r}"
                     )
-                # Same runner re-claiming an already IN_PROGRESS task — idempotent
+                # Same runner re-claiming an already IN_PROGRESS task --- idempotent
                 return task
 
             self._transition(task, TaskStatus.IN_PROGRESS)
@@ -248,7 +248,7 @@ class TaskLedger:
         return task
 
     def submit_result(self, task_id: str, result: TaskResult) -> Task:
-        """IN_PROGRESS → VERIFYING. Does NOT mark DONE — verifier does that."""
+        """IN_PROGRESS --- VERIFYING. Does NOT mark DONE --- verifier does that."""
         with self._lock:
             data = self._read_raw()
             self._assert_exists(data, task_id)
@@ -278,7 +278,7 @@ class TaskLedger:
         return task
 
     def mark_done(self, task_id: str, result: TaskResult) -> Task:
-        """VERIFYING → DONE. Called ONLY by VeridianRunner after verifier passes."""
+        """VERIFYING --- DONE. Called ONLY by VeridianRunner after verifier passes."""
         with self._lock:
             data = self._read_raw()
             self._assert_exists(data, task_id)
@@ -291,14 +291,14 @@ class TaskLedger:
             task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
             self._write_raw(data)
-        self.log(f"[DONE] {task_id} — {task.title[:60]}")
+        self.log(f"[DONE] {task_id} --- {task.title[:60]}")
         return task
 
     def mark_failed(self, task_id: str, error: str) -> Task:
         """
-        → FAILED. Auto-transitions to ABANDONED if retry_count > max_retries.
+        --- FAILED. Auto-transitions to ABANDONED if retry_count > max_retries.
         Increments retry_count. Stores error as last_error (for next prompt).
-        ABANDONED path: IN_PROGRESS → FAILED → ABANDONED (respects state machine).
+        ABANDONED path: IN_PROGRESS --- FAILED --- ABANDONED (respects state machine).
         """
         with self._lock:
             data = self._read_raw()
@@ -312,7 +312,7 @@ class TaskLedger:
             self._transition(task, TaskStatus.FAILED)
 
             if task.retry_count > task.max_retries:
-                # Two-step: FAILED → ABANDONED (state machine compliant)
+                # Two-step: FAILED --- ABANDONED (state machine compliant)
                 self._transition(task, TaskStatus.ABANDONED)
                 log.warning("task.abandoned id=%s retries=%d", task_id, task.retry_count)
 
@@ -321,7 +321,7 @@ class TaskLedger:
         return task
 
     def skip(self, task_id: str, reason: str = "") -> Task:
-        """→ SKIPPED. Terminal. Use for human-curated exclusions."""
+        """--- SKIPPED. Terminal. Use for human-curated exclusions."""
         with self._lock:
             data = self._read_raw()
             self._assert_exists(data, task_id)
@@ -340,7 +340,7 @@ class TaskLedger:
         payload: dict[str, Any] | None = None,
     ) -> Task:
         """
-        RV3-001: IN_PROGRESS → PAUSED. Persists pause metadata in
+        RV3-001: IN_PROGRESS --- PAUSED. Persists pause metadata in
         ``task.result.extras['pause_payload']`` so resume() can restore context.
 
         The pause payload carries the reason, an optional worker cursor, and a
@@ -376,12 +376,12 @@ class TaskLedger:
             data["tasks"][task_id] = task.to_dict()
             self._write_raw(data)
         log.info("ledger.pause task_id=%s reason=%s", task_id, reason[:60])
-        self.log(f"[PAUSE] {task_id} — {reason[:80]}")
+        self.log(f"[PAUSE] {task_id} --- {reason[:80]}")
         return task
 
     def resume(self, task_id: str, runner_id: str) -> Task:
         """
-        RV3-001: PAUSED → IN_PROGRESS. Increments resume_count, sets claimed_by.
+        RV3-001: PAUSED --- IN_PROGRESS. Increments resume_count, sets claimed_by.
         Raises TaskNotPaused if the task is not in PAUSED state.
         """
         with self._lock:
@@ -434,12 +434,12 @@ class TaskLedger:
 
         if reset:
             log.info("ledger.reset_in_progress count=%d", reset)
-            self.log(f"[RESET] {reset} stale IN_PROGRESS tasks → PENDING (crash recovery)")
+            self.log(f"[RESET] {reset} stale IN_PROGRESS tasks --- PENDING (crash recovery)")
         return reset
 
     def reset_failed(self, task_ids: builtins.list[str] | None = None) -> int:
         """
-        Reset FAILED/ABANDONED tasks → PENDING for re-queue.
+        Reset FAILED/ABANDONED tasks --- PENDING for re-queue.
         retry_count is preserved so the abandonment threshold remains accurate
         across multiple reset cycles.
         """
@@ -459,7 +459,7 @@ class TaskLedger:
                 self._write_raw(data)
         return reset
 
-    # ── PROGRESS LOG ──────────────────────────────────────────────────────────
+    # ------ PROGRESS LOG ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def log(self, message: str, level: str = "INFO") -> None:
         """
@@ -478,7 +478,7 @@ class TaskLedger:
         lines = self.progress_path.read_text(encoding="utf-8").splitlines()
         return lines[-n:]
 
-    # ── INTERNAL ──────────────────────────────────────────────────────────────
+    # ------ INTERNAL ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def _read_raw(self) -> dict[str, Any]:
         """Read and parse ledger.json. Raises LedgerCorrupted on parse failure."""
@@ -523,8 +523,8 @@ class TaskLedger:
         """
         Atomic write via temp file + os.replace().
 
-        Serialization uses compact JSON (no ``indent=2``) on the hot path —
-        every state transition (claim, submit_result, mark_done, …) goes
+        Serialization uses compact JSON (no ``indent=2``) on the hot path ---
+        every state transition (claim, submit_result, mark_done, ---) goes
         through here and the indented form roughly doubles wall-clock per
         write on multi-hundred-task ledgers. Set ``VERIDIAN_LEDGER_INDENT=1``
         to opt back into pretty-printed output (useful when hand-inspecting

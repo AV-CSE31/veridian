@@ -1,7 +1,7 @@
 """
 veridian.hooks.builtin.rate_limit
-───────────────────────────────────
-RateLimitHook — enforces max tasks per minute via a sliding window.
+---------------------------------------------------------------------------------------------------------
+RateLimitHook --- enforces max tasks per minute via a sliding window.
 Priority 50.
 """
 

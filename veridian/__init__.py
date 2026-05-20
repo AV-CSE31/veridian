@@ -1,79 +1,46 @@
-"""
-veridian
---------
-Deterministic verification and replay-safe execution for AI agent tasks.
+"""Deterministic verification and replay-safe execution for AI agent tasks."""
 
-The core contract: a task is not marked DONE unless its verifier passes.
-
-Quick start::
-
-    from veridian import Task, TaskLedger, VeridianRunner, MockProvider
-
-    ledger = TaskLedger("ledger.json")
-    ledger.add([
-        Task(
-            title="Check output schema",
-            description="Return JSON with keys: decision, reason.",
-            verifier_id="schema",
-            verifier_config={"required_fields": ["decision", "reason"]},
-        )
-    ])
-
-    provider = MockProvider().script_veridian_result(
-        structured={"decision": "allow", "reason": "policy-pass"}
-    )
-    summary = VeridianRunner(ledger=ledger, provider=provider).run()
-    print(f"Done: {summary.done_count}/{summary.total_tasks}")
-
-GitHub:  https://github.com/AV-CSE31/veridian
-PyPI:    https://pypi.org/project/veridian-ai/
-License: MIT
-"""
+from __future__ import annotations
 
 __version__ = "0.3.0"
 __author__ = "Veridian contributors"
 __license__ = "MIT"
 
-from veridian.core.exceptions import ProviderError, VeridianError, VerificationError
-from veridian.core.task import Task
-from veridian.providers.base import LLMProvider, LLMResponse, Message
-from veridian.providers.mock_provider import MockProvider
-from veridian.verify import builtin as _builtin_verifiers  # noqa: F401
-from veridian.verify.base import BaseVerifier, VerificationResult
+_LAZY_EXPORTS = {
+    "BaseHook": "veridian.hooks.base:BaseHook",
+    "BaseVerifier": "veridian.verify.base:BaseVerifier",
+    "HookRegistry": "veridian.hooks.registry:HookRegistry",
+    "LiteLLMProvider": "veridian.providers.litellm_provider:LiteLLMProvider",
+    "LLMProvider": "veridian.providers.base:LLMProvider",
+    "LLMResponse": "veridian.providers.base:LLMResponse",
+    "Message": "veridian.providers.base:Message",
+    "MockProvider": "veridian.providers.mock_provider:MockProvider",
+    "ProviderError": "veridian.core.exceptions:ProviderError",
+    "RunSummary": "veridian.loop.runner:RunSummary",
+    "Task": "veridian.core.task:Task",
+    "TaskLedger": "veridian.ledger.ledger:TaskLedger",
+    "VeridianConfig": "veridian.core.config:VeridianConfig",
+    "VeridianError": "veridian.core.exceptions:VeridianError",
+    "VeridianRunner": "veridian.loop.runner:VeridianRunner",
+    "VerifiedCall": "veridian.decorators:VerifiedCall",
+    "VerificationError": "veridian.core.exceptions:VerificationError",
+    "VerificationResult": "veridian.verify.base:VerificationResult",
+    "verified": "veridian.decorators:verified",
+}
 
 
 def __getattr__(name: str) -> object:
-    """Lazy-load heavier public primitives only when requested."""
-    if name in ("VeridianRunner", "VeridianConfig", "RunSummary"):
-        from veridian.core.config import VeridianConfig  # noqa: PLC0415
-        from veridian.loop.runner import RunSummary, VeridianRunner  # noqa: PLC0415
+    """Lazy-load public primitives on first access."""
+    target = _LAZY_EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module 'veridian' has no attribute {name!r}")
+    module_name, attr_name = target.rsplit(":", 1)
+    import importlib
 
-        globals()["VeridianRunner"] = VeridianRunner
-        globals()["VeridianConfig"] = VeridianConfig
-        globals()["RunSummary"] = RunSummary
-        return globals()[name]
-
-    if name == "TaskLedger":
-        from veridian.ledger.ledger import TaskLedger  # noqa: PLC0415
-
-        globals()["TaskLedger"] = TaskLedger
-        return TaskLedger
-
-    if name == "LiteLLMProvider":
-        from veridian.providers.litellm_provider import LiteLLMProvider  # noqa: PLC0415
-
-        globals()["LiteLLMProvider"] = LiteLLMProvider
-        return LiteLLMProvider
-
-    if name in ("BaseHook", "HookRegistry"):
-        from veridian.hooks.base import BaseHook  # noqa: PLC0415
-        from veridian.hooks.registry import HookRegistry  # noqa: PLC0415
-
-        globals()["BaseHook"] = BaseHook
-        globals()["HookRegistry"] = HookRegistry
-        return globals()[name]
-
-    raise AttributeError(f"module 'veridian' has no attribute {name!r}")
+    module = importlib.import_module(module_name)
+    value = getattr(module, attr_name)
+    globals()[name] = value
+    return value
 
 
 __all__ = [
@@ -92,6 +59,8 @@ __all__ = [
     "Message",
     "MockProvider",
     "LiteLLMProvider",
+    "VerifiedCall",
+    "verified",
     "VeridianError",
     "VerificationError",
     "ProviderError",

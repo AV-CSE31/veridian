@@ -1,6 +1,6 @@
 """
 tests.unit.test_task
-─────────────────────
+---------------------------------------------------------------
 Unit tests for Task, TaskStatus state machine, TaskResult, LedgerStats.
 """
 
@@ -17,7 +17,7 @@ from veridian.core.task import (
     TraceStep,
 )
 
-# ── TaskStatus state machine ──────────────────────────────────────────────────
+# ------ TaskStatus state machine ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestTaskStatusTransitions:
@@ -49,7 +49,7 @@ class TestTaskStatusTransitions:
     def test_failed_to_abandoned(self):
         assert TaskStatus.FAILED.can_transition_to(TaskStatus.ABANDONED)
 
-    # ── Invalid transitions ───────────────────────────────────────────────────
+    # ------ Invalid transitions ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def test_done_is_terminal(self):
         assert not TaskStatus.DONE.can_transition_to(TaskStatus.PENDING)
@@ -74,7 +74,7 @@ class TestTaskStatusTransitions:
         assert not TaskStatus.FAILED.is_terminal
 
 
-# ── Task dataclass ────────────────────────────────────────────────────────────
+# ------ Task dataclass ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestTask:
@@ -143,7 +143,7 @@ class TestTask:
         assert "in_progress" in r
 
 
-# ── TaskResult ────────────────────────────────────────────────────────────────
+# ------ TaskResult ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestTaskResult:
@@ -206,7 +206,8 @@ class TestTaskResult:
         assert out["future_field"] == {"x": 1}
         assert out["new_metric"] == 42
 
-# ── LedgerStats ───────────────────────────────────────────────────────────────
+
+# ------ LedgerStats ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestLedgerStats:

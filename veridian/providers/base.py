@@ -1,8 +1,8 @@
 """
 veridian.providers.base
-───────────────────────
+---------------------------------------------------------------------
 LLMProvider ABC + Message/LLMResponse types.
-All LLM I/O flows through these types — swapping providers requires
+All LLM I/O flows through these types --- swapping providers requires
 no changes to the rest of the codebase.
 """
 

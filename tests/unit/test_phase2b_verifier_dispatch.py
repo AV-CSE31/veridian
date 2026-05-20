@@ -1,6 +1,6 @@
 """
 tests.unit.test_phase2b_verifier_dispatch
-─────────────────────────────────────────
+---------------------------------------------------------------------------------------------------------------------------
 Acceptance tests for the Phase 2.B verifier-dispatch optimisations:
 
 * ``VerifierRegistry.get`` returns a shared instance when the class opts
@@ -8,8 +8,8 @@ Acceptance tests for the Phase 2.B verifier-dispatch optimisations:
 * Re-registering a class invalidates any cached instance.
 * The default (``shareable=False``) behaviour is unchanged: a fresh
   instance is constructed per call.
-* ``VeridianRunner.__init__`` eagerly loads the built-in registry so the
-  first verify call no longer pays the import cost.
+* ``VeridianRunner.__init__`` wires the built-in registry without importing
+  verifier modules; each built-in loads lazily by ID.
 """
 
 from __future__ import annotations
@@ -105,8 +105,8 @@ class TestShareableInstanceCache:
         assert _CountingFresh.construct_count == 3
 
 
-class TestEagerRegistryInit:
-    def test_runner_resolves_registry_in_init(self, tmp_path) -> None:
+class TestLazyRegistryInit:
+    def test_runner_resolves_lazy_registry_in_init(self, tmp_path) -> None:
         from veridian.core.config import VeridianConfig
         from veridian.ledger.ledger import TaskLedger
         from veridian.loop.runner import VeridianRunner
@@ -119,8 +119,5 @@ class TestEagerRegistryInit:
         ledger = TaskLedger(path=config.ledger_file, progress_file=str(config.progress_file))
         runner = VeridianRunner(ledger=ledger, provider=MockProvider(), config=config)
 
-        # Built-in registry must be loaded eagerly, not deferred.
         assert runner._verifier_registry is not None
-        assert bool(runner._verifier_registry._classes)
-        # And the canonical built-ins should be present.
-        assert "schema" in runner._verifier_registry._classes
+        assert "schema" in runner._verifier_registry._lazy

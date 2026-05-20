@@ -1,7 +1,7 @@
 """
 tests.unit.test_ledger
-───────────────────────
-Unit tests for TaskLedger — state machine, atomic writes, crash recovery.
+---------------------------------------------------------------------
+Unit tests for TaskLedger --- state machine, atomic writes, crash recovery.
 All tests use tmp_path (pytest fixture) so no disk residue.
 """
 
@@ -15,7 +15,7 @@ from veridian.core.exceptions import InvalidTransition, TaskAlreadyClaimed, Task
 from veridian.core.task import Task, TaskPriority, TaskResult, TaskStatus
 from veridian.ledger.ledger import TaskLedger
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# ------ Fixtures ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def make_task(**kwargs) -> Task:
     return Task(**defaults)
 
 
-# ── Basic CRUD ────────────────────────────────────────────────────────────────
+# ------ Basic CRUD ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestLedgerBasic:
@@ -95,7 +95,7 @@ class TestLedgerBasic:
         assert tasks[0].id == legacy_task.id
 
 
-# ── State machine ─────────────────────────────────────────────────────────────
+# ------ State machine ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestLedgerStateMachine:
@@ -155,7 +155,7 @@ class TestLedgerStateMachine:
         t = make_task(max_retries=1)
         ledger.add([t])
 
-        # First failure → FAILED
+        # First failure --- FAILED
         ledger.claim(t.id, "runner-1")
         updated = ledger.mark_failed(t.id, "error 1")
         assert updated.status == TaskStatus.FAILED
@@ -164,7 +164,7 @@ class TestLedgerStateMachine:
         # Reset to PENDING (simulate re-queue)
         ledger.reset_failed([t.id])
 
-        # Second failure → ABANDONED (exceeds max_retries=1)
+        # Second failure --- ABANDONED (exceeds max_retries=1)
         ledger.claim(t.id, "runner-1")
         updated = ledger.mark_failed(t.id, "error 2")
         assert updated.status == TaskStatus.ABANDONED
@@ -173,7 +173,7 @@ class TestLedgerStateMachine:
     def test_invalid_transition_raises(self, ledger):
         t = make_task()
         ledger.add([t])
-        # Cannot go from PENDING → DONE directly
+        # Cannot go from PENDING --- DONE directly
         with pytest.raises(InvalidTransition):
             ledger._transition(t, TaskStatus.DONE)
 
@@ -185,7 +185,7 @@ class TestLedgerStateMachine:
         assert updated.last_error == "out of scope"
 
 
-# ── get_next priority + dependency ordering ───────────────────────────────────
+# ------ get_next priority + dependency ordering ---------------------------------------------------------------------------------------------------------
 
 
 class TestGetNext:
@@ -237,7 +237,7 @@ class TestGetNext:
         assert nxt.id == child.id
 
 
-# ── Crash recovery ────────────────────────────────────────────────────────────
+# ------ Crash recovery ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestCrashRecovery:
@@ -280,7 +280,7 @@ class TestCrashRecovery:
         assert restored.retry_count == 1
 
 
-# ── Stats ─────────────────────────────────────────────────────────────────────
+# ------ Stats ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestStats:
@@ -297,7 +297,7 @@ class TestStats:
         assert stats.pending == 4
 
 
-# ── Progress log ──────────────────────────────────────────────────────────────
+# ------ Progress log ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestProgressLog:

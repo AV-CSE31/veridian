@@ -1,6 +1,6 @@
 """
 tests.integration.test_pause_resume
-────────────────────────────────────
+------------------------------------------------------------------------------------------------------------
 RV3-001 + RV3-002 end-to-end coverage.
 
 Proves that:
@@ -31,7 +31,7 @@ from veridian.ledger.ledger import TaskLedger
 from veridian.loop.runner import VeridianRunner
 from veridian.providers.mock_provider import MockProvider
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# ------ Fixtures ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 _SCHEMA_CONFIG = {"required_fields": ["summary"]}
@@ -72,7 +72,7 @@ def _make_task(title: str, **kwargs: Any) -> Task:
     return Task(**defaults)
 
 
-# ── Spy hook for event assertions ────────────────────────────────────────────
+# ------ Spy hook for event assertions ------------------------------------------------------------------------------------------------------------------------------------
 
 
 class _EventSpy(BaseHook):
@@ -95,7 +95,7 @@ class _EventSpy(BaseHook):
         self.events.append(("on_resume", event))
 
 
-# ── RV3-001 core tests ────────────────────────────────────────────────────────
+# ------ RV3-001 core tests ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestPauseOnControlFlowSignal:
@@ -165,7 +165,7 @@ class TestPauseAcrossRunnerRestart:
     def test_paused_task_survives_fresh_runner_and_ledger(
         self, tmp_path: Path, config: VeridianConfig
     ) -> None:
-        # Run 1: ledger A, runner A — task gets paused
+        # Run 1: ledger A, runner A --- task gets paused
         ledger_a = TaskLedger(path=config.ledger_file, progress_file=str(config.progress_file))
         task = _make_task("pause_me", metadata={"requires_human_review": True})
         ledger_a.add([task])

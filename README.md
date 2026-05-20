@@ -102,8 +102,39 @@ Output:
 If the provider omits a required field, uses an invalid enum, or returns output
 that cannot satisfy the verifier, the task becomes `FAILED`, not `DONE`.
 
-See [`examples/release_gate.py`](examples/release_gate.py) for a complete
-success-and-failure demonstration.
+## Decorator Example
+
+For application code that already has a Python function boundary, use
+`@verified` to attach the same verifier contract without creating a runner:
+
+```python
+from veridian import verified
+
+contract = {
+    "required": ["decision", "risk", "reason"],
+    "properties": {
+        "decision": {"type": "string", "enum": ["ship", "hold"]},
+        "risk": {"type": "string", "enum": ["low", "medium", "high"]},
+        "reason": {"type": "string", "minLength": 8},
+    },
+}
+
+
+@verified(verifier_id="schema", verifier_config={"schema": contract})
+def decide_release() -> dict[str, str]:
+    return {
+        "decision": "ship",
+        "risk": "low",
+        "reason": "tests, lint, and verification passed",
+    }
+
+
+result = decide_release()
+assert result.passed
+```
+
+See [`examples/decorator_release_gate.py`](examples/decorator_release_gate.py)
+for a complete success-and-failure demonstration.
 
 ## Runtime Model
 
@@ -145,8 +176,10 @@ from veridian import (
     VeridianConfig,
     VeridianError,
     VeridianRunner,
+    VerifiedCall,
     VerificationError,
     VerificationResult,
+    verified,
 )
 ```
 
@@ -163,7 +196,6 @@ The `0.3.0` core includes practical verifier building blocks:
 - `quote_match`: match quoted evidence, with PDF support behind the `pdf` extra
 - `composite`: require multiple verifier checks
 - `any_of`: pass when at least one verifier passes
-- `confidence`: require a numeric confidence threshold
 
 ## How It Fits
 

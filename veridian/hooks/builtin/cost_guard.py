@@ -1,7 +1,7 @@
 """
 veridian.hooks.builtin.cost_guard
-───────────────────────────────────
-CostGuardHook — halts the run when cumulative token cost exceeds max_cost_usd.
+---------------------------------------------------------------------------------------------------------
+CostGuardHook --- halts the run when cumulative token cost exceeds max_cost_usd.
 Priority 50.
 """
 

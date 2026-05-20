@@ -1,6 +1,6 @@
 """
 tests.integration.test_replay_compat_runner
-────────────────────────────────────────────
+------------------------------------------------------------------------------------------------------------------------------------
 RV3-003 end-to-end: runner persists replay snapshot on first run and fails
 closed on mismatch in strict mode.
 """
@@ -171,7 +171,7 @@ class TestLooseReplayAllowsDivergence:
         ).run()
         assert ledger.get(task.id).status == TaskStatus.DONE
 
-        # Reset to PENDING then rerun with a new model — loose mode permits it.
+        # Reset to PENDING then rerun with a new model --- loose mode permits it.
         done_task = ledger.get(task.id)
         done_task.status = TaskStatus.PENDING
         done_task.claimed_by = None

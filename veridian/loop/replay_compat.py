@@ -1,20 +1,20 @@
 """
 veridian.loop.replay_compat
-────────────────────────────
+------------------------------------------------------------------------------------
 RV3-003: Global replay compatibility envelope.
 
 General replay snapshot compatibility checks for resumed task execution.
 into a runner-level invariant applied to every task. When strict replay mode is
 enabled, a mismatch in model_id / prompt_hash / verifier_config between runs
-fails the task closed with a deterministic error string — no silent divergence.
+fails the task closed with a deterministic error string --- no silent divergence.
 
 Snapshot fields:
-- ``model_id``             — provider.model (identity of the LLM)
-- ``provider_version``     — optional provider SDK version tag
-- ``prompt_hash``          — SHA-256 of task identity + description
-- ``verifier_id``          — verifier class id
-- ``verifier_config_hash`` — SHA-256 of verifier_config dict (sorted keys)
-- ``tool_allowlist_hash``  — SHA-256 of any bash_allowlist metadata (for tool boundary)
+- ``model_id``             --- provider.model (identity of the LLM)
+- ``provider_version``     --- optional provider SDK version tag
+- ``prompt_hash``          --- SHA-256 of task identity + description
+- ``verifier_id``          --- verifier class id
+- ``verifier_config_hash`` --- SHA-256 of verifier_config dict (sorted keys)
+- ``tool_allowlist_hash``  --- SHA-256 of any bash_allowlist metadata (for tool boundary)
 
 Snapshots are stored in ``TaskResult.extras['run_replay_snapshot']`` and
 persisted via ``TaskLedger.checkpoint_result``.
@@ -82,7 +82,7 @@ def build_run_replay_snapshot(task: Task, provider: LLMProvider) -> ReplaySnapsh
     """Construct a deterministic ``ReplaySnapshot`` for the given task + provider.
 
     Every field is derived from data that is stable across runs for the same
-    inputs — no timestamps, no random IDs. Two runs with identical task data
+    inputs --- no timestamps, no random IDs. Two runs with identical task data
     and identical provider configuration MUST produce equal snapshots.
     """
     model_id = str(getattr(provider, "model", "") or type(provider).__name__)
@@ -126,8 +126,8 @@ def check_replay_compatibility(
     """Return a deterministic error string on mismatch in strict mode, else None.
 
     Returns None when:
-    - ``saved`` is None (first run — nothing to compare against)
-    - ``strict`` is False (loose mode — log but do not fail)
+    - ``saved`` is None (first run --- nothing to compare against)
+    - ``strict`` is False (loose mode --- log but do not fail)
     - all snapshot fields match the saved checkpoint
 
     Error strings start with ``replay_incompatible:`` and name the first field

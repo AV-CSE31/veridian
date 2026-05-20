@@ -1,9 +1,9 @@
 """
 veridian.core.config
-─────────────────────
-VeridianConfig — central configuration for the Veridian runner.
+---------------------------------------------------------------
+VeridianConfig --- central configuration for the Veridian runner.
 All fields have sensible defaults. Model is read from VERIDIAN_MODEL env var
-if not set explicitly (per CLAUDE.md §7 rule 15: never hardcode model names).
+if not set explicitly. The runtime must never hardcode model names.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ def _coerce_env_value(raw: str, hint: Any, env_key: str) -> Any:
 
     Handles ``int``, ``float``, ``bool``, ``str``, ``Path``, and the
     ``T | None`` shape used pervasively by :class:`VeridianConfig`.
-    Unsupported types fall back to passing the raw string through —
+    Unsupported types fall back to passing the raw string through ---
     the dataclass constructor will then raise its own TypeError, which
     is preferable to a silent miscoercion.
     """
@@ -70,7 +70,7 @@ def _coerce_env_value(raw: str, hint: Any, env_key: str) -> Any:
         return Path(stripped).expanduser()
     if target is str:
         return stripped
-    # Unknown / complex type — pass through. The dataclass will reject
+    # Unknown / complex type --- pass through. The dataclass will reject
     # mismatches at construction.
     return raw
 
@@ -103,17 +103,17 @@ class VeridianConfig:
     """
     Central configuration for VeridianRunner and supporting components.
 
-    All model-selection logic MUST read from this config — never hardcode
+    All model-selection logic MUST read from this config --- never hardcode
     model names anywhere else in the codebase.
     """
 
-    # ── LLM ───────────────────────────────────────────────────────────────────
+    # ------ LLM ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     model: str = field(default_factory=lambda: os.getenv("VERIDIAN_MODEL", _DEFAULT_MODEL))
     temperature: float = 0.2
     max_tokens: int = 4096
     provider_timeout: int = 120
 
-    # ── Runner ────────────────────────────────────────────────────────────────
+    # ------ Runner ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     max_turns_per_task: int = 10  # WorkerAgent loop limit
     max_retries: int = 3  # per-task retry budget
     dry_run: bool = False  # assemble context only, no LLM calls
@@ -126,7 +126,7 @@ class VeridianConfig:
     # changes between runs for the same task.
     strict_replay: bool = True
 
-    # ── Storage ───────────────────────────────────────────────────────────────
+    # ------ Storage ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # Defaults are anchored to default_data_dir() so containers can persist
     # state by setting ``VERIDIAN_DATA_DIR=/var/lib/veridian``. Bare paths
     # like ``ledger.json`` continue to resolve relative to that root.
@@ -137,14 +137,14 @@ class VeridianConfig:
     # blocking pod startup indefinitely.
     ledger_lock_timeout: float = 15.0
 
-    # ── Context ───────────────────────────────────────────────────────────────
+    # ------ Context ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     context_window_tokens: int = 8000  # token budget for context assembly
-    # ── Concurrency ───────────────────────────────────────────────────────────
-    # ── Cost guard ────────────────────────────────────────────────────────────
+    # ------ Concurrency ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # ------ Cost guard ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     max_cost_usd: float = 50.0
 
-    # ── Observability ─────────────────────────────────────────────────────────
-    # ── Phase filter ─────────────────────────────────────────────────────────
+    # ------ Observability ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # ------ Phase filter ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     phase: str | None = None  # restrict run to this phase
 
     @classmethod

@@ -7,16 +7,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_release_gate_example_demonstrates_verified_completion() -> None:
+def test_decorator_release_gate_example_demonstrates_verified_completion() -> None:
     result = subprocess.run(
-        [sys.executable, "examples/release_gate.py"],
+        [sys.executable, "examples/decorator_release_gate.py"],
         cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
     )
 
-    assert "'done_count': 1" in result.stdout
-    assert "'failed_count': 1" in result.stdout
-    assert "Release gate: good evidence: done" in result.stdout
-    assert "Release gate: missing evidence: failed" in result.stdout
+    assert "good passed=True" in result.stdout
+    assert "bad passed=False" in result.stdout
+    assert "required field 'reason' is missing or null" in result.stdout

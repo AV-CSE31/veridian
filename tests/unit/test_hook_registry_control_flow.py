@@ -1,6 +1,6 @@
 """
 tests.unit.test_hook_registry_control_flow
-───────────────────────────────────────────
+---------------------------------------------------------------------------------------------------------------------------------
 RV3-002: Control-flow hook channel hardening.
 
 HookRegistry.fire() must distinguish observability errors (caught & logged)
@@ -61,7 +61,7 @@ class TestControlFlowSignalPropagation:
 
         reg = HookRegistry()
         reg.register(BrokenHook())
-        # Must not raise — run continues
+        # Must not raise --- run continues
         reg.fire("before_task", TaskClaimed(run_id="r1"))
 
     def test_control_flow_signal_propagates(self) -> None:

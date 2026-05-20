@@ -1,6 +1,6 @@
 """
 veridian.context
-─────────────────
+---------------------------------------------------
 Token window management and worker context assembly.
 """
 

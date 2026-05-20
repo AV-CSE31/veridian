@@ -1,10 +1,10 @@
 """
 tests.unit.test_ledger_corruption_recovery
-──────────────────────────────────────────
+------------------------------------------------------------------------------------------------------------------------------
 Durability tests for ``TaskLedger`` under failure modes:
 
-- malformed JSON → ``LedgerCorrupted``
-- non-object root → ``LedgerCorrupted``
+- malformed JSON --- ``LedgerCorrupted``
+- non-object root --- ``LedgerCorrupted``
 - orphaned ``.tmp`` files left by a crashed writer don't break subsequent reads
 - ``reset_in_progress`` is idempotent (safe to call repeatedly after partial
   recovery)
@@ -67,7 +67,7 @@ class TestMalformedJsonDetection:
             ledger.list()
 
     def test_missing_file_is_treated_as_empty_not_corrupted(self, tmp_path: Path) -> None:
-        # Fresh ledger with no file on disk yet — list() must succeed empty,
+        # Fresh ledger with no file on disk yet --- list() must succeed empty,
         # not raise. This guarantees first-run UX.
         ledger = _mk_ledger(tmp_path)
         assert ledger.list() == []
@@ -111,7 +111,7 @@ class TestResetInProgressIdempotence:
         second = ledger.reset_in_progress()
 
         assert first == 1
-        # Second call is a no-op — task is already PENDING.
+        # Second call is a no-op --- task is already PENDING.
         assert second == 0
         assert ledger.get(t.id).status == TaskStatus.PENDING
         assert ledger.get(t.id).claimed_by is None

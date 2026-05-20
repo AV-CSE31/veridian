@@ -1,9 +1,9 @@
 """
 tests.unit.test_replay_compat
-──────────────────────────────
+------------------------------------------------------------------------------------------
 RV3-003: Global replay compatibility envelope.
 
-Unit tests for veridian.loop.replay_compat — validates the replay
+Unit tests for veridian.loop.replay_compat --- validates the replay
 snapshot into a runner-level invariant applied to every task. Snapshot hashes
 {model_id, provider_version, prompt_hash, verifier_id, verifier_config_hash,
 tool_allowlist_hash} so restarts fail closed when any of these change in
@@ -140,7 +140,7 @@ class TestCheckReplayCompatibility:
         assert check_replay_compatibility(task, current, saved=saved, strict=True) is None
 
     def test_error_message_fits_in_llm_context(self) -> None:
-        """Error strings are injected into agent prompts — must be < 300 chars."""
+        """Error strings are injected into agent prompts --- must be < 300 chars."""
         task = _make_task()
         current = build_run_replay_snapshot(task, _StubProvider(model="stub/v1"))
         saved = build_run_replay_snapshot(task, _StubProvider(model="stub/v999")).to_dict()
