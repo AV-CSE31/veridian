@@ -3,76 +3,37 @@ tests.unit.test_phase1a_security_guards
 ───────────────────────────────────────
 Acceptance tests for the Phase 1.A security hardening additions:
 
-* TrustedExecutor and BashExitCodeVerifier scrub the child-process env so
+* BashExitCodeVerifier scrubs the child-process env so
   parent secrets cannot leak into agent-issued shells.
 * LiteLLMProvider rejects URL-shaped model strings and enforces a provider
   prefix allowlist controllable via ``VERIDIAN_ALLOWED_MODELS``.
-* OTLP exporter rejects non-loopback plain-HTTP endpoints unless opted in.
 """
 
 from __future__ import annotations
 
 import os
+import shlex
+import subprocess
+import sys
 from collections.abc import Iterator
 from unittest.mock import patch
 
 import pytest
 
 from veridian.core.exceptions import ProviderError, VeridianConfigError
-from veridian.loop.trusted_executor import DEFAULT_ENV_ALLOWLIST, TrustedExecutor
-from veridian.observability.otlp_exporter import (
-    OTLPConfig,
-    _validate_otlp_endpoint,
-    configure_otlp_tracer,
-)
 from veridian.providers.litellm_provider import (
     LiteLLMProvider,
     _validate_model_string,
 )
 from veridian.verify.builtin.bash import BashExitCodeVerifier
 
-# ── TrustedExecutor env scrubbing ───────────────────────────────────────────
 
-
-class TestTrustedExecutorEnv:
-    def test_default_strips_unrelated_env_vars(self, tmp_path) -> None:
-        executor = TrustedExecutor(working_dir=str(tmp_path), timeout_seconds=5)
-        with patch.dict(
-            os.environ,
-            {"OPENAI_API_KEY": "sk-leaked", "AWS_SECRET_ACCESS_KEY": "leaked"},
-            clear=False,
-        ):
-            output = executor.run("env | grep -E '^(OPENAI|AWS)_' || true")
-        assert "sk-leaked" not in output.stdout
-        assert "AWS_SECRET" not in output.stdout
-
-    def test_path_passes_through(self, tmp_path) -> None:
-        executor = TrustedExecutor(working_dir=str(tmp_path), timeout_seconds=5)
-        output = executor.run("echo $PATH")
-        assert output.stdout.strip()  # PATH is in DEFAULT_ENV_ALLOWLIST
-
-    def test_inherit_env_opt_in_still_works(self, tmp_path) -> None:
-        executor = TrustedExecutor(working_dir=str(tmp_path), timeout_seconds=5, inherit_env=True)
-        with patch.dict(os.environ, {"VERIDIAN_TEST_LEAK": "yes-via-opt-in"}, clear=False):
-            output = executor.run("echo $VERIDIAN_TEST_LEAK")
-        assert "yes-via-opt-in" in output.stdout
-
-    def test_custom_allowlist_extends_defaults(self, tmp_path) -> None:
-        executor = TrustedExecutor(
-            working_dir=str(tmp_path),
-            timeout_seconds=5,
-            env_allowlist=(*DEFAULT_ENV_ALLOWLIST, "VERIDIAN_TEST_ALLOWED"),
-        )
-        with patch.dict(
-            os.environ,
-            {"VERIDIAN_TEST_ALLOWED": "exposed", "OPENAI_API_KEY": "sk-still-stripped"},
-            clear=False,
-        ):
-            output = executor.run("echo allowed=$VERIDIAN_TEST_ALLOWED openai=$OPENAI_API_KEY")
-        assert "allowed=exposed" in output.stdout
-        assert "openai=" in output.stdout
-        assert "sk-still-stripped" not in output.stdout
-
+def _python_cmd(code: str) -> str:
+    """Build a shell-safe Python command for the current platform."""
+    args = [sys.executable, "-c", code]
+    if os.name == "nt":
+        return subprocess.list2cmdline(args)
+    return " ".join(shlex.quote(arg) for arg in args)
 
 # ── BashExitCodeVerifier ────────────────────────────────────────────────────
 
@@ -91,7 +52,11 @@ class TestBashExitCodeVerifierGuards:
         from veridian.core.task import Task, TaskResult
 
         v = BashExitCodeVerifier(
-            command="env | grep -E '^(OPENAI|AWS)_' && exit 1 || exit 0",
+            command=_python_cmd(
+                "import os, sys; "
+                "sys.exit(1 if os.getenv('OPENAI_API_KEY') "
+                "or os.getenv('AWS_SECRET_ACCESS_KEY') else 0)"
+            ),
             timeout_seconds=5,
         )
         with patch.dict(
@@ -164,45 +129,3 @@ class TestModelAllowlist:
             )
 
 
-# ── OTLP endpoint validation ────────────────────────────────────────────────
-
-
-class TestOTLPEndpointGuard:
-    def test_https_endpoint_accepted(self) -> None:
-        _validate_otlp_endpoint("https://collector.example:4318/v1/traces", allow_http=False)
-
-    def test_http_loopback_accepted_without_opt_in(self) -> None:
-        _validate_otlp_endpoint("http://localhost:4318/v1/traces", allow_http=False)
-        _validate_otlp_endpoint("http://127.0.0.1:4318/v1/traces", allow_http=False)
-
-    def test_http_external_rejected_by_default(self) -> None:
-        with pytest.raises(ValueError, match="plain HTTP"):
-            _validate_otlp_endpoint("http://collector.example:4318/v1/traces", allow_http=False)
-
-    def test_http_external_accepted_with_opt_in(self) -> None:
-        # Should not raise — parameter opt-in.
-        _validate_otlp_endpoint("http://collector.example:4318/v1/traces", allow_http=True)
-
-    def test_http_external_accepted_with_env_opt_in(self) -> None:
-        with patch.dict(os.environ, {"VERIDIAN_OTLP_ALLOW_HTTP": "1"}):
-            _validate_otlp_endpoint("http://collector.example:4318/v1/traces", allow_http=False)
-
-    def test_non_http_scheme_rejected(self) -> None:
-        with pytest.raises(ValueError, match="http\\(s\\) URL"):
-            _validate_otlp_endpoint("file:///etc/passwd", allow_http=True)
-
-    def test_configure_otlp_tracer_default_allows_localhost(self, tmp_path) -> None:
-        tracer = configure_otlp_tracer(
-            config=OTLPConfig(),  # endpoint=http://localhost:4318/v1/traces
-            trace_file=tmp_path / "trace.jsonl",
-            use_otel=False,
-        )
-        assert tracer is not None
-
-    def test_configure_otlp_tracer_rejects_external_http(self, tmp_path) -> None:
-        with pytest.raises(ValueError, match="plain HTTP"):
-            configure_otlp_tracer(
-                config=OTLPConfig(endpoint="http://attacker.example:4318/v1/traces"),
-                trace_file=tmp_path / "trace.jsonl",
-                use_otel=False,
-            )

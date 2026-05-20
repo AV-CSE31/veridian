@@ -1,12 +1,11 @@
 """
 tests.unit.test_context
 ────────────────────────
-Unit tests for TokenWindow, ContextCompactor, and ContextManager.
+Unit tests for TokenWindow and ContextManager.
 """
 
 import pytest
 
-from veridian.context.compactor import ContextCompactor
 from veridian.context.manager import ContextManager
 from veridian.context.window import TokenWindow
 from veridian.core.task import Task
@@ -50,56 +49,6 @@ class TestTokenWindow:
     def test_zero_capacity_raises(self):
         with pytest.raises(ValueError):
             TokenWindow(capacity=0)
-
-
-# ── ContextCompactor ──────────────────────────────────────────────────────────
-
-
-class TestContextCompactor:
-    def test_needs_compaction_at_85_pct(self):
-        w = TokenWindow(capacity=1000)
-        c = ContextCompactor(w)
-        w.consume(850)
-        assert c.needs_compaction() is True
-
-    def test_no_compaction_below_85_pct(self):
-        w = TokenWindow(capacity=1000)
-        c = ContextCompactor(w)
-        w.consume(840)
-        assert c.needs_compaction() is False
-
-    def test_compact_preserves_system_and_tail(self):
-        w = TokenWindow(capacity=10000)
-        c = ContextCompactor(w)
-        messages = [
-            {"role": "system", "content": "you are an agent"},
-            {"role": "user", "content": "task block"},
-            {"role": "assistant", "content": "resp1"},
-            {"role": "user", "content": "msg2"},
-            {"role": "assistant", "content": "resp2"},
-            {"role": "user", "content": "msg3"},
-            {"role": "assistant", "content": "resp3"},
-            {"role": "user", "content": "msg4"},
-            {"role": "assistant", "content": "resp4"},
-        ]
-        compacted = c.compact(messages)
-        # System prompt must be preserved
-        assert any(m["role"] == "system" for m in compacted)
-        # Last exchanges must be preserved
-        assert compacted[-1]["content"] == "resp4"
-        # Middle messages should be dropped
-        assert len(compacted) < len(messages)
-
-    def test_compact_short_list_unchanged(self):
-        w = TokenWindow(capacity=10000)
-        c = ContextCompactor(w)
-        messages = [
-            {"role": "system", "content": "sys"},
-            {"role": "user", "content": "q"},
-            {"role": "assistant", "content": "a"},
-        ]
-        result = c.compact(messages)
-        assert len(result) == len(messages)
 
 
 # ── ContextManager ────────────────────────────────────────────────────────────

@@ -10,9 +10,6 @@ import pytest
 
 from veridian.core.task import (
     LedgerStats,
-    PRMBudget,
-    PRMRunResult,
-    PRMScore,
     Task,
     TaskPriority,
     TaskResult,
@@ -172,22 +169,6 @@ class TestTaskResult:
                     timestamp_ms=1000,
                 )
             ],
-            prm_result=PRMRunResult(
-                passed=True,
-                aggregate_score=0.9,
-                aggregate_confidence=0.8,
-                threshold=0.7,
-                scored_steps=[
-                    PRMScore(
-                        step_id="s1",
-                        score=0.9,
-                        confidence=0.8,
-                        model_id="prm-model",
-                        version="1",
-                    )
-                ],
-                policy_action="allow",
-            ),
             confidence={"composite": 0.88, "tier": "HIGH"},
             verifier_score=0.91,
             tool_calls=[{"name": "search_docs"}],
@@ -205,9 +186,6 @@ class TestTaskResult:
         assert restored.verified is True
         assert restored.token_usage["total_tokens"] == 1200
         assert restored.trace_steps[0].step_id == "s1"
-        assert restored.prm_result is not None
-        assert restored.prm_result.policy_action == "allow"
-        assert restored.prm_result.scored_steps[0].model_id == "prm-model"
         assert restored.confidence is not None
         assert restored.confidence["composite"] == pytest.approx(0.88)
         assert restored.verifier_score == pytest.approx(0.91)
@@ -227,13 +205,6 @@ class TestTaskResult:
         out = restored.to_dict()
         assert out["future_field"] == {"x": 1}
         assert out["new_metric"] == 42
-
-
-class TestPRMContracts:
-    def test_prm_budget_roundtrip(self):
-        b = PRMBudget(max_steps_per_call=10, max_tokens_per_call=500, max_latency_ms=1000)
-        assert PRMBudget.from_dict(b.to_dict()) == b
-
 
 # ── LedgerStats ───────────────────────────────────────────────────────────────
 

@@ -135,7 +135,7 @@ class TaskLedger:
 
         Filters are applied at the raw-dict level (cheap string comparison)
         *before* materialising :class:`Task` instances. On large ledgers the
-        scheduler frequently calls ``list(status=PENDING)`` and skipping
+        runner frequently calls ``list(status=PENDING)`` and skipping
         ``Task.from_dict`` for the DONE/FAILED majority is the bigger cost
         saving than caching the parsed JSON.
         """

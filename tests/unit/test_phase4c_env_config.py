@@ -35,10 +35,10 @@ def _env(monkeypatch: pytest.MonkeyPatch, **values: str) -> None:
 
 class TestFromEnvCoercion:
     def test_int_field(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _env(monkeypatch, VERIDIAN_MAX_PARALLEL="8")
+        _env(monkeypatch, VERIDIAN_MAX_TOKENS="8192")
         cfg = VeridianConfig.from_env()
-        assert cfg.max_parallel == 8
-        assert isinstance(cfg.max_parallel, int)
+        assert cfg.max_tokens == 8192
+        assert isinstance(cfg.max_tokens, int)
 
     def test_float_field(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _env(monkeypatch, VERIDIAN_MAX_COST_USD="25.5")
@@ -68,29 +68,17 @@ class TestFromEnvCoercion:
         cfg = VeridianConfig.from_env()
         assert cfg.ledger_file == target
 
-    def test_optional_str_field(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _env(monkeypatch, VERIDIAN_TRACE_FILE="/var/log/v.jsonl")
-        cfg = VeridianConfig.from_env()
-        assert cfg.trace_file == "/var/log/v.jsonl"
-
-    def test_optional_field_cleared_with_none_literal(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        _env(monkeypatch, VERIDIAN_TRACE_FILE="none")
-        cfg = VeridianConfig.from_env()
-        assert cfg.trace_file is None
-
     def test_invalid_int_raises_with_env_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _env(monkeypatch, VERIDIAN_MAX_PARALLEL="not-a-number")
-        with pytest.raises(VeridianConfigError, match="VERIDIAN_MAX_PARALLEL"):
+        _env(monkeypatch, VERIDIAN_MAX_TOKENS="not-a-number")
+        with pytest.raises(VeridianConfigError, match="VERIDIAN_MAX_TOKENS"):
             VeridianConfig.from_env()
 
 
 class TestFromEnvPrecedence:
     def test_explicit_kwargs_win_over_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _env(monkeypatch, VERIDIAN_MAX_PARALLEL="4")
-        cfg = VeridianConfig.from_env(max_parallel=12)
-        assert cfg.max_parallel == 12
+        _env(monkeypatch, VERIDIAN_MAX_TOKENS="4096")
+        cfg = VeridianConfig.from_env(max_tokens=12000)
+        assert cfg.max_tokens == 12000
 
     def test_env_wins_over_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _env(monkeypatch, VERIDIAN_MAX_TURNS_PER_TASK="42")
@@ -101,24 +89,24 @@ class TestFromEnvPrecedence:
         _env(monkeypatch)  # clear all VERIDIAN_*
         cfg = VeridianConfig.from_env()
         # Sanity: defaults intact (compare against the field's documented default).
-        assert cfg.max_parallel == 1
+        assert cfg.max_tokens == 4096
         assert cfg.dry_run is False
 
     def test_custom_prefix_supported(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _env(monkeypatch)
-        monkeypatch.setenv("MYAPP_MAX_PARALLEL", "16")
+        monkeypatch.setenv("MYAPP_MAX_TOKENS", "16000")
         cfg = VeridianConfig.from_env(prefix="MYAPP_")
-        assert cfg.max_parallel == 16
+        assert cfg.max_tokens == 16000
 
     def test_explicit_env_dict_overrides_os_environ(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _env(monkeypatch, VERIDIAN_MAX_PARALLEL="2")
-        cfg = VeridianConfig.from_env(env={"VERIDIAN_MAX_PARALLEL": "9"})
-        assert cfg.max_parallel == 9
+        _env(monkeypatch, VERIDIAN_MAX_TOKENS="2000")
+        cfg = VeridianConfig.from_env(env={"VERIDIAN_MAX_TOKENS": "9000"})
+        assert cfg.max_tokens == 9000
 
 
 class TestFromEnvValidationStillApplies:
     def test_invalid_value_caught_by_post_init(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _env(monkeypatch, VERIDIAN_MAX_PARALLEL="-1")
+        _env(monkeypatch, VERIDIAN_MAX_TOKENS="-1")
         # __post_init__ bounds checks from Phase 3.C still run.
-        with pytest.raises(VeridianConfigError, match="max_parallel"):
+        with pytest.raises(VeridianConfigError, match="max_tokens"):
             VeridianConfig.from_env()

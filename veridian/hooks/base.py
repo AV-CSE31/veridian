@@ -20,7 +20,6 @@ class BaseHook:
 
     Priority convention (ClassVar[int]):
       logging_hook = 0   (runs first — always sees the unmodified state)
-      identity_guard = 5
       all others = 50
     """
 

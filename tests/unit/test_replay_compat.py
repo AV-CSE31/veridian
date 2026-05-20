@@ -3,7 +3,7 @@ tests.unit.test_replay_compat
 ──────────────────────────────
 RV3-003: Global replay compatibility envelope.
 
-Unit tests for veridian.loop.replay_compat — generalizes the PRM-only replay
+Unit tests for veridian.loop.replay_compat — validates the replay
 snapshot into a runner-level invariant applied to every task. Snapshot hashes
 {model_id, provider_version, prompt_hash, verifier_id, verifier_config_hash,
 tool_allowlist_hash} so restarts fail closed when any of these change in

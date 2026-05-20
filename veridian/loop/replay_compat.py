@@ -3,7 +3,7 @@ veridian.loop.replay_compat
 ────────────────────────────
 RV3-003: Global replay compatibility envelope.
 
-Generalizes the PRM-only replay snapshot (previously in runner._build_prm_replay_snapshot)
+General replay snapshot compatibility checks for resumed task execution.
 into a runner-level invariant applied to every task. When strict replay mode is
 enabled, a mismatch in model_id / prompt_hash / verifier_config between runs
 fails the task closed with a deterministic error string — no silent divergence.

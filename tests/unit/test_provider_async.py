@@ -4,10 +4,7 @@ tests.unit.test_provider_async
 Async coverage for ``LLMProvider.complete_async`` on both the abstract base
 contract (via :class:`MockProvider`) and the LiteLLM adapter.
 
-These exercise the async surface that the parallel runner and any
-adapter-based concurrency code depends on. Until this file existed, the
-async path on every provider was lit only by indirect coverage via
-``ParallelRunner.run_async``.
+These exercise the async surface that adapter-based concurrency code can use.
 
 ``pyproject.toml`` already sets ``asyncio_mode = "auto"``, so plain
 ``async def test_*`` is sufficient.

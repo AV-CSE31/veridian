@@ -1,6 +1,5 @@
 """Package export hygiene tests for public subpackages."""
 
-from veridian.agents.prompts import PROMPTS_DIR, WORKER_PROMPT_FILE
 from veridian.ledger import SCHEMA_VERSION, TaskLedger
 from veridian.providers import (
     LiteLLMProvider,
@@ -11,22 +10,11 @@ from veridian.providers import (
 )
 from veridian.verify import (
     BaseVerifier,
-    IntegrityResult,
-    PipelineConfig,
-    PRMVerifier,
-    VerificationPipeline,
     VerificationResult,
-    VerifierIntegrityChecker,
     VerifierRegistry,
     registry,
     verifier_registry,
 )
-
-
-def test_prompts_package_exports_prompt_paths() -> None:
-    assert PROMPTS_DIR.is_dir()
-    assert WORKER_PROMPT_FILE.exists()
-    assert WORKER_PROMPT_FILE.name == "worker.md"
 
 
 def test_ledger_package_exports_public_surface() -> None:
@@ -43,13 +31,8 @@ def test_providers_package_exports_builtin_types() -> None:
     assert MockProvider.__name__ == "MockProvider"
 
 
-def test_verify_package_exports_registry_and_pipeline() -> None:
+def test_verify_package_exports_registry_primitives() -> None:
     assert BaseVerifier.__name__ == "BaseVerifier"
-    assert PRMVerifier.__name__ == "PRMVerifier"
     assert VerificationResult.__name__ == "VerificationResult"
     assert VerifierRegistry.__name__ == "VerifierRegistry"
     assert verifier_registry is registry
-    assert IntegrityResult.__name__ == "IntegrityResult"
-    assert VerifierIntegrityChecker.__name__ == "VerifierIntegrityChecker"
-    assert PipelineConfig.__name__ == "PipelineConfig"
-    assert VerificationPipeline.__name__ == "VerificationPipeline"

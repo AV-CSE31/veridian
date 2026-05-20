@@ -6,9 +6,6 @@ CompositeVerifier — AND chain: run all verifiers in order, stop on first failu
 Errors are prefixed with "[Step N/total] verifier_id: ..." to pinpoint
 which step failed and give the agent a clear fix target.
 
-RULE: LLMJudgeVerifier may NOT be the only verifier in a composite chain.
-      LLM judgment is probabilistic; it must be gated by at least one deterministic check.
-
 Usage:
     verifier_id="composite"
     verifier_config={
@@ -72,7 +69,7 @@ class CompositeVerifier(BaseVerifier):
                        Must be non-empty.
 
         Raises:
-            VeridianConfigError: If list is empty or contains only LLMJudgeVerifier.
+            VeridianConfigError: If list is empty or contains invalid verifier entries.
         """
         if not verifiers:
             raise VeridianConfigError(
@@ -80,13 +77,6 @@ class CompositeVerifier(BaseVerifier):
                 "Provide at least one sub-verifier."
             )
         self.verifiers: list[BaseVerifier] = _resolve_verifiers(verifiers)
-
-        # Guard: LLMJudgeVerifier cannot be the only verifier
-        if len(self.verifiers) == 1 and self.verifiers[0].id == "llm_judge":
-            raise VeridianConfigError(
-                "LLMJudgeVerifier cannot run standalone. "
-                "Wrap it with at least one deterministic verifier in CompositeVerifier."
-            )
 
     def verify(self, task: Task, result: TaskResult) -> VerificationResult:
         """Run sub-verifiers in order. Return on first failure."""

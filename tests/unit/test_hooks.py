@@ -294,39 +294,25 @@ class TestRateLimitHook:
 # ── SlackNotifyHook ───────────────────────────────────────────────────────────
 
 
-class TestSlackNotifyHook:
-    def test_no_op_when_no_webhook(self):
-        from veridian.hooks.builtin.slack import SlackNotifyHook
+class TestBuiltinHookBoundary:
+    def test_removed_hook_modules_stay_removed(self):
+        import importlib.util
 
-        hook = SlackNotifyHook(webhook_url=None)
-        hook.before_run(RunStarted(run_id="r1"))  # must not raise
-
-    def test_after_run_no_op_when_no_webhook(self):
-        from veridian.hooks.builtin.slack import SlackNotifyHook
-
-        hook = SlackNotifyHook(webhook_url=None)
-        hook.after_run(RunStarted(run_id="r1"))
-
-    def test_priority_is_50(self):
-        from veridian.hooks.builtin.slack import SlackNotifyHook
-
-        assert SlackNotifyHook.priority == 50
+        removed = [
+            "veridian.hooks.builtin.adaptive_safety",
+            "veridian.hooks.builtin.anomaly_detector",
+            "veridian.hooks.builtin.behavioral_fingerprint",
+            "veridian.hooks.builtin.boundary_fluidity",
+            "veridian.hooks.builtin.cross_run_consistency",
+            "veridian.hooks.builtin.drift_detector",
+            "veridian.hooks.builtin.evolution_monitor",
+            "veridian.hooks.builtin.identity_guard",
+            "veridian.hooks.builtin.slack",
+        ]
+        assert all(importlib.util.find_spec(name) is None for name in removed)
 
 
 # ── Exception coverage ─────────────────────────────────────────────────────────
-
-
-class TestDriftDetectedException:
-    def test_drift_detected_stores_attributes(self):
-        """DriftDetected should store metric, magnitude, and direction."""
-        from veridian.core.exceptions import DriftDetected
-
-        exc = DriftDetected(metric="latency", magnitude=0.25, direction="up")
-        assert exc.metric == "latency"
-        assert exc.magnitude == 0.25
-        assert exc.direction == "up"
-        assert "latency" in str(exc)
-        assert "up" in str(exc)
 
 
 class TestVeridianEventToDict:

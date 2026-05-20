@@ -1,19 +1,17 @@
-"""
+﻿"""
 tests.unit.test_verifiers
-─────────────────────────
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Phase 2 tests: 8 built-in verifiers.
 
-Pattern per verifier (CLAUDE.md §4.2):
+Pattern per verifier (CLAUDE.md Â§4.2):
   1. test_passes_when_<happy_path>
   2. test_fails_when_<failure_case>
-  3. test_error_message_is_actionable  (error names what failed, ≤ 300 chars)
+  3. test_error_message_is_actionable  (error names what failed, â‰¤ 300 chars)
   4. test_config_validation_rejects_<bad_config>
 """
 
 from __future__ import annotations
 
-import importlib.util
-import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -24,7 +22,7 @@ from veridian.core.exceptions import VeridianConfigError
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import BaseVerifier, VerificationResult
 
-# ─── helpers ──────────────────────────────────────────────────────────────────
+# â”€â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def make_task(**kwargs: Any) -> Task:
@@ -41,9 +39,9 @@ def make_result(
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # BashExitCodeVerifier
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 class TestBashExitCodeVerifier:
@@ -70,7 +68,7 @@ class TestBashExitCodeVerifier:
         assert result.passed is False
 
     def test_error_message_is_actionable(self, fail_verifier: Any) -> None:
-        """Error must mention exit code and be ≤ 300 chars."""
+        """Error must mention exit code and be â‰¤ 300 chars."""
         result = fail_verifier.verify(make_task(), make_result())
         assert result.error is not None
         assert "exit" in result.error.lower() or "exited" in result.error.lower()
@@ -126,9 +124,9 @@ class TestBashExitCodeVerifier:
         assert result.error is not None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # QuoteMatchVerifier
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 class TestQuoteMatchVerifier:
@@ -159,7 +157,7 @@ class TestQuoteMatchVerifier:
         assert result.passed is False
 
     def test_error_message_is_actionable(self, tmp_path: Path) -> None:
-        """Error must name the quote and be ≤ 300 chars."""
+        """Error must name the quote and be â‰¤ 300 chars."""
         from veridian.verify.builtin.quote import QuoteMatchVerifier
 
         src = tmp_path / "doc.txt"
@@ -210,9 +208,9 @@ class TestQuoteMatchVerifier:
             QuoteMatchVerifier(source_file=str(src), min_quote_length=0)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # SchemaVerifier
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 class TestSchemaVerifier:
@@ -239,7 +237,7 @@ class TestSchemaVerifier:
         assert result.passed is False
 
     def test_error_message_names_missing_field(self) -> None:
-        """Error must include the name of the missing field and be ≤ 300 chars."""
+        """Error must include the name of the missing field and be â‰¤ 300 chars."""
         from veridian.verify.builtin.schema import SchemaVerifier
 
         v = SchemaVerifier(required_fields=["risk_level"])
@@ -274,9 +272,9 @@ class TestSchemaVerifier:
             SchemaVerifier()
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # HttpStatusVerifier
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 class TestHttpStatusVerifier:
@@ -303,7 +301,7 @@ class TestHttpStatusVerifier:
         assert result.passed is False
 
     def test_error_message_is_actionable(self) -> None:
-        """Error must name the URL and status codes, be ≤ 300 chars."""
+        """Error must name the URL and status codes, be â‰¤ 300 chars."""
         from veridian.verify.builtin.http import HttpStatusVerifier
 
         v = HttpStatusVerifier(url="https://example.com/api", expected_statuses=[200])
@@ -335,9 +333,9 @@ class TestHttpStatusVerifier:
             HttpStatusVerifier(url="")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # FileExistsVerifier
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 class TestFileExistsVerifier:
@@ -360,7 +358,7 @@ class TestFileExistsVerifier:
         assert result.passed is False
 
     def test_error_message_names_missing_file(self) -> None:
-        """Error must name the missing file path and be ≤ 300 chars."""
+        """Error must name the missing file path and be â‰¤ 300 chars."""
         from veridian.verify.builtin.file_exists import FileExistsVerifier
 
         missing = "/tmp/missing_veridian_test_file.txt"
@@ -398,9 +396,9 @@ class TestFileExistsVerifier:
             FileExistsVerifier(files=[])
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # CompositeVerifier
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 class _AlwaysPass(BaseVerifier):
@@ -437,7 +435,7 @@ class TestCompositeVerifier:
         assert result.passed is False
 
     def test_error_message_has_step_prefix(self) -> None:
-        """Error must be prefixed with '[Step N/total]' and be ≤ 300 chars."""
+        """Error must be prefixed with '[Step N/total]' and be â‰¤ 300 chars."""
         from veridian.verify.builtin.composite import CompositeVerifier
 
         v = CompositeVerifier(verifiers=[_AlwaysPass(), _AlwaysFail()])
@@ -445,14 +443,6 @@ class TestCompositeVerifier:
         assert result.error is not None
         assert "[Step" in result.error
         assert len(result.error) <= 300
-
-    def test_config_validation_rejects_standalone_llm_judge(self) -> None:
-        """CompositeVerifier with only LLMJudgeVerifier must raise VeridianConfigError."""
-        from veridian.verify.builtin.composite import CompositeVerifier
-        from veridian.verify.builtin.llm_judge import LLMJudgeVerifier
-
-        with pytest.raises(VeridianConfigError, match="standalone"):
-            CompositeVerifier(verifiers=[LLMJudgeVerifier(rubric="Is it good?")])
 
     def test_config_validation_rejects_empty_verifiers(self) -> None:
         """Empty verifiers list should raise VeridianConfigError."""
@@ -488,9 +478,9 @@ class TestCompositeVerifier:
             CompositeVerifier(verifiers=["not_a_verifier"])
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # AnyOfVerifier
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 class TestAnyOfVerifier:
@@ -511,7 +501,7 @@ class TestAnyOfVerifier:
         assert result.passed is False
 
     def test_error_message_includes_all_failures(self) -> None:
-        """Error must aggregate sub-verifier errors and be ≤ 300 chars."""
+        """Error must aggregate sub-verifier errors and be â‰¤ 300 chars."""
         from veridian.verify.builtin.any_of import AnyOfVerifier
 
         v = AnyOfVerifier(verifiers=[_AlwaysFail(), _AlwaysFail()])
@@ -537,78 +527,3 @@ class TestAnyOfVerifier:
         assert result.passed is True
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# LLMJudgeVerifier
-# ══════════════════════════════════════════════════════════════════════════════
-
-_SCORE_HIGH = json.dumps({"score": 0.9, "reasoning": "Excellent output."})
-_SCORE_LOW = json.dumps({"score": 0.4, "reasoning": "Output lacks detail."})
-
-
-def _mock_litellm_response(content: str) -> MagicMock:
-    resp = MagicMock()
-    resp.choices = [MagicMock()]
-    resp.choices[0].message.content = content
-    return resp
-
-
-@pytest.mark.skipif(
-    not importlib.util.find_spec("litellm"),
-    reason="litellm not installed",
-)
-class TestLLMJudgeVerifier:
-    def test_passes_when_score_above_threshold(self) -> None:
-        """Should pass when LLM returns score ≥ min_score."""
-        from veridian.verify.builtin.llm_judge import LLMJudgeVerifier
-
-        v = LLMJudgeVerifier(rubric="Is the output well-structured?", min_score=0.7)
-        with patch("litellm.completion", return_value=_mock_litellm_response(_SCORE_HIGH)):
-            result = v.verify(make_task(), make_result(structured={"summary": "done"}))
-        assert result.passed is True
-        assert result.score is not None
-        assert result.score >= 0.7
-
-    def test_fails_when_score_below_threshold(self) -> None:
-        """Should fail when LLM returns score < min_score."""
-        from veridian.verify.builtin.llm_judge import LLMJudgeVerifier
-
-        v = LLMJudgeVerifier(rubric="Is the output well-structured?", min_score=0.7)
-        with patch("litellm.completion", return_value=_mock_litellm_response(_SCORE_LOW)):
-            result = v.verify(make_task(), make_result(structured={"summary": "done"}))
-        assert result.passed is False
-
-    def test_error_message_includes_score_and_threshold(self) -> None:
-        """Error must name the score, threshold, and be ≤ 300 chars."""
-        from veridian.verify.builtin.llm_judge import LLMJudgeVerifier
-
-        v = LLMJudgeVerifier(rubric="Check quality.", min_score=0.7)
-        with patch("litellm.completion", return_value=_mock_litellm_response(_SCORE_LOW)):
-            result = v.verify(make_task(), make_result())
-        assert result.error is not None
-        assert "0.4" in result.error or "0.7" in result.error
-        assert len(result.error) <= 300
-
-    def test_config_validation_rejects_threshold_above_one(self) -> None:
-        """min_score > 1.0 should raise VeridianConfigError."""
-        from veridian.verify.builtin.llm_judge import LLMJudgeVerifier
-
-        with pytest.raises(VeridianConfigError, match="min_score"):
-            LLMJudgeVerifier(rubric="test", min_score=1.5)
-
-    def test_config_validation_rejects_empty_rubric(self) -> None:
-        """Empty rubric should raise VeridianConfigError."""
-        from veridian.verify.builtin.llm_judge import LLMJudgeVerifier
-
-        with pytest.raises(VeridianConfigError, match="rubric"):
-            LLMJudgeVerifier(rubric="")
-
-    def test_handles_malformed_llm_response_gracefully(self) -> None:
-        """Should fail gracefully when LLM returns non-JSON."""
-        from veridian.verify.builtin.llm_judge import LLMJudgeVerifier
-
-        v = LLMJudgeVerifier(rubric="Check quality.", min_score=0.5)
-        with patch("litellm.completion", return_value=_mock_litellm_response("not json at all")):
-            result = v.verify(make_task(), make_result())
-        # Should return a result (not raise), with passed=False due to parse failure
-        assert isinstance(result, VerificationResult)
-        assert result.passed is False
