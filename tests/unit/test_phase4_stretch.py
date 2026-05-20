@@ -1,6 +1,6 @@
 """
 tests.unit.test_phase4_stretch
-──────────────────────────────
+------------------------------------------------------------------------------------------
 Acceptance tests for Phase 4 stretch items:
 
 * ``HttpStatusVerifier`` refuses URLs targeting loopback / private /
@@ -18,7 +18,7 @@ import pytest
 from veridian.core.exceptions import VeridianConfigError
 from veridian.verify.builtin.http import HttpStatusVerifier
 
-# ── HttpStatusVerifier SSRF guard ───────────────────────────────────────────
+# ------ HttpStatusVerifier SSRF guard ---------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestHttpVerifierSSRFGuard:
@@ -59,5 +59,3 @@ class TestHttpVerifierSSRFGuard:
         # services for the guard to be meaningful.
         v = HttpStatusVerifier(url="https://example.internal.corp/api")
         assert v.url == "https://example.internal.corp/api"
-
-

@@ -1,12 +1,12 @@
 """
 veridian.loop.runner
-─────────────────────
-VeridianRunner — the main synchronous task execution loop.
+---------------------------------------------------------------
+VeridianRunner --- the main synchronous task execution loop.
 
-Runner sequence (FROZEN — do NOT reorder per CLAUDE.md §6):
-  1. reset_in_progress()        — crash recovery, ALWAYS first
+Runner sequence (FROZEN - do NOT reorder):
+  1. reset_in_progress()        --- crash recovery, ALWAYS first
   2. fire RunStarted hook
-  3. Loop: get_next() → claim → worker → verify → mark_done/failed
+  3. Loop: get_next() --- claim --- worker --- verify --- mark_done/failed
   4. fire RunCompleted / RunAborted hook
   5. Return RunSummary
 
@@ -14,7 +14,7 @@ SIGINT contract:
   - Set _shutdown flag
   - Finish current task
   - Write RunSummary
-  - Exit cleanly — never sys.exit() mid-task
+  - Exit cleanly --- never sys.exit() mid-task
 
 dry_run=True:
   - Assemble context, log what would run, return RunSummary(dry_run=True)
@@ -118,12 +118,7 @@ class VeridianRunner:
         self.provider = provider
         self.config = config or VeridianConfig()
         self.hooks = hooks or HookRegistry()
-        # Resolve the verifier registry up-front so the built-ins are loaded
-        # before the first task. The lazy path (resolve-on-first-verify)
-        # otherwise pushes import + registration cost into the hot loop and
-        # makes the first task latency non-deterministic.
         if verifier_registry is None:
-            import veridian.verify.builtin  # noqa: F401, PLC0415  — trigger self-registration
             from veridian.verify.base import registry as _builtin_registry  # noqa: PLC0415
 
             self._verifier_registry = _builtin_registry
@@ -142,7 +137,7 @@ class VeridianRunner:
         """
         Execute all pending tasks in the ledger.
 
-        RUNNER SEQUENCE (frozen — see CLAUDE.md §6):
+        RUNNER SEQUENCE (frozen):
           1. reset_in_progress()
           2. fire RunStarted
           3. Task loop
@@ -158,7 +153,7 @@ class VeridianRunner:
             dry_run=self.config.dry_run,
             phase=phase,
         )
-        # ── Step 1: Crash recovery — ALWAYS FIRST ────────────────────────────
+        # ------ Step 1: Crash recovery --- ALWAYS FIRST ------------------------------------------------------------------------------------
         self.ledger.reset_in_progress()
 
         # Count total schedulable tasks. RV3-001: when resume_paused_on_start
@@ -180,7 +175,7 @@ class VeridianRunner:
             summary.duration_seconds = time.monotonic() - start_time
             return summary
 
-        # ── Step 2: RunStarted hook ───────────────────────────────────────────
+        # ------ Step 2: RunStarted hook ---------------------------------------------------------------------------------------------------------------------------------
         self.hooks.fire(
             "before_run",
             RunStarted(run_id=run_id, total_tasks=summary.total_tasks, phase=phase),
@@ -192,10 +187,10 @@ class VeridianRunner:
         previous_sigint = self._setup_signal_handler()
 
         try:
-            # ── Step 3: Task loop ─────────────────────────────────────────────
+            # ------ Step 3: Task loop ---------------------------------------------------------------------------------------------------------------------------------------
             self._task_loop(run_id, phase, summary)
 
-            # ── Step 4: RunCompleted hook ─────────────────────────────────────
+            # ------ Step 4: RunCompleted hook ---------------------------------------------------------------------------------------------------------------
             summary.duration_seconds = time.monotonic() - start_time
             self.hooks.fire(
                 "after_run",
@@ -224,8 +219,8 @@ class VeridianRunner:
         RV3-001: When ``config.resume_paused_on_start`` is True, PAUSED tasks are
         surfaced before new PENDING work and resumed via ``ledger.resume()``.
         Tasks paused during the current run are recorded so they are not
-        re-resumed this run (preventing a pause→resume→pause infinite loop when
-        the pausing hook is still in effect — the operator must remove the
+        re-resumed this run (preventing a pause---resume---pause infinite loop when
+        the pausing hook is still in effect --- the operator must remove the
         pause condition before the next run).
         """
         include_paused = bool(getattr(self.config, "resume_paused_on_start", True))
@@ -235,7 +230,7 @@ class VeridianRunner:
             if task is None:
                 break
 
-            # Skip tasks we already paused in this run — operator intervention
+            # Skip tasks we already paused in this run --- operator intervention
             # is required before the same pause condition can resolve.
             if task.id in paused_this_run:
                 # First try another PAUSED task we haven't attempted in this run.
@@ -311,7 +306,7 @@ class VeridianRunner:
         ControlFlowSignal. We must:
           1. Call ledger.pause() with the signal's reason + payload.
           2. Fire the TaskPaused event so hooks see it.
-          3. NOT increment done_count or failed_count — paused is a neutral
+          3. NOT increment done_count or failed_count --- paused is a neutral
              outcome that resumes next run.
         """
         reason = ""
@@ -417,7 +412,9 @@ class VeridianRunner:
                 step_id=f"verify_{len(result.trace_steps) + 1}",
                 role="verifier",
                 action_type="verify",
-                content="passed" if verification_passed else f"failed: {error_msg or 'verification failed'}",
+                content="passed"
+                if verification_passed
+                else f"failed: {error_msg or 'verification failed'}",
                 timestamp_ms=int(time.time() * 1000),
                 latency_ms=int(verify_meta.get("verification_ms", 0) or 0),
                 metadata={"verifier_id": task.verifier_id},
@@ -440,15 +437,12 @@ class VeridianRunner:
                 summary.abandoned_count += 1
             else:
                 summary.failed_count += 1
-    def _verify(self, task: Task, result: TaskResult) -> tuple[bool, str, dict[str, Any]]:
-        """Run verifier and return (passed, error_message, verify_meta).
 
-        """
+    def _verify(self, task: Task, result: TaskResult) -> tuple[bool, str, dict[str, Any]]:
+        """Run verifier and return (passed, error_message, verify_meta)."""
         verify_start = time.perf_counter()
         if not self._verifier_registry:
-            # Use the global registry with all built-in verifiers loaded
             try:
-                import veridian.verify.builtin  # noqa: F401,PLC0415 — triggers registration
                 from veridian.verify.base import registry  # noqa: PLC0415
 
                 self._verifier_registry = registry
@@ -537,13 +531,13 @@ class VeridianRunner:
         """
 
         def _handler(signum: int, frame: object) -> None:
-            log.warning("runner.sigint_received — will stop after current task")
+            log.warning("runner.sigint_received --- will stop after current task")
             self._shutdown = True
 
         try:
             return signal.signal(signal.SIGINT, _handler)
         except (OSError, ValueError):
-            # signal.signal fails in non-main threads — return sentinel
+            # signal.signal fails in non-main threads --- return sentinel
             return None
 
     def _restore_signal_handler(self, previous: object) -> None:
@@ -557,4 +551,3 @@ class VeridianRunner:
             return
         with contextlib.suppress(OSError, ValueError, TypeError):
             signal.signal(signal.SIGINT, previous)  # type: ignore[arg-type]
-

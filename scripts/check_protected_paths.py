@@ -12,6 +12,7 @@ PROTECTED_PREFIXES = (
     "planning/",
     "research/",
     "docs/",
+    "guides/",
     ".claude/",
 )
 

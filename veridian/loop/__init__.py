@@ -1,6 +1,6 @@
 """
 veridian.loop
-──────────────
+------------------------------------------
 Task execution loop for verified task execution.
 """
 

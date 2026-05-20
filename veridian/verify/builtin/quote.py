@@ -1,7 +1,7 @@
 """
 veridian.verify.builtin.quote
-─────────────────────────────
-QuoteMatchVerifier — verify that a quoted excerpt from result.structured
+---------------------------------------------------------------------------------------
+QuoteMatchVerifier --- verify that a quoted excerpt from result.structured
 actually appears verbatim (modulo whitespace normalisation) in a source document.
 
 Supported formats: .txt, .md, .pdf (pypdf), .docx (python-docx).
@@ -77,7 +77,7 @@ class QuoteMatchVerifier(BaseVerifier):
     """
     Verify that result.structured[quote_field] appears verbatim in source_file.
 
-    Whitespace is normalised for matching (multiple spaces → single space).
+    Whitespace is normalised for matching (multiple spaces --- single space).
     Supports PDF, DOCX, TXT, MD.
     """
 
@@ -98,13 +98,13 @@ class QuoteMatchVerifier(BaseVerifier):
         Args:
             source_file: Path to the source document. Required.
             quote_field: Key in result.structured containing the quote. Default "quote".
-            min_quote_length: Minimum accepted quote length in characters. Must be ≥ 1.
+            min_quote_length: Minimum accepted quote length in characters. Must be --- 1.
         """
         if not source_file or not source_file.strip():
             raise VeridianConfigError("QuoteMatchVerifier: 'source_file' must not be empty.")
         if min_quote_length < 1:
             raise VeridianConfigError(
-                f"QuoteMatchVerifier: 'min_quote_length' must be ≥ 1, got {min_quote_length}."
+                f"QuoteMatchVerifier: 'min_quote_length' must be --- 1, got {min_quote_length}."
             )
         self.source_file = source_file
         self.quote_field = quote_field

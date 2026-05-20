@@ -1,22 +1,8 @@
-"""
-veridian.verify.base
-â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-BaseVerifier ABC and VerificationResult.
-
-RULES FOR ALL VERIFIERS:
-1. Keep verifier behavior deterministic for the same task/result/config input.
-2. Must be stateless â€” all config via __init__ or verify() params.
-3. Must complete in < verification_timeout_seconds.
-4. Must be idempotent â€” safe to call multiple times with same args.
-5. Error messages must be:
-   - SPECIFIC: say exactly what failed, not "verification failed"
-   - ACTIONABLE: tell the agent what to fix and how
-   - CONCISE: < 300 chars â€” this goes directly into the LLM context window
-"""
+"""Base verifier protocol, result type, and registry."""
 
 from __future__ import annotations
 
-import importlib.metadata
+import importlib
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -31,41 +17,23 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class VerificationResult:
-    """
-    Returned by every verifier.
-    If passed=False, error is injected verbatim into the next agent prompt.
-    """
+    """Returned by every verifier."""
 
     passed: bool
-    error: str | None = None  # injected into LLM context on failure
+    error: str | None = None
     evidence: dict[str, Any] = field(default_factory=dict)
-    score: float | None = None  # 0.0-1.0 numeric verifier score
-
-    # Gap 3 fix: probabilistic verification support
-    # Confidence interval for constraint satisfaction probability
-    confidence_lower: float | None = None  # lower bound of CI
-    confidence_upper: float | None = None  # upper bound of CI
-    confidence_level: float | None = None  # e.g., 0.95 for 95% CI
-
-    # Execution metadata for Gap 6 (performance transparency)
-    verification_ms: float | None = None  # wall-clock time for this verification
+    score: float | None = None
+    confidence_lower: float | None = None
+    confidence_upper: float | None = None
+    confidence_level: float | None = None
+    verification_ms: float | None = None
 
 
 class BaseVerifier(ABC):
-    """
-    Abstract base for all verifiers.
-    Subclasses must define class-level `id` and `description`.
-    """
+    """Abstract base for deterministic verifiers."""
 
     id: ClassVar[str]
     description: ClassVar[str] = ""
-
-    # Opt-in: when True, ``VerifierRegistry.get()`` may return a single shared
-    # instance for repeated ``(verifier_id, config)`` pairs instead of
-    # constructing a new one per call. Verifiers must be stateless across
-    # ``verify()`` calls to set this safely â€” i.e. they may compile regexes,
-    # cache schemas, or load reference data in ``__init__`` but must not
-    # accumulate per-call state on instance attributes.
     shareable: ClassVar[bool] = False
 
     @abstractmethod
@@ -75,62 +43,53 @@ class BaseVerifier(ABC):
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        # Enforce that every concrete subclass declares an id
         if not getattr(cls, "id", None) and not getattr(cls, "__abstractmethods__", None):
             raise TypeError(f"{cls.__name__} must define a class-level 'id' string")
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-# REGISTRY
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-
 class VerifierRegistry:
-    """
-    Global registry of verifier classes.
-
-    Auto-discovery via Python entry points:
-        [project.entry-points."veridian.verifiers"]
-        my_verifier = "my_package.verifiers:MyVerifier"
-
-    Third-party packages are auto-discovered on first registry access.
-    """
+    """Registry of verifier classes with lazy built-in and entry-point loading."""
 
     def __init__(self) -> None:
         self._classes: dict[str, type[BaseVerifier]] = {}
+        self._lazy: dict[str, str] = {}
         self._discovered = False
-        # Cache for verifiers that opt-in to instance reuse. Keyed by
-        # (verifier_id, canonical-serialised config); values are the
-        # already-constructed BaseVerifier instance. Verifiers participate by
-        # setting ``shareable = True`` on the class (default False) â€” see
-        # BaseVerifier.shareable for the contract.
         self._instance_cache: dict[tuple[str, str], BaseVerifier] = {}
 
     def register(self, cls: type[BaseVerifier]) -> None:
-        """Register a verifier class. Raises if id already registered."""
+        """Register a verifier class. Re-registration replaces the old class."""
         if not issubclass(cls, BaseVerifier):
             raise TypeError(f"{cls} is not a BaseVerifier subclass")
         if cls.id in self._classes:
             log.debug("verifier.register override id=%s", cls.id)
         self._classes[cls.id] = cls
-        # Invalidate any cached instance for this id â€” re-registration usually
-        # means a definition swap (tests, hot-reload), so we don't want to
-        # hand out the old class instance.
         for key in [k for k in self._instance_cache if k[0] == cls.id]:
             self._instance_cache.pop(key, None)
         log.debug("verifier.register id=%s class=%s", cls.id, cls.__name__)
 
     def register_many(self, *classes: type[BaseVerifier]) -> None:
+        """Register several verifier classes."""
         for cls in classes:
             self.register(cls)
 
-    def _config_key(self, config: dict[str, Any] | None) -> str:
-        """Canonical, hashable key for a verifier config dict.
+    def register_lazy(self, verifier_id: str, target: str) -> None:
+        """Register ``module:Class`` without importing the module."""
+        self._lazy[verifier_id] = target
 
-        Returns an empty string for ``None``/empty configs and a stable
-        ``json.dumps`` for anything serialisable. Non-JSON-serialisable
-        configs (rare) fall through to a sentinel that disables caching.
-        """
+    def register_lazy_many(self, targets: dict[str, str]) -> None:
+        """Register several lazy verifier targets."""
+        self._lazy.update(targets)
+
+    def _load_lazy(self, verifier_id: str) -> None:
+        target = self._lazy.get(verifier_id)
+        if target is None or verifier_id in self._classes:
+            return
+        module_name, class_name = target.rsplit(":", 1)
+        module = importlib.import_module(module_name)
+        self.register(getattr(module, class_name))
+
+    def _config_key(self, config: dict[str, Any] | None) -> str:
+        """Return a stable cache key for verifier configuration."""
         if not config:
             return ""
         try:
@@ -139,21 +98,15 @@ class VerifierRegistry:
             return "__unhashable__"
 
     def get(self, verifier_id: str, config: dict[str, Any] | None = None) -> BaseVerifier:
-        """
-        Instantiate and return a verifier by ID.
+        """Instantiate and return a verifier by ID."""
+        self._load_lazy(verifier_id)
+        if verifier_id not in self._classes:
+            self._autodiscover()
+            self._load_lazy(verifier_id)
 
-        Verifiers can opt in to instance-level caching by setting
-        ``shareable = True`` on the class. The cache is keyed by
-        ``(verifier_id, canonical_config_json)`` so two callers asking for
-        the same configuration share one instance. This avoids regex
-        recompilation and other per-construction setup on hot paths.
-
-        Raises VerifierNotFound if not registered.
-        """
-        self._autodiscover()
         cls = self._classes.get(verifier_id)
         if cls is None:
-            available = sorted(self._classes.keys())
+            available = sorted({*self._classes.keys(), *self._lazy.keys()})
             raise VerifierNotFound(
                 f"Verifier {verifier_id!r} not found. "
                 f"Available: {available}. "
@@ -175,22 +128,34 @@ class VerifierRegistry:
         return cls()
 
     def _autodiscover(self) -> None:
-        """Load entry-point plugins. Called once on first access."""
+        """Load third-party verifier entry points once."""
         if self._discovered:
             return
         self._discovered = True
         try:
+            import importlib.metadata
+
             eps = importlib.metadata.entry_points(group="veridian.verifiers")
             for ep in eps:
                 try:
                     cls = ep.load()
                     self.register(cls)
                     log.info("verifier.autodiscover id=%s from=%s", cls.id, ep.value)
-                except Exception as e:
-                    log.warning("verifier.autodiscover failed ep=%s err=%s", ep.name, e)
-        except Exception as e:
-            log.debug("verifier.autodiscover eps failed: %s", e)
+                except Exception as exc:
+                    log.warning("verifier.autodiscover failed ep=%s err=%s", ep.name, exc)
+        except Exception as exc:
+            log.debug("verifier.autodiscover eps failed: %s", exc)
 
 
-# Module-level singleton â€” import this everywhere
 registry = VerifierRegistry()
+registry.register_lazy_many(
+    {
+        "any_of": "veridian.verify.builtin.any_of:AnyOfVerifier",
+        "bash_exit": "veridian.verify.builtin.bash:BashExitCodeVerifier",
+        "composite": "veridian.verify.builtin.composite:CompositeVerifier",
+        "file_exists": "veridian.verify.builtin.file_exists:FileExistsVerifier",
+        "http_status": "veridian.verify.builtin.http:HttpStatusVerifier",
+        "quote_match": "veridian.verify.builtin.quote:QuoteMatchVerifier",
+        "schema": "veridian.verify.builtin.schema:SchemaVerifier",
+    }
+)

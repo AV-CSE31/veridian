@@ -1,7 +1,7 @@
 """
 veridian.hooks.builtin.human_review
-──────────────────────────────────────
-HumanReviewHook — pauses run for tasks that require human approval.
+------------------------------------------------------------------------------------------------------------------
+HumanReviewHook --- pauses run for tasks that require human approval.
 Priority 50.
 """
 

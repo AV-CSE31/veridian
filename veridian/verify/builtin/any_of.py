@@ -1,7 +1,7 @@
 """
 veridian.verify.builtin.any_of
-────────────────────────────────
-AnyOfVerifier — OR chain: pass if any one sub-verifier passes.
+------------------------------------------------------------------------------------------------
+AnyOfVerifier --- OR chain: pass if any one sub-verifier passes.
 
 Useful when multiple valid output formats exist (e.g. the agent can
 satisfy the task either by creating a file OR returning a URL).
@@ -72,7 +72,7 @@ class AnyOfVerifier(BaseVerifier):
                 )
             errors.append(f"{verifier.id}: {sub_result.error or 'failed'}")
 
-        # All verifiers failed — build aggregate error
+        # All verifiers failed --- build aggregate error
         joined = "; ".join(errors)
         total = len(self.verifiers)
         error = f"All {total} verifier(s) failed: {joined}"[:300]

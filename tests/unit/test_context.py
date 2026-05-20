@@ -1,6 +1,6 @@
 """
 tests.unit.test_context
-────────────────────────
+------------------------------------------------------------------------
 Unit tests for TokenWindow and ContextManager.
 """
 
@@ -10,7 +10,7 @@ from veridian.context.manager import ContextManager
 from veridian.context.window import TokenWindow
 from veridian.core.task import Task
 
-# ── TokenWindow ───────────────────────────────────────────────────────────────
+# ------ TokenWindow ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestTokenWindow:
@@ -51,7 +51,7 @@ class TestTokenWindow:
             TokenWindow(capacity=0)
 
 
-# ── ContextManager ────────────────────────────────────────────────────────────
+# ------ ContextManager ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestContextManager:
@@ -98,7 +98,7 @@ class TestContextManager:
         """[RETRY ERROR] block must NOT appear in user message on attempt=0."""
         task.last_error = "previous error"
         messages = manager.build_worker_context(task, run_id="r1", attempt=0)
-        # Only check user messages — the system prompt may mention RETRY ERROR
+        # Only check user messages --- the system prompt may mention RETRY ERROR
         # as instructions but the actual block marker only appears on retry
         user_text = " ".join(m["content"] for m in messages if m.get("role") == "user")
         assert "[RETRY ERROR]" not in user_text

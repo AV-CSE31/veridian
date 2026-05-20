@@ -1,30 +1,30 @@
-﻿"""
+"""
 veridian.providers.litellm_provider
-────────────────────────────────────
+------------------------------------
 Production-grade LiteLLM provider with:
 
-  ┌─────────────────────────────────────────────────────────┐
-  │  RESILIENCE STACK (outermost → innermost)                │
-  │                                                          │
-  │  1. CircuitBreaker  — stops hammering a dead endpoint    │
-  │     CLOSED → OPEN after N failures → HALF_OPEN probe    │
-  │                                                          │
-  │  2. Retry w/ exponential backoff + jitter (tenacity)     │
-  │     Retries transient errors: 429, 503, timeout         │
-  │     Fails fast on permanent errors: 400, 401, 404       │
-  │                                                          │
-  │  3. Fallback model chain                                 │
-  │     primary → fallback[0] → fallback[1] → ...           │
-  │     Only activates after primary exhausts retries        │
-  │                                                          │
-  │  4. Context window guard                                 │
-  │     Raises ContextWindowExceeded before the API call    │
-  └─────────────────────────────────────────────────────────┘
+  -----------------------------------------------------------
+  -  RESILIENCE STACK (outermost - innermost)                -
+  -                                                          -
+  -  1. CircuitBreaker  - stops hammering a dead endpoint    -
+  -     CLOSED - OPEN after N failures - HALF_OPEN probe    -
+  -                                                          -
+  -  2. Retry w/ exponential backoff + jitter (tenacity)     -
+  -     Retries transient errors: 429, 503, timeout         -
+  -     Fails fast on permanent errors: 400, 401, 404       -
+  -                                                          -
+  -  3. Fallback model chain                                 -
+  -     primary - fallback[0] - fallback[1] - ...           -
+  -     Only activates after primary exhausts retries        -
+  -                                                          -
+  -  4. Context window guard                                 -
+  -     Raises ContextWindowExceeded before the API call    -
+  -----------------------------------------------------------
 
 Circuit breaker states:
-  CLOSED   → normal operation, all requests pass through
-  OPEN     → endpoint down, fail immediately for cooldown_seconds
-  HALF_OPEN → send one probe; close on success, re-open on failure
+  CLOSED   - normal operation, all requests pass through
+  OPEN     - endpoint down, fail immediately for cooldown_seconds
+  HALF_OPEN - send one probe; close on success, re-open on failure
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ from veridian.providers.base import LLMProvider, LLMResponse, Message
 log = logging.getLogger(__name__)
 
 
-# ── MODEL ALLOWLIST ───────────────────────────────────────────────────────────
+# -- MODEL ALLOWLIST -----------------------------------------------------------
 #
 # A model string is more than a label: LiteLLM parses it to choose which
 # provider endpoint to hit. An attacker who can influence ``VERIDIAN_MODEL``
@@ -115,7 +115,7 @@ def _validate_model_string(model: str) -> None:
         )
 
 
-# ── CIRCUIT BREAKER ───────────────────────────────────────────────────────────
+# -- CIRCUIT BREAKER -----------------------------------------------------------
 
 
 class CBState(StrEnum):
@@ -152,7 +152,7 @@ class CircuitBreaker:
     def allow_request(self) -> bool:
         """
         Returns True if request should proceed.
-        Transitions OPEN → HALF_OPEN when cooldown expires.
+        Transitions OPEN - HALF_OPEN when cooldown expires.
         """
         with self._lock:
             if self._state == CBState.CLOSED:
@@ -181,7 +181,7 @@ class CircuitBreaker:
         with self._lock:
             self._failures += 1
             if self._state == CBState.HALF_OPEN:
-                # Probe failed — re-open immediately
+                # Probe failed - re-open immediately
                 log.warning("circuit_breaker.reopen name=%s", self.name)
                 self._state = CBState.OPEN
                 self._opened_at = time.monotonic()
@@ -204,7 +204,7 @@ class CircuitBreaker:
         }
 
 
-# ── RETRY POLICY ─────────────────────────────────────────────────────────────
+# -- RETRY POLICY -------------------------------------------------------------
 
 # Errors worth retrying (transient)
 _TRANSIENT_STATUS_CODES = {429, 500, 502, 503, 504}
@@ -212,8 +212,8 @@ _TRANSIENT_STATUS_CODES = {429, 500, 502, 503, 504}
 
 def _is_retryable(exc: BaseException) -> bool:
     """
-    True → tenacity will retry.
-    False → fail immediately (permanent error).
+    True - tenacity will retry.
+    False - fail immediately (permanent error).
     """
     msg = str(exc).lower()
     # Rate limits / server errors
@@ -223,11 +223,11 @@ def _is_retryable(exc: BaseException) -> bool:
     # Connection / timeout errors
     if any(kw in msg for kw in ("timeout", "connection", "network", "overloaded")):
         return True
-    # Permanent: bad request, auth failure, not found — default: retry on unknown errors
+    # Permanent: bad request, auth failure, not found - default: retry on unknown errors
     return not any(code in msg for code in ("400", "401", "403", "404"))
 
 
-# ── LITELLM PROVIDER ─────────────────────────────────────────────────────────
+# -- LITELLM PROVIDER ---------------------------------------------------------
 
 
 class LiteLLMProvider(LLMProvider):
@@ -304,7 +304,7 @@ class LiteLLMProvider(LLMProvider):
             for m in all_models
         }
 
-        # Lazy import — litellm is optional at import time
+        # Lazy import - litellm is optional at import time
         self._litellm: Any = None
 
     def complete(self, messages: list[Message], **kwargs: Any) -> LLMResponse:
@@ -346,7 +346,7 @@ class LiteLLMProvider(LLMProvider):
         raise ProviderError(f"All models failed. Last error: {last_exc}") from last_exc
 
     async def complete_async(self, messages: list[Message], **kwargs: Any) -> LLMResponse:
-        """Async wrapper — runs sync complete() in executor to avoid blocking."""
+        """Async wrapper - runs sync complete() in executor to avoid blocking."""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.complete, messages)
 
@@ -426,4 +426,3 @@ class LiteLLMProvider(LLMProvider):
             if self.model.startswith(prefix):
                 return limit
         return self.CONTEXT_LIMITS["default"]
-

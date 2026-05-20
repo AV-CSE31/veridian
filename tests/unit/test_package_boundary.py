@@ -182,7 +182,13 @@ def test_removed_preview_adapter_modules_stay_removed() -> None:
 
 
 def test_builtin_hooks_are_runtime_only() -> None:
-    allowed = {"__init__.py", "cost_guard.py", "human_review.py", "logging_hook.py", "rate_limit.py"}
+    allowed = {
+        "__init__.py",
+        "cost_guard.py",
+        "human_review.py",
+        "logging_hook.py",
+        "rate_limit.py",
+    }
     actual = {path.name for path in (ROOT / "veridian" / "hooks" / "builtin").glob("*.py")}
     assert actual == allowed
 
@@ -260,4 +266,4 @@ def test_examples_stay_small_and_release_focused() -> None:
         for path in (ROOT / "examples").rglob("*")
         if path.is_file()
     }
-    assert example_files == {"examples/release_gate.py"}
+    assert example_files == {"examples/decorator_release_gate.py"}

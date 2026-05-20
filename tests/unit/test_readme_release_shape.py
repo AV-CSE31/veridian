@@ -10,7 +10,7 @@ def test_readme_describes_the_v03_slim_runtime() -> None:
 
     assert "The `0.3.0` release is intentionally light" in readme
     assert "The base install is small and only requires `filelock`." in readme
-    assert "examples/release_gate.py" in readme
+    assert "examples/decorator_release_gate.py" in readme
 
 
 def test_readme_does_not_advertise_removed_platform_surfaces() -> None:
@@ -25,6 +25,7 @@ def test_readme_does_not_advertise_removed_platform_surfaces() -> None:
         "semantic_grounding",
         "llm_judge",
         "tool_safety",
+        "`confidence`: require",
     ]
     for claim in removed_claims:
         assert claim not in readme

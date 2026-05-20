@@ -1,6 +1,6 @@
 """
 veridian.core.task
-─────────────────
+---------------------------------------------------
 Core domain models. Zero external dependencies.
 These are the only objects that travel through the entire system.
 """
@@ -13,16 +13,16 @@ from datetime import UTC, datetime
 from enum import Enum, StrEnum
 from typing import Any
 
-# ── STATUS & PRIORITY ────────────────────────────────────────────────────────
+# ------ STATUS & PRIORITY ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# Valid state machine transitions — kept outside the Enum to avoid being
+# Valid state machine transitions --- kept outside the Enum to avoid being
 # treated as an enum member (a Python enum ClassVar limitation in 3.11).
 _VALID_TRANSITIONS: dict[str, set[str]] = {
     "pending": {"in_progress", "skipped"},
     # RV3-001: IN_PROGRESS can transition to PAUSED when a control-flow hook
     # (HumanReviewHook, TaskPauseRequested) requests pause during execution.
     "in_progress": {"verifying", "failed", "pending", "paused", "skipped"},
-    # RV3-001: PAUSED resumes via IN_PROGRESS (never directly to PENDING — that
+    # RV3-001: PAUSED resumes via IN_PROGRESS (never directly to PENDING --- that
     # would destroy the pause payload). Can also fail/abandon on timeout.
     "paused": {"in_progress", "failed", "abandoned"},
     "verifying": {"done", "failed"},
@@ -59,7 +59,7 @@ class TaskStatus(StrEnum):
 
 
 class TaskPriority(int, Enum):
-    """Convenience constants. Any int 0–100 is valid."""
+    """Convenience constants. Any int 0---100 is valid."""
 
     CRITICAL = 100
     HIGH = 75
@@ -68,7 +68,7 @@ class TaskPriority(int, Enum):
     DEFERRED = 0
 
 
-# ── TRACE EVIDENCE TYPES ────────────────────────────────────────────────────────
+# ------ TRACE EVIDENCE TYPES ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
@@ -119,10 +119,10 @@ class TraceStep:
         )
 
 
-# ── RESULT ───────────────────────────────────────────────────────────────────
+# ------ RESULT ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-# ── RESULT ───────────────────────────────────────────────────────────────────
+# ------ RESULT ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
@@ -217,7 +217,7 @@ class TaskResult:
         return r
 
 
-# ── TASK ─────────────────────────────────────────────────────────────────────
+# ------ TASK ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
@@ -232,38 +232,38 @@ class Task:
     - metadata is a free-form dict for domain-specific payload (source_file, etc.)
     """
 
-    # ── Identity ──────────────────────────────────────────────────────────────
+    # ------ Identity ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:12])
     title: str = ""
     description: str = ""
 
-    # ── Scheduling ────────────────────────────────────────────────────────────
+    # ------ Scheduling ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     status: TaskStatus = TaskStatus.PENDING
     priority: int = TaskPriority.NORMAL
     phase: str = "default"
     depends_on: list[str] = field(default_factory=list)
 
-    # ── Verification contract ─────────────────────────────────────────────────
+    # ------ Verification contract ---------------------------------------------------------------------------------------------------------------------------------------------------
     verifier_id: str = "bash_exit"
     verifier_config: dict[str, Any] = field(default_factory=dict)
 
-    # ── Retry state ───────────────────────────────────────────────────────────
+    # ------ Retry state ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     result: TaskResult | None = None
     retry_count: int = 0
     max_retries: int = 3
     last_error: str | None = None  # injected verbatim into next agent prompt
 
-    # ── Ownership (set by runner on claim) ────────────────────────────────────
+    # ------ Ownership (set by runner on claim) ------------------------------------------------------------------------------------------------------------
     claimed_by: str | None = None  # run_id
 
-    # ── Timestamps ────────────────────────────────────────────────────────────
+    # ------ Timestamps ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
-    # ── Domain payload ────────────────────────────────────────────────────────
+    # ------ Domain payload ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
+    # ------ Helpers ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def is_terminal(self) -> bool:
         return self.status.is_terminal
@@ -325,14 +325,14 @@ class Task:
         )
 
 
-# ── STATS ────────────────────────────────────────────────────────────────────
+# ------ STATS ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
 class LedgerStats:
     total: int = 0
     by_status: dict[str, int] = field(default_factory=dict)
-    phases: dict[str, int] = field(default_factory=dict)  # phase → pending count
+    phases: dict[str, int] = field(default_factory=dict)  # phase --- pending count
     retry_rate: float = 0.0  # failed / total
     total_tokens_used: int = 0
     estimated_cost_usd: float = 0.0

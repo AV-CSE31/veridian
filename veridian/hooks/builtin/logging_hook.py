@@ -1,7 +1,7 @@
 """
 veridian.hooks.builtin.logging_hook
-─────────────────────────────────────
-LoggingHook — structured log lines for every lifecycle event.
+---------------------------------------------------------------------------------------------------------------
+LoggingHook --- structured log lines for every lifecycle event.
 Priority 0: runs first among all hooks.
 """
 

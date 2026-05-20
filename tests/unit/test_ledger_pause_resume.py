@@ -1,11 +1,11 @@
 """
 tests.unit.test_ledger_pause_resume
-────────────────────────────────────
-RV3-001: Resumable interrupt runtime primitive — ledger layer.
+------------------------------------------------------------------------------------------------------------
+RV3-001: Resumable interrupt runtime primitive --- ledger layer.
 
 Covers ledger-level pause/resume semantics:
-- IN_PROGRESS → PAUSED transition with payload persistence
-- PAUSED → IN_PROGRESS resume transition
+- IN_PROGRESS --- PAUSED transition with payload persistence
+- PAUSED --- IN_PROGRESS resume transition
 - resume_count increments
 - get_next(include_paused=True)
 - reset_in_progress() leaves PAUSED tasks alone (crash recovery safety)
@@ -70,7 +70,7 @@ class TestLedgerPause:
         assert paused.result.extras["pause_payload"]["reason"] == "pause after partial work"
 
     def test_pause_rejects_non_in_progress_task(self, ledger: TaskLedger) -> None:
-        """PENDING → PAUSED is not a valid transition per the state machine."""
+        """PENDING --- PAUSED is not a valid transition per the state machine."""
         task = Task(title="t1", verifier_id="schema", verifier_config={"required_fields": []})
         ledger.add([task])
         with pytest.raises(InvalidTransition):
@@ -154,7 +154,7 @@ class TestGetNextIncludesPaused:
         self, ledger: TaskLedger
     ) -> None:
         """Paused tasks should be surfaced first so they can resume before new
-        pending work starts — ensures HITL approvals aren't starved."""
+        pending work starts --- ensures HITL approvals aren't starved."""
         pending = Task(title="new", verifier_id="schema", verifier_config={"required_fields": []})
         ledger.add([pending])
         paused_task = _claimed_task(ledger, title="resume_me")
@@ -182,6 +182,6 @@ class TestTaskStatusPausedEnum:
         assert not TaskStatus.PENDING.can_transition_to(TaskStatus.PAUSED)
 
     def test_paused_cannot_transition_to_pending(self) -> None:
-        """PAUSED must resume via IN_PROGRESS — going back to PENDING would
+        """PAUSED must resume via IN_PROGRESS --- going back to PENDING would
         lose the pause payload."""
         assert not TaskStatus.PAUSED.can_transition_to(TaskStatus.PENDING)

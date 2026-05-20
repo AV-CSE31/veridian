@@ -1,7 +1,7 @@
 """
 veridian.verify.builtin.file_exists
-─────────────────────────────────────
-FileExistsVerifier — verify that expected output files exist on disk.
+---------------------------------------------------------------------------------------------------------------
+FileExistsVerifier --- verify that expected output files exist on disk.
 
 Usage:
     verifier_id="file_exists"

@@ -1,6 +1,6 @@
 """
 veridian.providers.mock_provider
-────────────────────────────────
+------------------------------------------------------------------------------------------------
 Deterministic mock for tests. Zero network calls. No API keys.
 
 Usage::
@@ -36,7 +36,7 @@ class MockProvider(LLMProvider):
         self._calls: list[list[Message]] = []
         self.default_tokens = default_tokens
 
-    # ── Configuration API ─────────────────────────────────────────────────────
+    # ------ Configuration API ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def script(self, responses: list[LLMResponse]) -> MockProvider:
         """Queue responses to be returned in order."""
@@ -73,7 +73,7 @@ class MockProvider(LLMProvider):
         text = f"<veridian:result>\n{payload}\n</veridian:result>"
         return self.script_text(text)
 
-    # ── LLMProvider interface ─────────────────────────────────────────────────
+    # ------ LLMProvider interface ---------------------------------------------------------------------------------------------------------------------------------------------------
 
     def complete(self, messages: list[Message], **kwargs: Any) -> LLMResponse:
         self._calls.append(messages)
@@ -101,7 +101,7 @@ class MockProvider(LLMProvider):
     async def complete_async(self, messages: list[Message], **kwargs: Any) -> LLMResponse:
         return self.complete(messages, **kwargs)
 
-    # ── Inspection helpers ────────────────────────────────────────────────────
+    # ------ Inspection helpers ------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     @property
     def call_count(self) -> int:

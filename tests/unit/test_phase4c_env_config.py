@@ -1,7 +1,7 @@
 """
 tests.unit.test_phase4c_env_config
-──────────────────────────────────
-Acceptance tests for Phase 4.C — generic ``VERIDIAN_*`` env-var expansion.
+------------------------------------------------------------------------------------------------------
+Acceptance tests for Phase 4.C --- generic ``VERIDIAN_*`` env-var expansion.
 
 * ``VeridianConfig.from_env`` reads ``VERIDIAN_<FIELD>`` for every field
   and coerces the value to the field's declared type.

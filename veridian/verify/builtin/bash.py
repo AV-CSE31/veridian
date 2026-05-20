@@ -1,7 +1,7 @@
 """
 veridian.verify.builtin.bash
-────────────────────────────
-BashExitCodeVerifier — runs a shell command and checks its exit code.
+------------------------------------------------------------------------------------
+BashExitCodeVerifier --- runs a shell command and checks its exit code.
 
 The command is specified in verifier_config per task, e.g.:
     verifier_id="bash_exit"
@@ -107,9 +107,7 @@ class BashExitCodeVerifier(BaseVerifier):
         self.command = command
         self.expected_exit = expected_exit
         self.timeout_seconds = timeout_seconds
-        self.env_allowlist = (
-            env_allowlist if env_allowlist is not None else DEFAULT_ENV_ALLOWLIST
-        )
+        self.env_allowlist = env_allowlist if env_allowlist is not None else DEFAULT_ENV_ALLOWLIST
         self.inherit_env = inherit_env
 
     def verify(self, task: Task, result: TaskResult) -> VerificationResult:
@@ -117,9 +115,7 @@ class BashExitCodeVerifier(BaseVerifier):
         if self.inherit_env:
             child_env: dict[str, str] | None = None
         else:
-            child_env = {
-                key: os.environ[key] for key in self.env_allowlist if key in os.environ
-            }
+            child_env = {key: os.environ[key] for key in self.env_allowlist if key in os.environ}
         try:
             proc = subprocess.run(  # noqa: S602  (blocklist + env scrub above)
                 self.command,

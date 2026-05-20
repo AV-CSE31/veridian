@@ -23,3 +23,12 @@ def test_heavy_dependencies_are_not_required_by_base_install() -> None:
     assert "pydantic" not in names
     assert "tiktoken" not in names
     assert "tenacity" not in names
+
+
+def test_verifier_entry_points_match_lazy_registry() -> None:
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    entry_points = pyproject["project"]["entry-points"]["veridian.verifiers"]
+
+    from veridian.verify.base import registry
+
+    assert entry_points == registry._lazy

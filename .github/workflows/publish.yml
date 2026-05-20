@@ -25,19 +25,24 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install build
+          pip install build twine
           pip install -e ".[dev]"
 
       - name: Quality gates
         run: |
-          ruff check .
-          ruff format --check .
-          mypy veridian/ --strict
+          ruff check veridian tests examples
+          ruff format --check veridian tests examples
+          mypy veridian --strict
           pytest -q --tb=short
           pytest --cov=veridian --cov-fail-under=85 -q
 
       - name: Build package
         run: python -m build
+
+      - name: Check artifacts
+        run: |
+          python -m twine check dist/*
+          python scripts/check_package_artifacts.py dist/*
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

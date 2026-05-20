@@ -43,4 +43,3 @@ class TestAtomicWriteJson:
         atomic_write_json(dst, {"hello": "world", "n": 1})
         parsed = json.loads(dst.read_text(encoding="utf-8"))
         assert parsed == {"hello": "world", "n": 1}
-

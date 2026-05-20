@@ -1,8 +1,8 @@
 """
 veridian.hooks.base
-───────────────────
+---------------------------------------------------------
 BaseHook ABC. All hooks inherit from this.
-All lifecycle methods default to no-op — subclasses override only what they need.
+All lifecycle methods default to no-op --- subclasses override only what they need.
 Priority is a ClassVar[int]; lower numbers run earlier.
 """
 
@@ -16,10 +16,10 @@ __all__ = ["BaseHook"]
 class BaseHook:
     """
     Abstract base hook. Override only the lifecycle methods you need.
-    Hook errors are swallowed by HookRegistry.fire() — they never propagate.
+    Hook errors are swallowed by HookRegistry.fire() --- they never propagate.
 
     Priority convention (ClassVar[int]):
-      logging_hook = 0   (runs first — always sees the unmodified state)
+      logging_hook = 0   (runs first --- always sees the unmodified state)
       all others = 50
     """
 
@@ -42,7 +42,7 @@ class BaseHook:
         """Called when a task transitions to FAILED or ABANDONED."""
 
     def on_pause(self, event: Any) -> None:
-        """RV3-001: Called when a task transitions IN_PROGRESS → PAUSED via a
+        """RV3-001: Called when a task transitions IN_PROGRESS --- PAUSED via a
         control-flow signal (HumanReviewRequired, TaskPauseRequested)."""
 
     def on_resume(self, event: Any) -> None:

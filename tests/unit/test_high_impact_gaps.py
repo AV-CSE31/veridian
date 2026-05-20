@@ -16,4 +16,3 @@ def test_confidence_score_degrades_across_retries() -> None:
 
 def test_cross_run_consistency_hook_stays_removed() -> None:
     assert importlib.util.find_spec("veridian.hooks.builtin.cross_run_consistency") is None
-

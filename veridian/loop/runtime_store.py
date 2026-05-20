@@ -1,6 +1,6 @@
 """
 veridian.loop.runtime_store
-──────────────────────────
+------------------------------------------------------------------------------
 Runtime storage abstraction for runner-facing state operations.
 
 This protocol is intentionally shaped around the operations Veridian runners

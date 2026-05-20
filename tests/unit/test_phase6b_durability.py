@@ -1,6 +1,6 @@
 """
 tests.unit.test_phase6b_durability
-──────────────────────────────────
+------------------------------------------------------------------------------------------------------
 Acceptance tests for Phase 6.B bug-hunt fixes:
 
 * fsync runs as part of ``atomic_write_text`` so the kernel commits
@@ -19,7 +19,7 @@ import pytest
 
 from veridian.core.atomic_io import atomic_write_text
 
-# ── fsync ────────────────────────────────────────────────────────────────────
+# ------ fsync ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestAtomicWriteFsync:
@@ -67,7 +67,7 @@ class TestAtomicWriteFsync:
         assert target.read_text(encoding="utf-8") == "payload"
 
 
-# ── ContextManager path-traversal guard ─────────────────────────────────────
+# ------ ContextManager path-traversal guard ---------------------------------------------------------------------------------------------------------------
 
 
 class TestContextFilesPathGuard:

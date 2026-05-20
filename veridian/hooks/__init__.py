@@ -1,6 +1,6 @@
 """
 veridian.hooks
-──────────────
+------------------------------------------
 Hook infrastructure: BaseHook ABC, HookRegistry, and builtin hooks.
 """
 

@@ -1,7 +1,7 @@
 """
 veridian.context.window
-────────────────────────
-TokenWindow — tracks a fixed token budget for context assembly.
+------------------------------------------------------------------------
+TokenWindow --- tracks a fixed token budget for context assembly.
 Used by ContextManager to decide whether optional blocks fit.
 """
 
@@ -47,7 +47,7 @@ class TokenWindow:
 
     @property
     def pct_used(self) -> float:
-        """Fraction of capacity consumed (0.0–1.0+)."""
+        """Fraction of capacity consumed (0.0---1.0+)."""
         return self._used / self.capacity if self.capacity > 0 else 0.0
 
     def reset(self) -> None:

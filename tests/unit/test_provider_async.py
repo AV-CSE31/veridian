@@ -1,6 +1,6 @@
 """
 tests.unit.test_provider_async
-──────────────────────────────
+------------------------------------------------------------------------------------------
 Async coverage for ``LLMProvider.complete_async`` on both the abstract base
 contract (via :class:`MockProvider`) and the LiteLLM adapter.
 
@@ -79,7 +79,7 @@ class TestMockProviderComplete:
         provider._callable = _capture
         await provider.complete_async(_msg(), temperature=0.42, max_tokens=128)
         # MockProvider.complete delegates to the callable without forwarding
-        # **kwargs — this is the documented MockProvider behavior, so the
+        # **kwargs --- this is the documented MockProvider behavior, so the
         # capture dict stays empty. Test pins the contract.
         assert captured == {}
 

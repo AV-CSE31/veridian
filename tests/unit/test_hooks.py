@@ -1,6 +1,6 @@
 """
 tests.unit.test_hooks
-──────────────────────
+------------------------------------------------------------------
 Unit tests for BaseHook ABC, HookRegistry, and builtin hooks.
 """
 
@@ -12,7 +12,7 @@ from veridian.core.task import Task, TaskResult, TaskStatus
 from veridian.hooks.base import BaseHook
 from veridian.hooks.registry import HookRegistry
 
-# ── BaseHook ──────────────────────────────────────────────────────────────────
+# ------ BaseHook ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestBaseHook:
@@ -31,7 +31,7 @@ class TestBaseHook:
         hook.on_failure(event)
 
     def test_priority_is_class_level(self):
-        """Priority is a ClassVar — set on the class, not the instance."""
+        """Priority is a ClassVar --- set on the class, not the instance."""
 
         class MyHook(BaseHook):
             id = "myhook"
@@ -50,7 +50,7 @@ class TestBaseHook:
         assert DefaultHook.priority == 50
 
 
-# ── HookRegistry ──────────────────────────────────────────────────────────────
+# ------ HookRegistry ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestHookRegistry:
@@ -89,7 +89,7 @@ class TestHookRegistry:
 
         reg = HookRegistry()
         reg.register(BrokenHook())
-        # Must NOT raise — the run must continue
+        # Must NOT raise --- the run must continue
         reg.fire("before_task", TaskClaimed(run_id="r1"))
 
     def test_register_and_list(self):
@@ -148,7 +148,7 @@ class TestHookRegistry:
         registry.fire("before_task", TaskClaimed(run_id="t1"))  # must not raise
 
 
-# ── LoggingHook ───────────────────────────────────────────────────────────────
+# ------ LoggingHook ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestLoggingHook:
@@ -179,7 +179,7 @@ class TestLoggingHook:
         hook.on_failure(TaskFailed(run_id="r1", task=task, error="boom"))
 
 
-# ── CostGuardHook ─────────────────────────────────────────────────────────────
+# ------ CostGuardHook ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestCostGuardHook:
@@ -249,7 +249,7 @@ class TestCostGuardHook:
         assert hook.current_cost == pytest.approx(0.6)
 
 
-# ── HumanReviewHook ───────────────────────────────────────────────────────────
+# ------ HumanReviewHook ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestHumanReviewHook:
@@ -275,7 +275,7 @@ class TestHumanReviewHook:
         hook.before_task(TaskClaimed(run_id="r1"))  # event with no task attached
 
 
-# ── RateLimitHook ─────────────────────────────────────────────────────────────
+# ------ RateLimitHook ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestRateLimitHook:
@@ -291,7 +291,7 @@ class TestRateLimitHook:
         assert RateLimitHook.priority == 50
 
 
-# ── SlackNotifyHook ───────────────────────────────────────────────────────────
+# ------ SlackNotifyHook ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestBuiltinHookBoundary:
@@ -312,7 +312,7 @@ class TestBuiltinHookBoundary:
         assert all(importlib.util.find_spec(name) is None for name in removed)
 
 
-# ── Exception coverage ─────────────────────────────────────────────────────────
+# ------ Exception coverage ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestVeridianEventToDict:
