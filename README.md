@@ -1,52 +1,34 @@
 # Veridian
 
-**Deterministic verification and replay-safe runtime for production AI agent workflows.**
+**Deterministic verification for AI agent work.**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/veridian-ai.svg)](https://pypi.org/project/veridian-ai/)
 
-Veridian is the reliability layer between your agent and production.
+Veridian is a small runtime that sits between an agent and the outside world.
+Its core rule is simple:
 
-**Core contract:** a task is not marked `DONE` unless its verifier passes.  
-The model cannot self-certify completion.
+> A task is not marked `DONE` unless an independent verifier passes.
 
-If this project is useful, please star it to support the roadmap.
+The model can produce a result. Veridian decides whether that result is complete.
 
-## Why Veridian
+## Why
 
-Most agent stacks are good at orchestration but weak at correctness guarantees.
-Veridian is built to fail closed, recover deterministically, and produce evidence you can audit.
+Agent frameworks are good at planning, routing, and tool use. Veridian focuses on
+the narrower production boundary: verified completion.
 
-You get:
+Use it when you need:
 
-- deterministic task verification (Python verifiers, not self-certification)
-- replay-safe execution with crash recovery
-- pause/resume and dead-letter queue operations
-- strict replay compatibility checks for drift-sensitive workflows
-- policy and hook controls with error isolation
+- deterministic task state transitions
+- crash-safe ledger writes
+- retryable failures instead of silent success
+- structured evidence for each completed task
+- verifier logic that lives outside the model
 
-## What Shipped in v0.3.0
-
-- release hardened with strict gates (`ruff`, `mypy --strict`, tests, coverage)
-- packaging and release metadata updated for `0.3.0`
-- protected-path safety script and CI guardrails improved
-- production cleanup pass applied (stale local artifacts removed, hygiene tightened)
-
-## What Veridian Is (and Is Not)
-
-What it is:
-
-- a runtime correctness layer around agent tasks
-- a verification contract system for task transitions
-- a replay/debug substrate for production incidents
-
-What it is not:
-
-- not a replacement for your preferred orchestration framework
-- not a prompt-only guardrail tool
-
-Use Veridian with existing frameworks when you want stronger execution correctness.
+Veridian is not an orchestration framework, dashboard, policy engine, or prompt
+library. The `0.3.0` release is intentionally light: core runtime, ledger,
+providers, hooks, and practical verifiers.
 
 ## Install
 
@@ -54,152 +36,156 @@ Use Veridian with existing frameworks when you want stronger execution correctne
 pip install veridian-ai
 ```
 
+The base install is small and only requires `filelock`.
+
 Optional extras:
 
 ```bash
-pip install "veridian-ai[llm]"        # LiteLLM provider support
-pip install "veridian-ai[otel]"       # OpenTelemetry exporter support
-pip install "veridian-ai[dashboard]"  # Dashboard endpoints
-pip install "veridian-ai[redis]"      # Redis storage backend
-pip install "veridian-ai[postgres]"   # Postgres storage backend
-pip install "veridian-ai[all]"        # All optional integrations
+pip install "veridian-ai[llm]"       # LiteLLM provider support
+pip install "veridian-ai[http]"      # HTTP verifier support
+pip install "veridian-ai[pdf]"       # PDF quote matching support
+pip install "veridian-ai[pydantic]"  # Pydantic model validation
+pip install "veridian-ai[all]"       # All runtime extras
 ```
 
-## Quick Start (Python)
+## Quick Start
 
 ```python
-from veridian.core.task import Task
-from veridian.ledger.ledger import TaskLedger
-from veridian.loop.runner import VeridianRunner
-from veridian.providers.mock_provider import MockProvider
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
-ledger = TaskLedger("ledger.json")
-ledger.add(
-    [
-        Task(
-            title="Sanity check output schema",
-            description="Return JSON with keys: decision, reason.",
-            verifier_id="schema",
-            verifier_config={"required_fields": ["decision", "reason"]},
-        )
-    ]
-)
+from veridian import MockProvider, Task, TaskLedger, VeridianRunner
 
-provider = MockProvider().script_veridian_result(
-    structured={"decision": "allow", "reason": "policy-pass"}
-)
-runner = VeridianRunner(ledger=ledger, provider=provider)
-summary = runner.run()
-print(summary.done_count, summary.failed_count)
+contract = {
+    "required": ["decision", "risk", "reason"],
+    "properties": {
+        "decision": {"type": "string", "enum": ["ship", "hold"]},
+        "risk": {"type": "string", "enum": ["low", "medium", "high"]},
+        "reason": {"type": "string", "minLength": 8},
+    },
+}
+
+with TemporaryDirectory() as tmp:
+    ledger = TaskLedger(
+        Path(tmp) / "ledger.json",
+        progress_file=str(Path(tmp) / "progress.md"),
+    )
+    ledger.add(
+        [
+            Task(
+                title="Release gate",
+                description="Decide whether build 2026.05 can ship.",
+                verifier_id="schema",
+                verifier_config={"schema": contract},
+            )
+        ]
+    )
+
+    provider = MockProvider().script_veridian_result(
+        structured={
+            "decision": "ship",
+            "risk": "low",
+            "reason": "tests, lint, and verification passed",
+        }
+    )
+
+    summary = VeridianRunner(ledger=ledger, provider=provider).run()
+    print(summary.to_dict())
 ```
 
-## Quick Start (CLI)
+Output:
 
-```bash
-veridian init --ledger ledger.json
-veridian status --ledger ledger.json
-veridian list --ledger ledger.json
-veridian run --ledger ledger.json
-veridian replay show --ledger ledger.json
-veridian dlq status --ledger ledger.json
+```python
+{"done_count": 1, "failed_count": 0, "total_tasks": 1, ...}
 ```
 
-Core CLI commands:
+If the provider omits a required field, uses an invalid enum, or returns output
+that cannot satisfy the verifier, the task becomes `FAILED`, not `DONE`.
 
-- `init`, `status`, `list`, `run`, `gc`, `reset`, `skip`, `retry`
-- `dlq status`, `dlq list`, `dlq retry`, `dlq dismiss`, `dlq report`
-- `replay show`, `replay compare`, `replay diff`
+See [`examples/release_gate.py`](examples/release_gate.py) for a complete
+success-and-failure demonstration.
 
-## Core Runtime Model
+## Runtime Model
 
-Execution path:
+Veridian keeps the execution path deliberately small:
 
-`TaskLedger -> Runner -> Worker -> Verifier -> Ledger transition`
+```text
+Task -> TaskLedger -> VeridianRunner -> WorkerAgent -> Verifier -> TaskLedger
+```
+
+The ledger is the only component allowed to change task status. It writes
+atomically and resets stale `IN_PROGRESS` tasks before each run, so interrupted
+work can be retried safely.
 
 Typical lifecycle:
 
-`PENDING -> IN_PROGRESS -> VERIFYING -> DONE`
-
-Failure and intervention paths include:
-
-- `FAILED` / `ABANDONED`
-- `PAUSED` with resume support
-- replay compatibility checks for drift-sensitive runs
-
-## Built-in Components
-
-Verifier families include:
-
-- structural and IO checks (`schema`, `file_exists`, `http_status`, `bash_exit`)
-- composition (`composite`, `any_of`)
-- quality/safety checks (`semantic_grounding`, `self_consistency`, `llm_judge`, `tool_safety`, `memory_integrity`)
-
-Hook families include:
-
-- logging/cost/rate controls
-- human review and consistency checks
-- anomaly and drift-oriented safety hooks
-
-## Integrations
-
-Veridian is designed to sit beside orchestration frameworks rather than replace
-them.
-
-- Certified adapters: [LangGraph](guides/integrations/langgraph.md),
-  [CrewAI](guides/integrations/crewai.md)
-- Universal integration patterns:
-  [OpenAI Agents SDK](guides/integrations/openai-agents-sdk.md),
-  [Pydantic AI](guides/integrations/pydantic-ai.md),
-  [Mastra](guides/integrations/mastra.md)
-- Production checklist: [integration hardening](guides/integrations/production-checklist.md)
-
-## Quality Gates
-
-Veridian uses claim-to-test discipline. For release work, run:
-
-```bash
-ruff check .
-ruff format --check .
-mypy veridian/ --strict
-pytest -q --tb=short
-pytest --cov=veridian --cov-fail-under=85 -q
+```text
+PENDING -> IN_PROGRESS -> VERIFYING -> DONE
+PENDING -> IN_PROGRESS -> VERIFYING -> FAILED
 ```
 
-## Release Evidence
+## Public API
 
-Public releases require evidence-backed notes:
+Top-level imports are intentionally narrow:
 
-- follow [RELEASING.md](RELEASING.md)
-- include a completed [release evidence template](.github/RELEASE_EVIDENCE_TEMPLATE.md)
+```python
+from veridian import (
+    BaseHook,
+    BaseVerifier,
+    HookRegistry,
+    LiteLLMProvider,
+    LLMProvider,
+    LLMResponse,
+    Message,
+    MockProvider,
+    ProviderError,
+    RunSummary,
+    Task,
+    TaskLedger,
+    VeridianConfig,
+    VeridianError,
+    VeridianRunner,
+    VerificationError,
+    VerificationResult,
+)
+```
 
-## Roadmap Focus
+Everything else is available through explicit module paths.
 
-Near-term focus areas:
+## Built-In Verifiers
 
-- v0.4: publish the verification contract, evidence timeline, threat model,
-  and `TrustedExecutor` boundary
-- v0.5: add production integration paths for Pydantic AI durable execution,
-  Mastra sidecars, OpenAI Agents SDK guardrails, and Inspect AI evidence export
-- keep LangGraph and CrewAI as the only certified adapters until new
-  certification tests exist
+The `0.3.0` core includes practical verifier building blocks:
 
-See the [v0.5 production roadmap](guides/production/roadmap-v0.5.md).
+- `schema`: required fields, small JSON Schema subset, optional Pydantic models
+- `file_exists`: require an artifact path to exist
+- `bash_exit`: validate captured shell exit codes
+- `http_status`: check an endpoint status code with the `http` extra
+- `quote_match`: match quoted evidence, with PDF support behind the `pdf` extra
+- `composite`: require multiple verifier checks
+- `any_of`: pass when at least one verifier passes
+- `confidence`: require a numeric confidence threshold
 
-## Contributing
+## How It Fits
 
-Contributions are welcome.
+Veridian complements orchestration libraries:
 
-Recommended PR discipline:
+- Use LangGraph, CrewAI, or your own loop to decide what work should happen.
+- Use Pydantic when you want rich model validation.
+- Use Veridian when you need the completion boundary to be enforced by a
+  runtime ledger and independent verifier.
 
-1. add or update tests first
-2. keep PRs single-ticket and scoped
-3. update docs when behavior changes
-4. include failure-mode and rollback notes for risky runtime changes
+The design bias is closer to Pydantic's small public namespace and LangGraph's
+focused runtime core than to an all-in-one agent platform.
 
-Project links:
+## Development
 
-- [Issues](https://github.com/AV-CSE31/veridian/issues)
-- [Discussions](https://github.com/AV-CSE31/veridian/discussions)
+```bash
+python -m pytest -q
+python -m ruff check veridian tests examples
+```
+
+Protected local planning and research material is intentionally not part of the
+public package.
 
 ## License
 
