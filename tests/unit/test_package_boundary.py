@@ -143,6 +143,41 @@ def test_parallel_runner_config_knob_stays_removed() -> None:
     assert "max_parallel" not in config_fields
 
 
+def test_litellm_provider_importable_without_llm_extras() -> None:
+    """Importing the provider module must NOT require the [llm] extra.
+
+    Regression guard: previously ``litellm_provider.py`` did a top-level
+    ``from tenacity import ...`` which broke test collection in CI when
+    only ``[dev]`` was installed. tenacity, litellm, and tiktoken are all
+    optional extras and must remain lazy.
+    """
+    code = textwrap.dedent(
+        """
+        import json
+        import sys
+        # Pretend the [llm] extras are absent even if locally installed.
+        for mod in ('tenacity', 'litellm', 'tiktoken'):
+            sys.modules[mod] = None  # type: ignore[assignment]
+        from veridian.providers.litellm_provider import (  # noqa: F401
+            CBState,
+            CircuitBreaker,
+            LiteLLMProvider,
+        )
+        # Instantiating must also succeed without the extras present.
+        LiteLLMProvider(model='mock/test')
+        print(json.dumps({'ok': True}))
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == '{"ok": true}'
+
+
 def test_optional_dependency_roots_not_imported_by_base_import() -> None:
     code = textwrap.dedent(
         """

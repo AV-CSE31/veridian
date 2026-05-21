@@ -9,10 +9,16 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
 
@@ -23,6 +29,8 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
 
       - name: Install dependencies
         run: |
@@ -38,10 +46,17 @@ jobs:
         run: mypy veridian --strict
 
       - name: Tests
-        run: pytest -q --tb=short
+        run: pytest --cov=veridian --cov-report=term-missing --cov-report=xml --cov-fail-under=85 --junitxml=pytest-report.xml --tb=short -q
 
-      - name: Coverage
-        run: pytest --cov=veridian --cov-report=term-missing --cov-fail-under=85 -q
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report-${{ matrix.python-version }}
+          path: |
+            pytest-report.xml
+            coverage.xml
+          retention-days: 14
 
       - name: Build package
         run: python -m build
@@ -50,3 +65,9 @@ jobs:
         run: |
           python -m twine check dist/*
           python scripts/check_package_artifacts.py dist/*
+
+      - name: Smoke install built wheel
+        run: |
+          python -m venv /tmp/smoke-venv
+          /tmp/smoke-venv/bin/pip install --quiet dist/*.whl
+          /tmp/smoke-venv/bin/python -c "import veridian; assert veridian.VeridianRunner, 'public API missing'"

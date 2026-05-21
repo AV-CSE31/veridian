@@ -41,7 +41,11 @@ COPY veridian ./veridian
 
 RUN python -m venv /opt/veridian-venv \
     && /opt/veridian-venv/bin/pip install --upgrade pip \
-    && /opt/veridian-venv/bin/pip install ".[${VERIDIAN_EXTRAS}]"
+    && if [ -n "${VERIDIAN_EXTRAS}" ]; then \
+           /opt/veridian-venv/bin/pip install ".[${VERIDIAN_EXTRAS}]"; \
+       else \
+           /opt/veridian-venv/bin/pip install "."; \
+       fi
 
 # ── Stage 2: runtime ────────────────────────────────────────────────────────
 FROM python:${PYTHON_VERSION}-slim AS runtime
