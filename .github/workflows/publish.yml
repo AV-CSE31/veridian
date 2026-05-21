@@ -27,9 +27,11 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Install dependencies
+        # Match CI: install all runtime extras so the publish quality
+        # gates exercise the full test surface.
         run: |
           pip install build twine
-          pip install -e ".[dev]"
+          pip install -e ".[dev,all]"
 
       - name: Quality gates
         run: |

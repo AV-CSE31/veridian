@@ -12,6 +12,7 @@ Pattern per verifier:
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -278,6 +279,11 @@ class TestSchemaVerifier:
 
 
 class TestHttpStatusVerifier:
+    pytestmark = pytest.mark.skipif(
+        importlib.util.find_spec("httpx") is None,
+        reason="HttpStatusVerifier requires the [http] extra (httpx).",
+    )
+
     def test_passes_when_status_in_expected_statuses(self) -> None:
         """Should pass when HTTP response status is in expected list."""
         from veridian.verify.builtin.http import HttpStatusVerifier

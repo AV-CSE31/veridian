@@ -33,8 +33,12 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       - name: Install dependencies
+        # Install all runtime extras so the full test surface (httpx,
+        # litellm, pypdf, pydantic) is exercised. The library remains
+        # importable with only [dev] thanks to lazy imports — covered by
+        # tests/unit/test_package_boundary.py.
         run: |
-          pip install -e ".[dev]"
+          pip install -e ".[dev,all]"
 
       - name: Lint
         run: ruff check veridian tests examples
