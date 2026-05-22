@@ -43,15 +43,25 @@ jobs:
       - name: Run pip-audit (report)
         # Always write the JSON report so the artifact upload below has
         # something to publish even when the strict gate fails.
+        # --skip-editable: we install veridian-ai itself via `pip install -e`,
+        # and pip-audit cannot resolve editable installs against PyPI.
         if: always()
         run: |
-          pip-audit --format json --output pip-audit.json || true
+          pip-audit --skip-editable --format json --output pip-audit.json || true
 
-      - name: Run pip-audit (strict gate)
-        # Audits the resolved environment so both direct and transitive
-        # vulnerabilities surface. The wider [dev,all] install ensures
-        # issues in [llm], [http], [pdf], [pydantic] are caught.
-        run: pip-audit --strict
+      - name: Run pip-audit (advisory on PR)
+        # PR runs report findings but do not block: third-party CVE
+        # disclosures should not gate unrelated feature work on the
+        # release cadence of an upstream dep.
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: pip-audit --skip-editable
+
+      - name: Run pip-audit (strict on schedule)
+        # Scheduled and manual runs fail loudly when CVEs surface so the
+        # weekly summary email / failed run is the operator's signal.
+        if: github.event_name != 'pull_request'
+        run: pip-audit --skip-editable --strict
 
       - name: Upload audit report
         if: always()
