@@ -44,6 +44,11 @@ from veridian.core.exceptions import (
     ProviderRateLimited,
 )
 from veridian.providers.base import LLMProvider, LLMResponse, Message
+from veridian.providers.retry import (
+    RetryPolicy,
+    _default_policy_for,
+    default_is_retryable,
+)
 
 log = logging.getLogger(__name__)
 
@@ -198,25 +203,10 @@ class CircuitBreaker:
 
 # -- RETRY POLICY -------------------------------------------------------------
 
-# Errors worth retrying (transient)
+# Retain the legacy module-level names for back-compat. New code should
+# import from veridian.providers.retry, which owns the canonical impl.
 _TRANSIENT_STATUS_CODES = {429, 500, 502, 503, 504}
-
-
-def _is_retryable(exc: BaseException) -> bool:
-    """
-    True - tenacity will retry.
-    False - fail immediately (permanent error).
-    """
-    msg = str(exc).lower()
-    # Rate limits / server errors
-    for code in _TRANSIENT_STATUS_CODES:
-        if str(code) in msg:
-            return True
-    # Connection / timeout errors
-    if any(kw in msg for kw in ("timeout", "connection", "network", "overloaded")):
-        return True
-    # Permanent: bad request, auth failure, not found - default: retry on unknown errors
-    return not any(code in msg for code in ("400", "401", "403", "404"))
+_is_retryable = default_is_retryable
 
 
 # -- LITELLM PROVIDER ---------------------------------------------------------
@@ -258,11 +248,12 @@ class LiteLLMProvider(LLMProvider):
         temperature: float = 0.2,
         max_tokens: int = 4096,
         timeout: int = 120,
-        # Retry
+        # Retry (legacy kwargs map onto retry_policy; kept for compat)
         max_retries: int = 3,
         min_backoff: float = 1.0,
         max_backoff: float = 30.0,
         jitter: float = 2.0,
+        retry_policy: RetryPolicy | None = None,
         # Circuit breaker
         cb_failure_threshold: int = 5,
         cb_cooldown_seconds: int = 60,
@@ -282,6 +273,15 @@ class LiteLLMProvider(LLMProvider):
         self.min_backoff = min_backoff
         self.max_backoff = max_backoff
         self.jitter = jitter
+        # When the caller doesn't supply a RetryPolicy explicitly, build
+        # one from the legacy kwargs so existing call sites keep their
+        # current behaviour. New code should pass retry_policy directly.
+        self.retry_policy: RetryPolicy = retry_policy or _default_policy_for(
+            max_retries=max_retries,
+            min_backoff=min_backoff,
+            max_backoff=max_backoff,
+            jitter=jitter,
+        )
         self.fallback_models = fallback_models or []
         self.context_window_budget = context_window_budget or self._model_context_limit()
 
@@ -346,18 +346,12 @@ class LiteLLMProvider(LLMProvider):
         self, model: str, messages: list[Message], **kwargs: Any
     ) -> LLMResponse:
         """
-        Call LiteLLM with tenacity retry (exponential backoff + jitter).
+        Call LiteLLM through the configured RetryPolicy (default: tenacity).
         Fails immediately on permanent errors (4xx non-429).
         """
         try:
             import litellm  # noqa: PLC0415
-            from tenacity import (  # noqa: PLC0415
-                RetryError,
-                Retrying,
-                retry_if_exception,
-                stop_after_attempt,
-                wait_exponential_jitter,
-            )
+            from tenacity import RetryError  # noqa: PLC0415
         except ImportError as exc:
             raise ProviderError(
                 "LiteLLMProvider.complete() requires the 'llm' extra. "
@@ -395,16 +389,7 @@ class LiteLLMProvider(LLMProvider):
             )
 
         try:
-            for attempt in Retrying(
-                retry=retry_if_exception(_is_retryable),
-                stop=stop_after_attempt(self.max_retries + 1),
-                wait=wait_exponential_jitter(
-                    initial=self.min_backoff,
-                    max=self.max_backoff,
-                    jitter=self.jitter,
-                ),
-                reraise=True,
-            ):
+            for attempt in self.retry_policy.retrying():
                 with attempt:
                     log.debug(
                         "provider.call model=%s attempt=%d",
