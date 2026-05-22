@@ -132,6 +132,11 @@ class VeridianRunner:
             provider=provider,
             progress_path=Path(str(self.config.progress_file)),
         )
+        # Observability: wire env-configured trace + alert hooks before any
+        # event fires. Safe no-op when none of the env vars are set.
+        from veridian.observability.setup import auto_register  # noqa: PLC0415
+
+        auto_register(self.hooks)
 
     def run(self, phase: str | None = None) -> RunSummary:
         """
@@ -147,6 +152,12 @@ class VeridianRunner:
         start_time = time.monotonic()
         run_id = self._run_id
         phase = phase or self.config.phase
+
+        # Pin a trace id for the current execution context. Logs and
+        # JsonlTraceHook records both pick this up automatically.
+        from veridian.observability.trace import set_trace_id  # noqa: PLC0415
+
+        set_trace_id(run_id)
 
         summary = RunSummary(
             run_id=run_id,

@@ -21,6 +21,7 @@ _EXPECTED_TOP_LEVEL_PACKAGES = {
     "hooks",
     "ledger",
     "loop",
+    "observability",
     "providers",
     "verify",
 }
@@ -65,7 +66,11 @@ def test_verify_package_stays_runtime_focused() -> None:
 
 
 def test_public_api_stays_small() -> None:
-    assert len(veridian.__all__) <= 20
+    # Cap raised from 20 -> 30 when the observability primitives
+    # (AlertHook, WebhookAlertHook, JsonLogFormatter, JsonlTraceHook,
+    # configure_logging) were promoted to top-level exports in the audit
+    # follow-up. Re-tighten if any of them are removed.
+    assert len(veridian.__all__) <= 30
 
 
 def test_removed_root_extras_stay_removed() -> None:
@@ -262,6 +267,9 @@ def test_removed_agent_variant_modules_stay_removed() -> None:
 
 
 def test_deleted_platform_packages_stay_removed() -> None:
+    # observability/ was re-introduced under the audit follow-up to ship
+    # JsonlTraceHook, JsonLogFormatter, and the AlertHook surface. The
+    # rest of these platform packages remain intentionally deleted.
     removed = {
         "audit",
         "agents",
@@ -277,7 +285,6 @@ def test_deleted_platform_packages_stay_removed() -> None:
         "intelligence",
         "knowledge",
         "mcp",
-        "observability",
         "operator",
         "plugins",
         "policy",

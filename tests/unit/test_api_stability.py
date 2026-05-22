@@ -26,6 +26,13 @@ _EXPECTED_STABLE_ALL = sorted(
         "VerificationError",
         "ProviderError",
         "verified",
+        # observability primitives promoted to top-level in the audit
+        # follow-up. They are opt-in via env vars and stay no-op when unset.
+        "AlertHook",
+        "WebhookAlertHook",
+        "JsonLogFormatter",
+        "JsonlTraceHook",
+        "configure_logging",
     ]
 )
 
@@ -40,7 +47,9 @@ class TestStableSurfaceIsExact:
         )
 
     def test_stable_surface_count(self) -> None:
-        assert len(veridian.__all__) <= 20
+        # Raised from 20 -> 30 when observability primitives joined the
+        # public surface. Re-tighten if any are removed.
+        assert len(veridian.__all__) <= 30
 
     def test_removed_symbols_are_module_path_only(self) -> None:
         removed = [

@@ -7,9 +7,12 @@ __author__ = "Veridian contributors"
 __license__ = "MIT"
 
 _LAZY_EXPORTS = {
+    "AlertHook": "veridian.observability.alerts:AlertHook",
     "BaseHook": "veridian.hooks.base:BaseHook",
     "BaseVerifier": "veridian.verify.base:BaseVerifier",
     "HookRegistry": "veridian.hooks.registry:HookRegistry",
+    "JsonLogFormatter": "veridian.observability.logging:JsonLogFormatter",
+    "JsonlTraceHook": "veridian.observability.trace:JsonlTraceHook",
     "LiteLLMProvider": "veridian.providers.litellm_provider:LiteLLMProvider",
     "LLMProvider": "veridian.providers.base:LLMProvider",
     "LLMResponse": "veridian.providers.base:LLMResponse",
@@ -25,6 +28,8 @@ _LAZY_EXPORTS = {
     "VerifiedCall": "veridian.decorators:VerifiedCall",
     "VerificationError": "veridian.core.exceptions:VerificationError",
     "VerificationResult": "veridian.verify.base:VerificationResult",
+    "WebhookAlertHook": "veridian.observability.alerts:WebhookAlertHook",
+    "configure_logging": "veridian.observability.logging:configure_logging",
     "verified": "veridian.decorators:verified",
 }
 
@@ -64,4 +69,9 @@ __all__ = [
     "VeridianError",
     "VerificationError",
     "ProviderError",
+    "AlertHook",
+    "WebhookAlertHook",
+    "JsonLogFormatter",
+    "JsonlTraceHook",
+    "configure_logging",
 ]
