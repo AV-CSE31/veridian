@@ -1,0 +1,38 @@
+# Dependabot keeps GitHub Actions pinned to current SHAs and surfaces
+# Python dependency upgrades for review. Grouped updates reduce PR noise
+# and keep related bumps (e.g. ruff + ruff-format) on one branch.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    # Group dev tooling (ruff, mypy, pytest, etc.) so a single PR covers
+    # them. Runtime extras stay separate so [llm] bumps get individual
+    # scrutiny — LiteLLM ships breaking changes frequently.
+    groups:
+      dev-tools:
+        dependency-type: "development"
+      runtime:
+        dependency-type: "production"
+        exclude-patterns:
+          - "litellm"
+          - "tiktoken"
+    ignore:
+      # Pin the LiteLLM major version; bump deliberately after smoke-testing
+      # against the provider matrix.
+      - dependency-name: "litellm"
+        update-types: ["version-update:semver-major"]

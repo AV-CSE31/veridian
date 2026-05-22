@@ -48,7 +48,27 @@ jobs:
           python -m twine check dist/*
           python scripts/check_package_artifacts.py dist/*
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          pip install --quiet cyclonedx-bom
+          mkdir -p dist
+          cyclonedx-py environment --of JSON --output-reproducible -o dist/sbom.cdx.json
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          name: release-artifacts
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/sbom.cdx.json
+          retention-days: 90
+
+      # Trusted publishing (PEP 740 / OIDC). The job-level id-token: write
+      # permission lets pypa/gh-action-pypi-publish exchange a GitHub OIDC
+      # token for a short-lived PyPI credential — no long-lived
+      # PYPI_API_TOKEN secret required. Pinned to a commit SHA so a tag
+      # rewrite on the action repo cannot silently change what runs with
+      # publish authority.
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0

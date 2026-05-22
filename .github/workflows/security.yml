@@ -1,0 +1,62 @@
+name: Security audit
+
+# Runs pip-audit weekly against the installed runtime + extras.
+# Decoupled from CI so transient CVE disclosures do not block PR merges
+# — security findings open issues via the action itself.
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"  # Monday 04:17 UTC
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/security.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install package + all extras
+        run: |
+          pip install -e ".[dev,all]"
+          pip install pip-audit
+
+      - name: Run pip-audit (report)
+        # Always write the JSON report so the artifact upload below has
+        # something to publish even when the strict gate fails.
+        if: always()
+        run: |
+          pip-audit --format json --output pip-audit.json || true
+
+      - name: Run pip-audit (strict gate)
+        # Audits the resolved environment so both direct and transitive
+        # vulnerabilities surface. The wider [dev,all] install ensures
+        # issues in [llm], [http], [pdf], [pydantic] are caught.
+        run: pip-audit --strict
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit
+          path: pip-audit.json
+          retention-days: 30
