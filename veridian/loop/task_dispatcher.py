@@ -82,9 +82,7 @@ class _TaskDispatcher:
                 other_paused = self.ledger.list(status=TaskStatus.PAUSED)
                 if phase:
                     other_paused = [t for t in other_paused if t.phase == phase]
-                next_paused = next(
-                    (t for t in other_paused if t.id not in paused_this_run), None
-                )
+                next_paused = next((t for t in other_paused if t.id not in paused_this_run), None)
                 if next_paused is not None:
                     task = next_paused
                 else:
@@ -212,9 +210,7 @@ class _TaskDispatcher:
             error_msg = f"WorkerAgent failed: {exc!s}"[:300]
             log.warning("runner.worker_error task_id=%s err=%s", task.id, exc)
             updated = self.ledger.mark_failed(task.id, error_msg)
-            self.hooks.fire(
-                "on_failure", TaskFailed(run_id=run_id, task=updated, error=error_msg)
-            )
+            self.hooks.fire("on_failure", TaskFailed(run_id=run_id, task=updated, error=error_msg))
             if updated.status == TaskStatus.ABANDONED:
                 summary.abandoned_count += 1
             else:
@@ -250,9 +246,7 @@ class _TaskDispatcher:
         self.ledger.submit_result(task.id, result)
         if verification_passed:
             updated = self.ledger.mark_done(task.id, result)
-            self.hooks.fire(
-                "after_task", TaskCompleted(run_id=run_id, task=updated, result=result)
-            )
+            self.hooks.fire("after_task", TaskCompleted(run_id=run_id, task=updated, result=result))
             summary.done_count += 1
         else:
             updated = self.ledger.mark_failed(task.id, error_msg or "Verification failed")
@@ -266,9 +260,7 @@ class _TaskDispatcher:
                 summary.failed_count += 1
 
     # ------ verifier dispatch + confidence ----------------------------------
-    def _verify(
-        self, task: Task, result: TaskResult
-    ) -> tuple[bool, str, dict[str, Any]]:
+    def _verify(self, task: Task, result: TaskResult) -> tuple[bool, str, dict[str, Any]]:
         verify_start = time.perf_counter()
         if not self.verifier_registry:
             try:
@@ -282,9 +274,7 @@ class _TaskDispatcher:
                     {
                         "score": None,
                         "evidence": {},
-                        "verification_ms": round(
-                            (time.perf_counter() - verify_start) * 1000, 1
-                        ),
+                        "verification_ms": round((time.perf_counter() - verify_start) * 1000, 1),
                     },
                 )
 
@@ -298,9 +288,7 @@ class _TaskDispatcher:
                 {
                     "score": vresult.score,
                     "evidence": vresult.evidence or {},
-                    "verification_ms": round(
-                        (time.perf_counter() - verify_start) * 1000, 1
-                    ),
+                    "verification_ms": round((time.perf_counter() - verify_start) * 1000, 1),
                 },
             )
         except Exception as exc:
@@ -311,9 +299,7 @@ class _TaskDispatcher:
                 {
                     "score": None,
                     "evidence": {"verify_error": str(exc)[:300]},
-                    "verification_ms": round(
-                        (time.perf_counter() - verify_start) * 1000, 1
-                    ),
+                    "verification_ms": round((time.perf_counter() - verify_start) * 1000, 1),
                 },
             )
 
@@ -350,9 +336,7 @@ class _TaskDispatcher:
                 "tier": "LOW" if fallback < 0.65 else "MEDIUM",
             }
 
-    def _namespace_trace_steps(
-        self, trace_steps: list[TraceStep], attempt_number: int
-    ) -> None:
+    def _namespace_trace_steps(self, trace_steps: list[TraceStep], attempt_number: int) -> None:
         for idx, step in enumerate(trace_steps, start=1):
             base_id = step.step_id or f"step_{idx}"
             step.step_id = f"a{attempt_number}_{idx}_{base_id}"

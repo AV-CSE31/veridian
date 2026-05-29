@@ -15,6 +15,7 @@ SESSION_HANDOFF.md
 # Keep only release showcase example
 examples/*
 !examples/decorator_release_gate.py
+!examples/cost_guard_with_alerts.py
 
 # Internal logs and reports
 cov_progress.txt

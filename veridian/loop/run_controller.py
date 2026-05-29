@@ -80,9 +80,7 @@ class _RunController:
         self._previous_sigint = None
 
     # ------ run lifecycle events --------------------------------------------
-    def fire_run_started(
-        self, run_id: str, total_tasks: int, phase: str | None
-    ) -> None:
+    def fire_run_started(self, run_id: str, total_tasks: int, phase: str | None) -> None:
         self.hooks.fire(
             "before_run",
             RunStarted(run_id=run_id, total_tasks=total_tasks, phase=phase),

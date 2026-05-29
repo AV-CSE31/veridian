@@ -308,4 +308,7 @@ def test_examples_stay_small_and_release_focused() -> None:
         for path in (ROOT / "examples").rglob("*")
         if path.is_file()
     }
-    assert example_files == {"examples/decorator_release_gate.py"}
+    assert example_files == {
+        "examples/decorator_release_gate.py",
+        "examples/cost_guard_with_alerts.py",
+    }
