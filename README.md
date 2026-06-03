@@ -24,6 +24,7 @@ Use it when you need:
 - crash-safe ledger writes
 - retryable failures instead of silent success
 - structured evidence for each completed task
+- hashable verification reports for audit trails
 - verifier logic that lives outside the model
 
 Veridian is not an orchestration framework, dashboard, policy engine, or prompt
@@ -136,6 +137,29 @@ assert result.passed
 See [`examples/decorator_release_gate.py`](examples/decorator_release_gate.py)
 for a complete success-and-failure demonstration.
 
+## Verification Reports
+
+Every runner/decorator verification produces a stable report object under
+`TaskResult.verification_report`. The report includes the verifier decision,
+evidence, input/output hashes, runtime version, and a report hash.
+
+```python
+result = decide_release()
+print(result.report.to_dict()["report_hash"])
+```
+
+For local audit export, configure a JSONL report file. Each appended report is
+linked to the previous report hash so tampering can be detected later:
+
+```python
+from veridian import VeridianConfig
+from veridian.core.report import validate_report_chain
+
+config = VeridianConfig(report_file="verification-reports.jsonl")
+validation = validate_report_chain(config.report_file)
+assert validation.valid
+```
+
 ## Runtime Model
 
 Veridian keeps the execution path deliberately small:
@@ -185,6 +209,12 @@ from veridian import (
 
 Everything else is available through explicit module paths.
 
+Report primitives are intentionally module-path imports:
+
+```python
+from veridian.core.report import VerificationReport, validate_report_chain
+```
+
 ## Built-In Verifiers
 
 The `0.3.0` core includes practical verifier building blocks:
@@ -196,6 +226,14 @@ The `0.3.0` core includes practical verifier building blocks:
 - `quote_match`: match quoted evidence, with PDF support behind the `pdf` extra
 - `composite`: require multiple verifier checks
 - `any_of`: pass when at least one verifier passes
+
+## Examples
+
+The example set is intentionally small and business-oriented:
+
+- [`examples/decorator_release_gate.py`](examples/decorator_release_gate.py)
+- [`examples/runner_release_gate.py`](examples/runner_release_gate.py)
+- [`examples/artifact_verification_gate.py`](examples/artifact_verification_gate.py)
 
 ## How It Fits
 

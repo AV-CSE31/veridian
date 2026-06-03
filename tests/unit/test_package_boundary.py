@@ -46,6 +46,7 @@ def test_core_package_stays_runtime_focused() -> None:
         "config.py",
         "events.py",
         "exceptions.py",
+        "report.py",
         "task.py",
     }
     actual = {path.name for path in (ROOT / "veridian" / "core").glob("*.py")}
@@ -266,4 +267,8 @@ def test_examples_stay_small_and_release_focused() -> None:
         for path in (ROOT / "examples").rglob("*")
         if path.is_file()
     }
-    assert example_files == {"examples/decorator_release_gate.py"}
+    assert example_files == {
+        "examples/artifact_verification_gate.py",
+        "examples/decorator_release_gate.py",
+        "examples/runner_release_gate.py",
+    }

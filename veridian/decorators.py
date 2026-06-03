@@ -5,9 +5,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
+from pathlib import Path
 from typing import Any, ParamSpec
 
+from veridian import __version__
 from veridian.core.exceptions import VerificationError
+from veridian.core.report import VerificationReport, append_report_jsonl
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import VerificationResult, VerifierRegistry, registry
 
@@ -22,6 +25,7 @@ class VerifiedCall:
     task: Task
     result: TaskResult
     verification: VerificationResult
+    report: VerificationReport
 
     @property
     def passed(self) -> bool:
@@ -59,6 +63,7 @@ def verified(
     description: str | None = None,
     strict: bool = False,
     verifier_registry: VerifierRegistry | None = None,
+    report_file: str | Path | None = None,
 ) -> Callable[[Callable[P, Any]], Callable[P, VerifiedCall]]:
     """Verify a function's return value with a Veridian verifier.
 
@@ -84,12 +89,26 @@ def verified(
             result.verification_error = verification.error
             result.verification_evidence = verification.evidence
             result.verifier_score = verification.score
+            report = VerificationReport.from_task_result(
+                task=task,
+                result=result,
+                passed=verification.passed,
+                error=verification.error,
+                evidence=verification.evidence or {},
+                score=verification.score,
+                runtime_version=__version__,
+                metadata={"source": "decorator", "function": fn.__name__},
+            )
+            if report_file is not None:
+                report = append_report_jsonl(report_file, report)
+            result.verification_report = report.to_dict()
 
             call = VerifiedCall(
                 value=value,
                 task=task,
                 result=result,
                 verification=verification,
+                report=report,
             )
             if strict:
                 call.raise_for_failure()

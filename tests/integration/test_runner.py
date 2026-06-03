@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from veridian.core.config import VeridianConfig
+from veridian.core.report import validate_report_chain
 from veridian.core.task import (
     Task,
     TaskStatus,
@@ -148,10 +149,33 @@ class TestVeridianRunnerHappyPath:
         assert isinstance(stored.result.confidence, dict)
         assert "composite" in stored.result.confidence
         assert isinstance(stored.result.verification_evidence, dict)
+        assert stored.result.verification_report["schema_version"] == "verification-report.v1"
+        assert stored.result.verification_report["passed"] is True
+        assert stored.result.verification_report["task_id"] == "e1"
+        assert stored.result.verification_report["report_hash"]
         assert "worker_ms" in stored.result.timing
         assert "verification_ms" in stored.result.timing
         assert len(stored.result.trace_steps) >= 1
         assert stored.result.trace_steps[-1].action_type == "verify"
+
+    def test_runner_exports_tamper_evident_report_jsonl(self, config, ledger, mock_provider):
+        """Configured report_file writes the same evidence chain sold by Enterprise."""
+        config.report_file = config.ledger_file.parent / "reports.jsonl"
+        ledger.add([make_task("evidence export", id="report-1")])
+        mock_provider.script([make_result_response({"summary": "done"})])
+
+        runner = VeridianRunner(ledger=ledger, provider=mock_provider, config=config)
+        summary = runner.run()
+
+        assert summary.done_count == 1
+        assert config.report_file is not None
+        validation = validate_report_chain(config.report_file)
+        assert validation.valid is True
+        assert validation.checked_count == 1
+
+        stored = ledger.get("report-1")
+        assert stored.result is not None
+        assert stored.result.verification_report["report_hash"]
 
 
 class TestDryRun:

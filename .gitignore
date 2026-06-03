@@ -14,7 +14,9 @@ SESSION_HANDOFF.md
 
 # Keep only release showcase example
 examples/*
+!examples/artifact_verification_gate.py
 !examples/decorator_release_gate.py
+!examples/runner_release_gate.py
 
 # Internal logs and reports
 cov_progress.txt

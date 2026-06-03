@@ -10,6 +10,7 @@ _LAZY_EXPORTS = {
     "TaskStatus": "veridian.core.task:TaskStatus",
     "VeridianConfig": "veridian.core.config:VeridianConfig",
     "VeridianError": "veridian.core.exceptions:VeridianError",
+    "VerificationReport": "veridian.core.report:VerificationReport",
 }
 
 
@@ -34,4 +35,5 @@ __all__ = [
     "LedgerStats",
     "VeridianError",
     "VeridianConfig",
+    "VerificationReport",
 ]

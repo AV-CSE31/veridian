@@ -147,6 +147,7 @@ class TaskResult:
     tool_calls: list[Any] = field(default_factory=list)
     timing: dict[str, Any] = field(default_factory=dict)
     verification_evidence: dict[str, Any] = field(default_factory=dict)
+    verification_report: dict[str, Any] = field(default_factory=dict)
     extras: dict[str, Any] = field(default_factory=dict)
 
     # Verification outcome (set by runner after verifier runs)
@@ -170,6 +171,7 @@ class TaskResult:
             "tool_calls": self.tool_calls,
             "timing": self.timing,
             "verification_evidence": self.verification_evidence,
+            "verification_report": self.verification_report,
             "verified": self.verified,
             "verification_error": self.verification_error,
             "verified_at": self.verified_at.isoformat() if self.verified_at else None,
@@ -192,6 +194,7 @@ class TaskResult:
         r.tool_calls = d.get("tool_calls", [])
         r.timing = d.get("timing", {})
         r.verification_evidence = d.get("verification_evidence", {})
+        r.verification_report = d.get("verification_report", {})
         r.verified = d.get("verified", False)
         r.verification_error = d.get("verification_error")
         r.token_usage = d.get("token_usage", {})
@@ -208,6 +211,7 @@ class TaskResult:
             "tool_calls",
             "timing",
             "verification_evidence",
+            "verification_report",
             "verified",
             "verification_error",
             "verified_at",
