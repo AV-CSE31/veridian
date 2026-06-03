@@ -15,6 +15,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
+        extras: ["dev", "dev,all"]
 
     steps:
       - uses: actions/checkout@v5
@@ -26,7 +27,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e ".[dev]"
+          pip install -e ".[${{ matrix.extras }}]"
 
       - name: Lint
         run: ruff check veridian tests examples

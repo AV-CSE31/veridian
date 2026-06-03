@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from veridian import __version__
 from veridian.context.manager import ContextManager
 from veridian.context.window import TokenWindow
 from veridian.core.config import VeridianConfig
@@ -45,6 +46,7 @@ from veridian.core.events import (
     TaskResumed,
 )
 from veridian.core.exceptions import ControlFlowSignal, HumanReviewRequired, TaskPauseRequested
+from veridian.core.report import VerificationReport, append_report_jsonl
 from veridian.core.task import (
     Task,
     TaskResult,
@@ -421,6 +423,28 @@ class VeridianRunner:
             )
         )
         result.confidence = self._build_confidence(task, verify_meta)
+        report = VerificationReport.from_task_result(
+            task=task,
+            result=result,
+            passed=verification_passed,
+            error=error_msg or None,
+            evidence=result.verification_evidence,
+            score=result.verifier_score,
+            runtime_version=__version__,
+            run_id=run_id,
+            metadata={"source": "runner", "phase": task.phase},
+        )
+        if self.config.report_file is not None:
+            try:
+                report = append_report_jsonl(self.config.report_file, report)
+            except Exception as exc:
+                log.warning(
+                    "runner.report_export_failed task_id=%s path=%s err=%s",
+                    task.id,
+                    self.config.report_file,
+                    exc,
+                )
+        result.verification_report = report.to_dict()
 
         self.ledger.submit_result(task.id, result)
         if verification_passed:

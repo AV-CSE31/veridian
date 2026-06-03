@@ -132,6 +132,7 @@ class VeridianConfig:
     # like ``ledger.json`` continue to resolve relative to that root.
     ledger_file: Path = field(default_factory=lambda: default_data_dir() / "ledger.json")
     progress_file: Path = field(default_factory=lambda: default_data_dir() / "progress.md")
+    report_file: Path | None = None  # optional JSONL verification evidence export
     # FileLock acquire timeout for ledger writes. Tight enough that a
     # crashed peer with a stale lock surfaces a clear Timeout instead of
     # blocking pod startup indefinitely.

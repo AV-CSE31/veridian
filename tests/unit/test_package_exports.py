@@ -1,5 +1,6 @@
 """Package export hygiene tests for public subpackages."""
 
+from veridian.core import VerificationReport
 from veridian.ledger import SCHEMA_VERSION, TaskLedger
 from veridian.providers import (
     LiteLLMProvider,
@@ -36,3 +37,7 @@ def test_verify_package_exports_registry_primitives() -> None:
     assert VerificationResult.__name__ == "VerificationResult"
     assert VerifierRegistry.__name__ == "VerifierRegistry"
     assert verifier_registry is registry
+
+
+def test_core_package_exports_report_schema_by_module_path() -> None:
+    assert VerificationReport.__name__ == "VerificationReport"
