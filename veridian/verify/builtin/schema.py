@@ -27,72 +27,43 @@ from __future__ import annotations
 import importlib
 from typing import Any, ClassVar
 
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
+
 from veridian.core.exceptions import VeridianConfigError
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import BaseVerifier, VerificationResult
 
 
+def _validate_schema_or_raise(schema: dict[str, Any]) -> None:
+    """Fail-closed schema check. A malformed JSON Schema is a configuration error,
+    not a verification outcome --- raise so it surfaces at setup instead of silently
+    passing every payload (false GREEN).
+    """
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as exc:
+        raise VeridianConfigError(
+            f"Invalid JSON Schema supplied to SchemaVerifier: {exc.message}"
+        ) from exc
+
+
 def _check_json_schema(schema: dict[str, Any], data: dict[str, Any]) -> list[str]:
     """
-    Minimal JSON Schema validation without external dependencies.
-    Handles: required, properties.type, properties.enum.
-    Returns list of error strings.
+    Sound JSON Schema (Draft 2020-12) validation via the ``jsonschema`` library.
+
+    Recurses into nested objects/arrays, honours ``pattern``/``anyOf``/``allOf``/
+    ``oneOf``/``items``/nested ``required``, and treats booleans as distinct from
+    integers/numbers. Returns a deterministic, sorted list of error strings.
+    Assumes the schema was already validated by ``_validate_schema_or_raise``.
     """
+    validator = Draft202012Validator(schema)
     errors: list[str] = []
-
-    required: list[str] = schema.get("required", [])
-    for field in required:
-        if field not in data or data[field] is None:
-            errors.append(f"required field '{field}' is missing or null")
-
-    properties: dict[str, Any] = schema.get("properties", {})
-    for field, constraints in properties.items():
-        if field not in data:
-            continue
-        value = data[field]
-
-        # type check
-        expected_type: str | None = constraints.get("type")
-        if expected_type:
-            type_map: dict[str, type | tuple[type, ...]] = {
-                "string": str,
-                "number": (int, float),
-                "integer": int,
-                "boolean": bool,
-                "array": list,
-                "object": dict,
-                "null": type(None),
-            }
-            py_type = type_map.get(expected_type)
-            if py_type and not isinstance(value, py_type):
-                errors.append(
-                    f"field '{field}' must be type '{expected_type}', got '{type(value).__name__}'"
-                )
-
-        # enum check
-        enum_vals: list[Any] | None = constraints.get("enum")
-        if enum_vals is not None and value not in enum_vals:
-            errors.append(f"field '{field}' must be one of {enum_vals!r}, got '{value}'")
-
-        # minLength / maxLength for strings
-        if isinstance(value, str):
-            min_len: int | None = constraints.get("minLength")
-            max_len: int | None = constraints.get("maxLength")
-            if min_len is not None and len(value) < min_len:
-                errors.append(f"field '{field}' is too short (min {min_len} chars)")
-            if max_len is not None and len(value) > max_len:
-                errors.append(f"field '{field}' is too long (max {max_len} chars)")
-
-        # minimum / maximum for numbers
-        if isinstance(value, (int, float)):
-            minimum: float | None = constraints.get("minimum")
-            maximum: float | None = constraints.get("maximum")
-            if minimum is not None and value < minimum:
-                errors.append(f"field '{field}' value {value} is below minimum {minimum}")
-            if maximum is not None and value > maximum:
-                errors.append(f"field '{field}' value {value} exceeds maximum {maximum}")
-
-    return errors
+    for err in validator.iter_errors(data):
+        location = "/".join(str(p) for p in err.absolute_path) or "<root>"
+        errors.append(f"{location}: {err.message}")
+    # Deterministic ordering independent of dict/iteration order.
+    return sorted(errors)
 
 
 def _validate_pydantic(model_path: str, data: dict[str, Any]) -> list[str]:
@@ -161,6 +132,10 @@ class SchemaVerifier(BaseVerifier):
                 "Provide a JSON Schema dict, a Pydantic model path, "
                 "or a list of required field names."
             )
+        # Fail closed: reject a malformed JSON Schema at construction time rather
+        # than silently passing every payload at verify time.
+        if isinstance(schema, dict):
+            _validate_schema_or_raise(schema)
         self.schema = schema
         self.required_fields: list[str] = required_fields or []
 
