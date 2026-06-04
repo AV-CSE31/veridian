@@ -37,6 +37,8 @@ classifiers = [
 dependencies = [
     # Cross-process file locking for atomic ledger writes
     "filelock>=3.13",
+    # Sound, recursive JSON Schema validation (Draft 2020-12) for the schema verifier
+    "jsonschema>=4.18",
 ]
 
 [project.optional-dependencies]
