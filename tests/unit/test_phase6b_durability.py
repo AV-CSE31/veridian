@@ -51,10 +51,13 @@ class TestAtomicWriteFsync:
         assert called == []
 
     def test_fsync_oserror_swallowed_but_write_succeeds(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         # Some filesystems / network mounts raise OSError on fsync. The
-        # helper must surface a written file even when fsync fails.
+        # helper must surface a written file even when fsync fails, and
+        # the durability downgrade must be visible in the logs.
+        import logging
+
         import veridian.core.atomic_io as mod
 
         def _boom(_fd: int) -> None:
@@ -63,8 +66,10 @@ class TestAtomicWriteFsync:
         monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
         monkeypatch.setattr(mod.os, "fsync", _boom)
         target = tmp_path / "ok.txt"
-        atomic_write_text(target, "payload")
+        with caplog.at_level(logging.WARNING, logger="veridian.core.atomic_io"):
+            atomic_write_text(target, "payload")
         assert target.read_text(encoding="utf-8") == "payload"
+        assert any("fsync_failed" in rec.message for rec in caplog.records)
 
 
 # ------ TaskLedger fsync ------------------------------------------------------------------------------------------------------------------------------------
@@ -106,8 +111,10 @@ class TestLedgerWriteFsync:
         assert called == []
 
     def test_fsync_oserror_swallowed_but_write_succeeds(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
+        import logging
+
         import veridian.ledger.ledger as mod
 
         ledger = self._build_ledger(tmp_path)
@@ -117,9 +124,11 @@ class TestLedgerWriteFsync:
 
         monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
         monkeypatch.setattr(mod.os, "fsync", _boom)
-        ledger.add([self._make_task()])
+        with caplog.at_level(logging.WARNING, logger="veridian.ledger.ledger"):
+            ledger.add([self._make_task()])
         assert (tmp_path / "ledger.json").exists()
         assert len(ledger.list()) == 1
+        assert any("fsync_failed" in rec.message for rec in caplog.records)
 
 
 # ------ Orphan temp-file sweep ------------------------------------------------------------------------------------------------------------------------------

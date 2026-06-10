@@ -584,8 +584,17 @@ class TaskLedger:
                     # Without fsync the bytes can still be in the page cache
                     # when os.replace() runs; a power loss there loses the
                     # write despite the atomic-rename contract.
-                    with contextlib.suppress(OSError):
+                    try:
                         os.fsync(f.fileno())
+                    except OSError as exc:
+                        # Proceed --- rename-atomicity still holds --- but make
+                        # the durability downgrade visible to operators.
+                        log.warning(
+                            "ledger.fsync_failed path=%s err=%s (write proceeds rename-atomic, "
+                            "not power-loss durable)",
+                            self.path,
+                            exc,
+                        )
 
             # Windows can transiently deny replace if another thread/process is
             # briefly reading the target path. Retry a few times with tiny
