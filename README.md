@@ -21,7 +21,7 @@ the narrower production boundary: verified completion.
 Use it when you need:
 
 - deterministic task state transitions
-- crash-safe ledger writes
+- crash-safe ledger writes (fsync + atomic rename)
 - retryable failures instead of silent success
 - structured evidence for each completed task
 - hashable verification reports for audit trails

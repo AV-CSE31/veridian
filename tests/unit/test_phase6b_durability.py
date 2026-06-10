@@ -67,6 +67,61 @@ class TestAtomicWriteFsync:
         assert target.read_text(encoding="utf-8") == "payload"
 
 
+# ------ TaskLedger fsync ------------------------------------------------------------------------------------------------------------------------------------
+
+
+class TestLedgerWriteFsync:
+    def _build_ledger(self, tmp_path: Path):
+        from veridian.ledger.ledger import TaskLedger
+
+        return TaskLedger(
+            path=tmp_path / "ledger.json", progress_file=str(tmp_path / "progress.md")
+        )
+
+    def _make_task(self):
+        from veridian.core.task import Task
+
+        return Task(title="durable", description="fsync before rename")
+
+    def test_fsync_called_by_default(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import veridian.ledger.ledger as mod
+
+        ledger = self._build_ledger(tmp_path)
+
+        called: list[int] = []
+        monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
+        monkeypatch.setattr(mod.os, "fsync", lambda fd: called.append(fd))
+        ledger.add([self._make_task()])
+        assert len(called) >= 1
+
+    def test_env_var_disables_fsync(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import veridian.ledger.ledger as mod
+
+        ledger = self._build_ledger(tmp_path)
+
+        called: list[int] = []
+        monkeypatch.setenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", "1")
+        monkeypatch.setattr(mod.os, "fsync", lambda fd: called.append(fd))
+        ledger.add([self._make_task()])
+        assert called == []
+
+    def test_fsync_oserror_swallowed_but_write_succeeds(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import veridian.ledger.ledger as mod
+
+        ledger = self._build_ledger(tmp_path)
+
+        def _boom(_fd: int) -> None:
+            raise OSError("fsync unsupported")
+
+        monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
+        monkeypatch.setattr(mod.os, "fsync", _boom)
+        ledger.add([self._make_task()])
+        assert (tmp_path / "ledger.json").exists()
+        assert len(ledger.list()) == 1
+
+
 # ------ ContextManager path-traversal guard ---------------------------------------------------------------------------------------------------------------
 
 

@@ -5,7 +5,7 @@ TaskLedger --- the single source of truth for all task state.
 
 RULES:
 - Ledger is the ONLY object allowed to transition task status.
-- All writes are atomic (temp-file --- rename via os.replace).
+- All writes are atomic and durable (temp-file --- fsync --- os.replace).
 - FileLock ensures single writer across processes.
 - reset_in_progress() MUST be called at the start of every run().
 """
@@ -26,6 +26,7 @@ from typing import Any
 
 from filelock import FileLock
 
+from veridian.core.atomic_io import _fsync_enabled
 from veridian.core.exceptions import (
     InvalidTransition,
     LedgerCorrupted,
@@ -521,7 +522,11 @@ class TaskLedger:
 
     def _write_raw(self, data: dict[str, Any]) -> None:
         """
-        Atomic write via temp file + os.replace().
+        Atomic, durable write via temp file + fsync + os.replace().
+
+        The fsync honours ``VERIDIAN_ATOMIC_IO_SKIP_FSYNC=1`` (same opt-out as
+        :mod:`veridian.core.atomic_io`) so test suites can trade durability for
+        speed. Production deployments should leave it unset.
 
         Serialization uses compact JSON (no ``indent=2``) on the hot path ---
         every state transition (claim, submit_result, mark_done, ---) goes
@@ -541,6 +546,13 @@ class TaskLedger:
         try:
             with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
                 f.write(text)
+                f.flush()
+                if _fsync_enabled():
+                    # Without fsync the bytes can still be in the page cache
+                    # when os.replace() runs; a power loss there loses the
+                    # write despite the atomic-rename contract.
+                    with contextlib.suppress(OSError):
+                        os.fsync(f.fileno())
 
             # Windows can transiently deny replace if another thread/process is
             # briefly reading the target path. Retry a few times with tiny
