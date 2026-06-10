@@ -176,22 +176,29 @@ class TaskLedger:
     def stats(self) -> LedgerStats:
         """Compute current ledger statistics."""
         data = self._read_raw()
-        tasks = [Task.from_dict(t) for t in data["tasks"].values()]
+        raw_tasks = data["tasks"].values()
 
         by_status: dict[str, int] = {}
         phases: dict[str, int] = {}
         total_tokens = 0
         total_retries = 0
 
-        for t in tasks:
-            by_status[t.status.value] = by_status.get(t.status.value, 0) + 1
-            if t.status == TaskStatus.PENDING:
-                phases[t.phase] = phases.get(t.phase, 0) + 1
-            total_retries += t.retry_count
-            if t.result:
-                total_tokens += t.result.token_usage.get("total_tokens", 0)
+        # Aggregates need only a handful of scalar fields, so read them off
+        # the raw dicts (defaults mirror Task.from_dict / TaskResult.from_dict
+        # exactly) instead of materialising every Task. TaskStatus() keeps the
+        # same validation Task.from_dict would apply to unknown status values.
+        for d in raw_tasks:
+            status = TaskStatus(d.get("status", "pending"))
+            by_status[status.value] = by_status.get(status.value, 0) + 1
+            if status == TaskStatus.PENDING:
+                phase = d.get("phase", "default")
+                phases[phase] = phases.get(phase, 0) + 1
+            total_retries += d.get("retry_count", 0)
+            result = d.get("result")
+            if result:
+                total_tokens += result.get("token_usage", {}).get("total_tokens", 0)
 
-        n = len(tasks)
+        n = len(raw_tasks)
         return LedgerStats(
             total=n,
             by_status=by_status,
