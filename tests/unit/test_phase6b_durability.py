@@ -131,6 +131,61 @@ class TestLedgerWriteFsync:
         assert any("fsync_failed" in rec.message for rec in caplog.records)
 
 
+# ------ Bootstrap write race ------------------------------------------------------------------------------------------------------------------------------
+
+
+class TestBootstrapRace:
+    def test_losing_init_race_does_not_clobber_populated_ledger(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Two processes init the same ledger path concurrently. The loser must
+        not replace the winner's populated ledger with an empty bootstrap.
+        Simulated deterministically: a stub lock lets "the other process"
+        create and populate the ledger while we wait to acquire.
+        """
+        import veridian.ledger.ledger as mod
+        from veridian.core.task import Task
+        from veridian.ledger.ledger import TaskLedger
+
+        ledger_path = tmp_path / "ledger.json"
+
+        class RaceyLock:
+            """Winner populates the ledger during our acquire()."""
+
+            def __init__(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def __enter__(self) -> RaceyLock:
+                if not ledger_path.exists():
+                    winner = object.__new__(TaskLedger)
+                    winner.path = ledger_path
+                    winner.run_id = "winner"
+                    winner.progress_path = tmp_path / "winner-progress.md"
+                    winner._lock_path = ledger_path.with_suffix(".lock")
+                    winner._lock = self
+                    winner._write_raw(
+                        {
+                            "schema_version": mod.SCHEMA_VERSION,
+                            "tasks": {
+                                "keep-me": Task(
+                                    id="keep-me", title="winner task", description="d"
+                                ).to_dict()
+                            },
+                        }
+                    )
+                return self
+
+            def __exit__(self, *exc: object) -> None:
+                pass
+
+        monkeypatch.setattr(mod, "FileLock", RaceyLock)
+        loser = TaskLedger(path=ledger_path, progress_file=str(tmp_path / "loser-progress.md"))
+
+        # The winner's task must survive the loser's __init__.
+        assert loser.get("keep-me").title == "winner task"
+
+
 # ------ Orphan temp-file sweep ------------------------------------------------------------------------------------------------------------------------------
 
 

@@ -72,9 +72,14 @@ class TaskLedger:
         self._lock_path = self.path.with_suffix(".lock")
         self._lock = FileLock(str(self._lock_path), timeout=lock_timeout)
 
-        # Initialise empty ledger if file doesn't exist
+        # Initialise empty ledger if file doesn't exist. Double-checked under
+        # the lock: a concurrent process can create (and populate) the ledger
+        # between our exists() check and our bootstrap write, and an unlocked
+        # write here would replace its tasks with an empty ledger.
         if not self.path.exists():
-            self._write_raw({"schema_version": SCHEMA_VERSION, "tasks": {}})
+            with self._lock:
+                if not self.path.exists():
+                    self._write_raw({"schema_version": SCHEMA_VERSION, "tasks": {}})
 
     # ------ READ INTERFACE ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
