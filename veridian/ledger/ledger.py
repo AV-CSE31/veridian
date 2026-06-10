@@ -101,26 +101,33 @@ class TaskLedger:
         gating does not apply to resumes because the task was already running.
         """
         data = self._read_raw()
-        tasks = [Task.from_dict(t) for t in data["tasks"].values()]
-        done_ids = {t.id for t in tasks if t.status == TaskStatus.DONE}
+        raw_tasks = data["tasks"].values()
+
+        # Hot path: filter on raw dicts and materialize Task objects only for
+        # eligible candidates. Defaults mirror Task.from_dict exactly so the
+        # selection is identical to filtering materialized tasks.
+        done_ids = {d["id"] for d in raw_tasks if d.get("status", "pending") == "done"}
 
         # RV3-001: Resume-first policy --- surface PAUSED tasks before PENDING ones.
         if include_paused:
             paused = [
-                t
-                for t in tasks
-                if t.status == TaskStatus.PAUSED and (phase is None or t.phase == phase)
+                Task.from_dict(d)
+                for d in raw_tasks
+                if d.get("status", "pending") == "paused"
+                and (phase is None or d.get("phase", "default") == phase)
             ]
             if paused:
                 paused.sort(key=lambda t: (-t.priority, t.created_at))
                 return paused[0]
 
         candidates = [
-            t
-            for t in tasks
-            if t.status == TaskStatus.PENDING
-            and (phase is None or t.phase == phase)
-            and (not respect_dependencies or all(dep in done_ids for dep in t.depends_on))
+            Task.from_dict(d)
+            for d in raw_tasks
+            if d.get("status", "pending") == "pending"
+            and (phase is None or d.get("phase", "default") == phase)
+            and (
+                not respect_dependencies or all(dep in done_ids for dep in d.get("depends_on", []))
+            )
         ]
 
         if not candidates:

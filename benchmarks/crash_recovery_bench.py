@@ -130,6 +130,18 @@ def _run_once(min_kill_ms: int, max_kill_ms: int, rng: random.Random) -> dict[st
             str(ack_path),
         ]
         child = subprocess.Popen(cmd)  # noqa: S603
+        # Start the kill window from the FIRST acknowledged op, not from
+        # process spawn: interpreter + import startup dwarfs small windows
+        # and would otherwise kill the worker before it does any work.
+        deadline = time.monotonic() + 30.0
+        while time.monotonic() < deadline:
+            if ack_path.exists() and ack_path.stat().st_size > 0:
+                break
+            time.sleep(0.005)
+        else:
+            child.kill()
+            child.wait()
+            raise RuntimeError("worker produced no acknowledged ops within 30s")
         kill_after = rng.uniform(min_kill_ms, max_kill_ms) / 1000.0
         time.sleep(kill_after)
         child.kill()  # SIGKILL: no cleanup handlers run
