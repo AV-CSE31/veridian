@@ -14,6 +14,8 @@ SIGKILLs a ledger-writer subprocess at a random point mid-stream, reopens the
 ledger, and reconciles it against the operations the worker had already seen
 acknowledged. Reports acknowledged-op loss, ledger corruption, orphan temp
 files, and how many `IN_PROGRESS` tasks the crash-recovery contract reset.
+(Orphan temp files are counted as left immediately after the kill; the
+runtime sweeps stale ones during `reset_in_progress()` on the next run.)
 
 ```bash
 python benchmarks/crash_recovery_bench.py --runs 20

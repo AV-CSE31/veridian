@@ -122,6 +122,54 @@ class TestLedgerWriteFsync:
         assert len(ledger.list()) == 1
 
 
+# ------ Orphan temp-file sweep ------------------------------------------------------------------------------------------------------------------------------
+
+
+class TestOrphanTmpSweep:
+    def _build_ledger(self, tmp_path: Path):
+        from veridian.ledger.ledger import TaskLedger
+
+        return TaskLedger(
+            path=tmp_path / "ledger.json", progress_file=str(tmp_path / "progress.md")
+        )
+
+    def test_stale_tmp_files_removed_on_reset(self, tmp_path: Path) -> None:
+        import os
+        import time
+
+        ledger = self._build_ledger(tmp_path)
+        stale = tmp_path / "ledger_dead1234.tmp"
+        stale.write_text("{}", encoding="utf-8")
+        old = time.time() - 120
+        os.utime(stale, (old, old))
+
+        ledger.reset_in_progress()
+        assert not stale.exists()
+
+    def test_fresh_tmp_files_are_preserved(self, tmp_path: Path) -> None:
+        # A young temp file may belong to a sibling ledger mid-write in a
+        # shared directory; the sweep must not race its rename.
+        ledger = self._build_ledger(tmp_path)
+        fresh = tmp_path / "ledger_live5678.tmp"
+        fresh.write_text("{}", encoding="utf-8")
+
+        ledger.reset_in_progress()
+        assert fresh.exists()
+
+    def test_unrelated_files_untouched(self, tmp_path: Path) -> None:
+        import os
+        import time
+
+        ledger = self._build_ledger(tmp_path)
+        other = tmp_path / "notes.tmp"
+        other.write_text("keep me", encoding="utf-8")
+        old = time.time() - 120
+        os.utime(other, (old, old))
+
+        ledger.reset_in_progress()
+        assert other.exists()
+
+
 # ------ ContextManager path-traversal guard ---------------------------------------------------------------------------------------------------------------
 
 

@@ -40,6 +40,10 @@ log = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 2
 
+# Orphan ledger_*.tmp files younger than this are skipped by the startup
+# sweep: they may belong to a sibling ledger mid-write in a shared directory.
+_TMP_SWEEP_MAX_AGE_SECONDS = 60.0
+
 
 class TaskLedger:
     """
@@ -415,11 +419,15 @@ class TaskLedger:
         If runner_id given: only reset tasks claimed by that runner.
         Returns count reset.
 
+        Also sweeps stale ``ledger_*.tmp`` files left behind by writers that
+        crashed between temp-file creation and the atomic rename.
+
         RV3-001 guarantee: PAUSED tasks are NEVER reset. Their pause payload is
         preserved so they can be resumed on next run().
         """
         reset = 0
         with self._lock:
+            self._sweep_orphan_tmp_files()
             data = self._read_raw()
             for task_dict in data["tasks"].values():
                 if task_dict.get("status") != "in_progress":
@@ -519,6 +527,31 @@ class TaskLedger:
         if not isinstance(data.get("schema_version"), int):
             data["schema_version"] = SCHEMA_VERSION
         return data
+
+    def _sweep_orphan_tmp_files(self) -> int:
+        """
+        Remove stale ``ledger_*.tmp`` files left by crashed writers.
+
+        Must be called while holding ``self._lock``: writers to this ledger
+        hold the same lock for the full temp-write + rename window, so any
+        temp file visible here is either a crash leftover or belongs to a
+        *sibling* ledger sharing the directory. The age threshold protects
+        the sibling case --- its in-flight temp files are milliseconds old,
+        while crash leftovers only age.
+        """
+        removed = 0
+        now = time.time()
+        for tmp in self.path.parent.glob("ledger_*.tmp"):
+            try:
+                if now - tmp.stat().st_mtime < _TMP_SWEEP_MAX_AGE_SECONDS:
+                    continue
+                tmp.unlink()
+                removed += 1
+            except OSError:
+                continue
+        if removed:
+            log.info("ledger.sweep_orphan_tmp count=%d", removed)
+        return removed
 
     def _write_raw(self, data: dict[str, Any]) -> None:
         """
