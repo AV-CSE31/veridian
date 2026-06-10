@@ -6,6 +6,7 @@ import importlib
 import json
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
@@ -40,6 +41,45 @@ class BaseVerifier(ABC):
     def verify(self, task: Task, result: TaskResult) -> VerificationResult:
         """Run verification. Must be deterministic and idempotent."""
         ...
+
+    def as_guardrail(self) -> Callable[[Any], tuple[bool, Any]]:
+        """
+        Adapt this verifier into a framework-agnostic guardrail callable.
+
+        The returned callable accepts a single task output and returns
+        ``(True, output)`` when verification passes, or ``(False, error)``
+        when it fails. The two-tuple shape matches CrewAI's function
+        guardrail contract and is directly usable inside a LangGraph node
+        (or any harness that can call a function on an output before
+        accepting it), so the verification contract travels without
+        Veridian owning the execution loop.
+
+        Output coercion: objects exposing ``raw`` (str) and/or ``json_dict``
+        (dict) --- e.g. CrewAI ``TaskOutput`` --- are unwrapped; plain
+        strings become ``raw_output``; dicts become ``structured``; anything
+        else is JSON-serialized into ``raw_output``.
+        """
+
+        def _guardrail(output: Any) -> tuple[bool, Any]:
+            raw = getattr(output, "raw", None)
+            if not isinstance(raw, str):
+                if isinstance(output, str):
+                    raw = output
+                else:
+                    raw = json.dumps(output, default=str, ensure_ascii=False)
+
+            structured = getattr(output, "json_dict", None)
+            if not isinstance(structured, dict):
+                structured = output if isinstance(output, dict) else {}
+
+            task = Task(title=f"guardrail:{self.id}", description=self.description or self.id)
+            result = TaskResult(raw_output=raw, structured=structured)
+            verification = self.verify(task, result)
+            if verification.passed:
+                return True, output
+            return False, verification.error or f"verifier {self.id!r} failed"
+
+        return _guardrail
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
