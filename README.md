@@ -21,7 +21,7 @@ the narrower production boundary: verified completion.
 Use it when you need:
 
 - deterministic task state transitions
-- crash-safe ledger writes
+- crash-safe ledger writes (fsync + atomic rename)
 - retryable failures instead of silent success
 - structured evidence for each completed task
 - hashable verification reports for audit trails
@@ -226,6 +226,35 @@ The `0.3.0` core includes practical verifier building blocks:
 - `quote_match`: match quoted evidence, with PDF support behind the `pdf` extra
 - `composite`: require multiple verifier checks
 - `any_of`: pass when at least one verifier passes
+
+### Verifiers as portable guardrails
+
+Every verifier adapts into a plain `(output) -> (passed, payload)` callable
+via `as_guardrail()`, so the verification contract travels into harnesses
+Veridian does not own. The two-tuple matches CrewAI's function-guardrail
+signature and drops into a LangGraph node as an output gate:
+
+```python
+from veridian.verify.base import registry
+
+contract = {"required": ["status"], "properties": {"status": {"enum": ["complete"]}}}
+guardrail = registry.get("schema", {"schema": contract}).as_guardrail()
+
+# CrewAI: Task(..., guardrails=[guardrail])
+# LangGraph or any custom loop:
+passed, payload = guardrail(node_output)
+if not passed:
+    raise ValueError(payload)  # keep unverified output out of your checkpoint
+```
+
+## Benchmarks
+
+[`benchmarks/`](benchmarks/) contains two runnable reliability measurements:
+a crash-recovery benchmark (SIGKILL a ledger writer mid-stream; assert zero
+acknowledged-write loss and zero corruption) and a verified-completion
+benchmark (a worker that always claims success; compare false-DONE rates with
+and without the verification gate). Both print JSON and exit non-zero on any
+violation, so they can run in CI.
 
 ## Examples
 

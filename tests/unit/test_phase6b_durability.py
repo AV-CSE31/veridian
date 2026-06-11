@@ -51,10 +51,13 @@ class TestAtomicWriteFsync:
         assert called == []
 
     def test_fsync_oserror_swallowed_but_write_succeeds(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         # Some filesystems / network mounts raise OSError on fsync. The
-        # helper must surface a written file even when fsync fails.
+        # helper must surface a written file even when fsync fails, and
+        # the durability downgrade must be visible in the logs.
+        import logging
+
         import veridian.core.atomic_io as mod
 
         def _boom(_fd: int) -> None:
@@ -63,8 +66,172 @@ class TestAtomicWriteFsync:
         monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
         monkeypatch.setattr(mod.os, "fsync", _boom)
         target = tmp_path / "ok.txt"
-        atomic_write_text(target, "payload")
+        with caplog.at_level(logging.WARNING, logger="veridian.core.atomic_io"):
+            atomic_write_text(target, "payload")
         assert target.read_text(encoding="utf-8") == "payload"
+        assert any("fsync_failed" in rec.message for rec in caplog.records)
+
+
+# ------ TaskLedger fsync ------------------------------------------------------------------------------------------------------------------------------------
+
+
+class TestLedgerWriteFsync:
+    def _build_ledger(self, tmp_path: Path):
+        from veridian.ledger.ledger import TaskLedger
+
+        return TaskLedger(
+            path=tmp_path / "ledger.json", progress_file=str(tmp_path / "progress.md")
+        )
+
+    def _make_task(self):
+        from veridian.core.task import Task
+
+        return Task(title="durable", description="fsync before rename")
+
+    def test_fsync_called_by_default(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import veridian.ledger.ledger as mod
+
+        ledger = self._build_ledger(tmp_path)
+
+        called: list[int] = []
+        monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
+        monkeypatch.setattr(mod.os, "fsync", lambda fd: called.append(fd))
+        ledger.add([self._make_task()])
+        assert len(called) >= 1
+
+    def test_env_var_disables_fsync(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import veridian.ledger.ledger as mod
+
+        ledger = self._build_ledger(tmp_path)
+
+        called: list[int] = []
+        monkeypatch.setenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", "1")
+        monkeypatch.setattr(mod.os, "fsync", lambda fd: called.append(fd))
+        ledger.add([self._make_task()])
+        assert called == []
+
+    def test_fsync_oserror_swallowed_but_write_succeeds(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        import logging
+
+        import veridian.ledger.ledger as mod
+
+        ledger = self._build_ledger(tmp_path)
+
+        def _boom(_fd: int) -> None:
+            raise OSError("fsync unsupported")
+
+        monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
+        monkeypatch.setattr(mod.os, "fsync", _boom)
+        with caplog.at_level(logging.WARNING, logger="veridian.ledger.ledger"):
+            ledger.add([self._make_task()])
+        assert (tmp_path / "ledger.json").exists()
+        assert len(ledger.list()) == 1
+        assert any("fsync_failed" in rec.message for rec in caplog.records)
+
+
+# ------ Bootstrap write race ------------------------------------------------------------------------------------------------------------------------------
+
+
+class TestBootstrapRace:
+    def test_losing_init_race_does_not_clobber_populated_ledger(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Two processes init the same ledger path concurrently. The loser must
+        not replace the winner's populated ledger with an empty bootstrap.
+        Simulated deterministically: a stub lock lets "the other process"
+        create and populate the ledger while we wait to acquire.
+        """
+        import veridian.ledger.ledger as mod
+        from veridian.core.task import Task
+        from veridian.ledger.ledger import TaskLedger
+
+        ledger_path = tmp_path / "ledger.json"
+
+        class RaceyLock:
+            """Winner populates the ledger during our acquire()."""
+
+            def __init__(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def __enter__(self) -> RaceyLock:
+                if not ledger_path.exists():
+                    winner = object.__new__(TaskLedger)
+                    winner.path = ledger_path
+                    winner.run_id = "winner"
+                    winner.progress_path = tmp_path / "winner-progress.md"
+                    winner._lock_path = ledger_path.with_suffix(".lock")
+                    winner._lock = self
+                    winner._write_raw(
+                        {
+                            "schema_version": mod.SCHEMA_VERSION,
+                            "tasks": {
+                                "keep-me": Task(
+                                    id="keep-me", title="winner task", description="d"
+                                ).to_dict()
+                            },
+                        }
+                    )
+                return self
+
+            def __exit__(self, *exc: object) -> None:
+                pass
+
+        monkeypatch.setattr(mod, "FileLock", RaceyLock)
+        loser = TaskLedger(path=ledger_path, progress_file=str(tmp_path / "loser-progress.md"))
+
+        # The winner's task must survive the loser's __init__.
+        assert loser.get("keep-me").title == "winner task"
+
+
+# ------ Orphan temp-file sweep ------------------------------------------------------------------------------------------------------------------------------
+
+
+class TestOrphanTmpSweep:
+    def _build_ledger(self, tmp_path: Path):
+        from veridian.ledger.ledger import TaskLedger
+
+        return TaskLedger(
+            path=tmp_path / "ledger.json", progress_file=str(tmp_path / "progress.md")
+        )
+
+    def test_stale_tmp_files_removed_on_reset(self, tmp_path: Path) -> None:
+        import os
+        import time
+
+        ledger = self._build_ledger(tmp_path)
+        stale = tmp_path / "ledger_dead1234.tmp"
+        stale.write_text("{}", encoding="utf-8")
+        old = time.time() - 120
+        os.utime(stale, (old, old))
+
+        ledger.reset_in_progress()
+        assert not stale.exists()
+
+    def test_fresh_tmp_files_are_preserved(self, tmp_path: Path) -> None:
+        # A young temp file may belong to a sibling ledger mid-write in a
+        # shared directory; the sweep must not race its rename.
+        ledger = self._build_ledger(tmp_path)
+        fresh = tmp_path / "ledger_live5678.tmp"
+        fresh.write_text("{}", encoding="utf-8")
+
+        ledger.reset_in_progress()
+        assert fresh.exists()
+
+    def test_unrelated_files_untouched(self, tmp_path: Path) -> None:
+        import os
+        import time
+
+        ledger = self._build_ledger(tmp_path)
+        other = tmp_path / "notes.tmp"
+        other.write_text("keep me", encoding="utf-8")
+        old = time.time() - 120
+        os.utime(other, (old, old))
+
+        ledger.reset_in_progress()
+        assert other.exists()
 
 
 # ------ ContextManager path-traversal guard ---------------------------------------------------------------------------------------------------------------

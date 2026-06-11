@@ -32,12 +32,15 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
 from typing import Any
 
 __all__ = ["atomic_write_text", "atomic_write_json"]
+
+log = logging.getLogger(__name__)
 
 
 def _fsync_enabled() -> bool:
@@ -79,8 +82,17 @@ def atomic_write_text(path: Path | str, content: str, *, encoding: str = "utf-8"
                 # as up-to-date as ``content``. Without this, a crash
                 # between flush and replace can leave the renamed file
                 # empty despite the atomic-rename contract.
-                with contextlib.suppress(OSError):
+                try:
                     os.fsync(handle.fileno())
+                except OSError as exc:
+                    # Proceed --- rename-atomicity still holds --- but make
+                    # the durability downgrade visible to operators.
+                    log.warning(
+                        "atomic_io.fsync_failed path=%s err=%s (write proceeds "
+                        "rename-atomic, not power-loss durable)",
+                        target,
+                        exc,
+                    )
             tmp_name = handle.name
         os.replace(tmp_name, target)
     except OSError:

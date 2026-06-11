@@ -38,14 +38,6 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
-from tenacity import (
-    RetryError,
-    Retrying,
-    retry_if_exception,
-    stop_after_attempt,
-    wait_exponential_jitter,
-)
-
 from veridian.core.exceptions import (
     ContextWindowExceeded,
     ProviderError,
@@ -357,6 +349,22 @@ class LiteLLMProvider(LLMProvider):
         Call LiteLLM with tenacity retry (exponential backoff + jitter).
         Fails immediately on permanent errors (4xx non-429).
         """
+        # Lazy like ``litellm`` below: the module stays importable on minimal
+        # installs; the missing extra surfaces on first use with a fix-it hint.
+        try:
+            from tenacity import (  # noqa: PLC0415
+                RetryError,
+                Retrying,
+                retry_if_exception,
+                stop_after_attempt,
+                wait_exponential_jitter,
+            )
+        except ImportError as exc:
+            raise ProviderError(
+                "LiteLLMProvider requires the 'tenacity' package for its retry "
+                "stack. Install the LLM extra: pip install 'veridian-ai[llm]'"
+            ) from exc
+
         import litellm  # noqa: PLC0415
 
         # Guard: check context window before making the API call

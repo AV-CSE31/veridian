@@ -44,6 +44,21 @@ class TestLedgerBasic:
         with pytest.raises(TaskNotFound):
             ledger.get("nonexistent-id")
 
+    def test_phases_ordered_by_first_seen_priority(self, ledger):
+        ledger.add(
+            [
+                make_task(title="low", phase="cleanup", priority=10),
+                make_task(title="high", phase="build", priority=90),
+                make_task(title="mid", phase="test", priority=50),
+                make_task(title="dup", phase="build", priority=5),
+            ]
+        )
+        assert ledger.phases() == ["build", "test", "cleanup"]
+
+    def test_phases_defaults_apply(self, ledger):
+        ledger.add([make_task(title="bare")])
+        assert ledger.phases() == ["default"]
+
     def test_add_skip_duplicates(self, ledger):
         t = make_task()
         ledger.add([t])
