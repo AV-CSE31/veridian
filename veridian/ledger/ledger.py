@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import builtins
 import contextlib
+import copy
 import json
 import logging
 import os
@@ -35,6 +36,7 @@ from veridian.core.exceptions import (
     TaskNotPaused,
 )
 from veridian.core.task import LedgerStats, Task, TaskPriority, TaskResult, TaskStatus
+from veridian.ledger.wal import WalLog
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +45,10 @@ SCHEMA_VERSION = 2
 # Orphan ledger_*.tmp files younger than this are skipped by the startup
 # sweep: they may belong to a sibling ledger mid-write in a shared directory.
 _TMP_SWEEP_MAX_AGE_SECONDS = 60.0
+
+# WAL mode (VERIDIAN_LEDGER_WAL=1): snapshot is rewritten and the log
+# truncated once this many entries accumulate.
+_WAL_COMPACT_ENTRIES_DEFAULT = 1000
 
 
 class TaskLedger:
@@ -72,6 +78,21 @@ class TaskLedger:
         self._lock_path = self.path.with_suffix(".lock")
         self._lock = FileLock(str(self._lock_path), timeout=lock_timeout)
 
+        # Experimental append-only write path (see veridian.ledger.wal).
+        # Default OFF: the rewrite-per-transition path below is unchanged.
+        self._wal_enabled = os.getenv("VERIDIAN_LEDGER_WAL") == "1"
+        self._wal = WalLog(self.path.with_suffix(".wal"))
+        self._wal_compact_entries = int(
+            os.getenv("VERIDIAN_LEDGER_WAL_COMPACT_ENTRIES", str(_WAL_COMPACT_ENTRIES_DEFAULT))
+        )
+        self._wal_seq = 0
+        self._wal_entries = 0
+        # Writer-side cache of the merged state, valid only while the stamp
+        # (snapshot mtime+size, wal size) matches on-disk reality. Only ever
+        # consulted under the file lock; readers always parse fresh.
+        self._write_cache: dict[str, Any] | None = None
+        self._write_stamp: tuple[int, int, int] | None = None
+
         # Initialise empty ledger if file doesn't exist. Double-checked under
         # the lock: a concurrent process can create (and populate) the ledger
         # between our exists() check and our bootstrap write, and an unlocked
@@ -79,7 +100,7 @@ class TaskLedger:
         if not self.path.exists():
             with self._lock:
                 if not self.path.exists():
-                    self._write_raw({"schema_version": SCHEMA_VERSION, "tasks": {}})
+                    self._commit({"schema_version": SCHEMA_VERSION, "tasks": {}}, changed=None)
 
     # ------ READ INTERFACE ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -238,13 +259,15 @@ class TaskLedger:
         """
         added = 0
         with self._lock:
-            data = self._read_raw()
+            data = self._load_for_write()
+            changed: builtins.list[dict[str, Any]] = []
             for task in tasks:
                 if task.id in data["tasks"] and skip_duplicates:
                     continue
                 data["tasks"][task.id] = task.to_dict()
+                changed.append(data["tasks"][task.id])
                 added += 1
-            self._write_raw(data)
+            self._commit(data, changed)
         log.debug("ledger.add count=%d skip_dup=%s", added, skip_duplicates)
         return added
 
@@ -255,9 +278,9 @@ class TaskLedger:
         Returns the updated task.
         """
         with self._lock:
-            data = self._read_raw()
+            data = self._load_for_write()
             self._assert_exists(data, task_id)
-            task = Task.from_dict(data["tasks"][task_id])
+            task = Task.from_dict(copy.deepcopy(data["tasks"][task_id]))
 
             if task.status == TaskStatus.IN_PROGRESS:
                 if task.claimed_by and task.claimed_by != runner_id:
@@ -271,21 +294,21 @@ class TaskLedger:
             task.claimed_by = runner_id
             task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
-            self._write_raw(data)
+            self._commit(data, [data["tasks"][task_id]])
 
         return task
 
     def submit_result(self, task_id: str, result: TaskResult) -> Task:
         """IN_PROGRESS --- VERIFYING. Does NOT mark DONE --- verifier does that."""
         with self._lock:
-            data = self._read_raw()
+            data = self._load_for_write()
             self._assert_exists(data, task_id)
-            task = Task.from_dict(data["tasks"][task_id])
+            task = Task.from_dict(copy.deepcopy(data["tasks"][task_id]))
             self._transition(task, TaskStatus.VERIFYING)
             task.result = result
             task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
-            self._write_raw(data)
+            self._commit(data, [data["tasks"][task_id]])
         return task
 
     def checkpoint_result(self, task_id: str, result: TaskResult) -> Task:
@@ -296,21 +319,21 @@ class TaskLedger:
         (trace, score boundaries, policy logs, invocation IDs) after each step.
         """
         with self._lock:
-            data = self._read_raw()
+            data = self._load_for_write()
             self._assert_exists(data, task_id)
-            task = Task.from_dict(data["tasks"][task_id])
+            task = Task.from_dict(copy.deepcopy(data["tasks"][task_id]))
             task.result = result
             task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
-            self._write_raw(data)
+            self._commit(data, [data["tasks"][task_id]])
         return task
 
     def mark_done(self, task_id: str, result: TaskResult) -> Task:
         """VERIFYING --- DONE. Called ONLY by VeridianRunner after verifier passes."""
         with self._lock:
-            data = self._read_raw()
+            data = self._load_for_write()
             self._assert_exists(data, task_id)
-            task = Task.from_dict(data["tasks"][task_id])
+            task = Task.from_dict(copy.deepcopy(data["tasks"][task_id]))
             self._transition(task, TaskStatus.DONE)
             result.verified = True
             result.verified_at = datetime.now(tz=UTC)
@@ -318,7 +341,7 @@ class TaskLedger:
             task.claimed_by = None
             task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
-            self._write_raw(data)
+            self._commit(data, [data["tasks"][task_id]])
         self.log(f"[DONE] {task_id} --- {task.title[:60]}")
         return task
 
@@ -329,9 +352,9 @@ class TaskLedger:
         ABANDONED path: IN_PROGRESS --- FAILED --- ABANDONED (respects state machine).
         """
         with self._lock:
-            data = self._read_raw()
+            data = self._load_for_write()
             self._assert_exists(data, task_id)
-            task = Task.from_dict(data["tasks"][task_id])
+            task = Task.from_dict(copy.deepcopy(data["tasks"][task_id]))
             task.retry_count += 1
             task.last_error = error
             task.claimed_by = None
@@ -345,20 +368,20 @@ class TaskLedger:
                 log.warning("task.abandoned id=%s retries=%d", task_id, task.retry_count)
 
             data["tasks"][task_id] = task.to_dict()
-            self._write_raw(data)
+            self._commit(data, [data["tasks"][task_id]])
         return task
 
     def skip(self, task_id: str, reason: str = "") -> Task:
         """--- SKIPPED. Terminal. Use for human-curated exclusions."""
         with self._lock:
-            data = self._read_raw()
+            data = self._load_for_write()
             self._assert_exists(data, task_id)
-            task = Task.from_dict(data["tasks"][task_id])
+            task = Task.from_dict(copy.deepcopy(data["tasks"][task_id]))
             self._transition(task, TaskStatus.SKIPPED)
             task.last_error = reason
             task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
-            self._write_raw(data)
+            self._commit(data, [data["tasks"][task_id]])
         return task
 
     def pause(
@@ -375,9 +398,9 @@ class TaskLedger:
         resume_count that increments on each resume. Crash-safe via atomic write.
         """
         with self._lock:
-            data = self._read_raw()
+            data = self._load_for_write()
             self._assert_exists(data, task_id)
-            task = Task.from_dict(data["tasks"][task_id])
+            task = Task.from_dict(copy.deepcopy(data["tasks"][task_id]))
             self._transition(task, TaskStatus.PAUSED)
 
             # Preserve any existing TaskResult (e.g. from checkpoint_result())
@@ -402,7 +425,7 @@ class TaskLedger:
             task.claimed_by = None
             task.updated_at = datetime.now(tz=UTC)
             data["tasks"][task_id] = task.to_dict()
-            self._write_raw(data)
+            self._commit(data, [data["tasks"][task_id]])
         log.info("ledger.pause task_id=%s reason=%s", task_id, reason[:60])
         self.log(f"[PAUSE] {task_id} --- {reason[:80]}")
         return task
@@ -413,9 +436,9 @@ class TaskLedger:
         Raises TaskNotPaused if the task is not in PAUSED state.
         """
         with self._lock:
-            data = self._read_raw()
+            data = self._load_for_write()
             self._assert_exists(data, task_id)
-            task = Task.from_dict(data["tasks"][task_id])
+            task = Task.from_dict(copy.deepcopy(data["tasks"][task_id]))
             if task.status != TaskStatus.PAUSED:
                 raise TaskNotPaused(task_id=task_id, status=task.status.value)
 
@@ -430,7 +453,7 @@ class TaskLedger:
                 task.result.extras["pause_payload"] = pause_payload
 
             data["tasks"][task_id] = task.to_dict()
-            self._write_raw(data)
+            self._commit(data, [data["tasks"][task_id]])
         log.info("ledger.resume task_id=%s runner_id=%s", task_id, runner_id)
         self.log(f"[RESUME] {task_id}")
         return task
@@ -451,7 +474,8 @@ class TaskLedger:
         reset = 0
         with self._lock:
             self._sweep_orphan_tmp_files()
-            data = self._read_raw()
+            data = self._load_for_write()
+            changed: builtins.list[dict[str, Any]] = []
             for task_dict in data["tasks"].values():
                 if task_dict.get("status") != "in_progress":
                     continue
@@ -460,9 +484,10 @@ class TaskLedger:
                 task_dict["status"] = "pending"
                 task_dict["claimed_by"] = None
                 task_dict["updated_at"] = datetime.now(tz=UTC).isoformat()
+                changed.append(task_dict)
                 reset += 1
             if reset:
-                self._write_raw(data)
+                self._commit(data, changed)
 
         if reset:
             log.info("ledger.reset_in_progress count=%d", reset)
@@ -477,7 +502,8 @@ class TaskLedger:
         """
         reset = 0
         with self._lock:
-            data = self._read_raw()
+            data = self._load_for_write()
+            changed: builtins.list[dict[str, Any]] = []
             for tid, task_dict in data["tasks"].items():
                 if task_ids and tid not in task_ids:
                     continue
@@ -486,9 +512,10 @@ class TaskLedger:
                 task_dict["status"] = "pending"
                 task_dict["last_error"] = None
                 task_dict["updated_at"] = datetime.now(tz=UTC).isoformat()
+                changed.append(task_dict)
                 reset += 1
             if reset:
-                self._write_raw(data)
+                self._commit(data, changed)
         return reset
 
     # ------ PROGRESS LOG ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -513,6 +540,14 @@ class TaskLedger:
     # ------ INTERNAL ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     def _read_raw(self) -> dict[str, Any]:
+        """Return current merged state (snapshot + WAL overlay in WAL mode)."""
+        data = self._read_snapshot()
+        if self._wal_enabled:
+            for task_dict in self._wal.replay().upserts:
+                data["tasks"][task_dict["id"]] = task_dict
+        return data
+
+    def _read_snapshot(self) -> dict[str, Any]:
         """Read and parse ledger.json. Raises LedgerCorrupted on parse failure."""
         try:
             text = self.path.read_text(encoding="utf-8")
@@ -524,6 +559,84 @@ class TaskLedger:
             raise LedgerCorrupted(f"ledger.json is malformed: {e}") from e
         except FileNotFoundError:
             return {"schema_version": SCHEMA_VERSION, "tasks": {}}
+
+    def _stamp(self) -> tuple[int, int, int]:
+        """On-disk identity of (snapshot, wal) for write-cache validation."""
+        try:
+            st = self.path.stat()
+            snap = (st.st_mtime_ns, st.st_size)
+        except OSError:
+            snap = (0, 0)
+        return (snap[0], snap[1], self._wal.size())
+
+    def _load_for_write(self) -> dict[str, Any]:
+        """Return current state for mutation. Caller must hold ``self._lock``.
+
+        In WAL mode, reuses the cached merged state when the on-disk stamp is
+        unchanged (appends and snapshots only happen under the lock, so the
+        stamp is authoritative); otherwise reloads, repairing any torn WAL
+        tail first --- a valid line appended after a torn fragment would be
+        unreachable on replay, so writers never append past one.
+        """
+        if not self._wal_enabled:
+            return self._read_raw()
+
+        stamp = self._stamp()
+        if self._write_cache is not None and self._write_stamp == stamp:
+            return self._write_cache
+
+        replay = self._wal.replay()
+        if replay.has_invalid_tail:
+            self._wal.repair(replay)
+        data = self._read_snapshot()
+        for task_dict in replay.upserts:
+            data["tasks"][task_dict["id"]] = task_dict
+        self._wal_seq = replay.last_seq
+        self._wal_entries = replay.entry_count
+        self._write_cache = data
+        self._write_stamp = self._stamp()
+        return data
+
+    def _commit(self, data: dict[str, Any], changed: builtins.list[dict[str, Any]] | None) -> None:
+        """Persist a mutation. Caller must hold ``self._lock``.
+
+        Default mode: full atomic snapshot rewrite (unchanged behavior).
+        WAL mode with ``changed`` entries: append one durable log line.
+        WAL mode with ``changed=None`` (bootstrap/recovery): full snapshot,
+        then truncate the log --- safe because replay is idempotent upserts.
+        """
+        if not self._wal_enabled:
+            self._write_raw(data)
+            return
+
+        try:
+            if changed is None:
+                self._write_raw(data)
+                self._wal.truncate()
+                self._wal_seq = 0
+                self._wal_entries = 0
+            else:
+                self._wal_seq += 1
+                line = json.dumps({"seq": self._wal_seq, "tasks": changed}, ensure_ascii=False)
+                self._wal.append(line + "\n")
+                self._wal_entries += 1
+                # Re-parse the exact bytes written so the cache never shares
+                # nested dicts with Task objects handed back to callers ---
+                # and provably mirrors what is on disk.
+                for task_dict in json.loads(line)["tasks"]:
+                    data["tasks"][task_dict["id"]] = task_dict
+                if self._wal_entries >= self._wal_compact_entries:
+                    self._write_raw(data)
+                    self._wal.truncate()
+                    self._wal_seq = 0
+                    self._wal_entries = 0
+            self._write_cache = data
+            self._write_stamp = self._stamp()
+        except Exception:
+            # Disk and memory may now disagree; force a reload on next write.
+            self._write_cache = None
+            self._write_stamp = None
+            raise
 
     @staticmethod
     def _normalize_legacy_shape(data: dict[str, Any]) -> dict[str, Any]:

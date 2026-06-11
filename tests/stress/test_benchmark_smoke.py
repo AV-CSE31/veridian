@@ -9,6 +9,7 @@ zero reliability violations.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -16,13 +17,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def _run_bench(script: str, *args: str) -> dict:
+def _run_bench(script: str, *args: str, env: dict[str, str] | None = None) -> dict:
     proc = subprocess.run(  # noqa: S603
         [sys.executable, str(ROOT / "benchmarks" / script), *args],
         capture_output=True,
         text=True,
         timeout=120,
         cwd=ROOT,
+        env={**os.environ, **(env or {})},
     )
     assert proc.returncode == 0, f"{script} failed:\n{proc.stdout}\n{proc.stderr}"
     return json.loads(proc.stdout)
@@ -31,6 +33,23 @@ def _run_bench(script: str, *args: str) -> dict:
 def test_crash_recovery_bench_no_loss_or_corruption() -> None:
     report = _run_bench(
         "crash_recovery_bench.py", "--runs", "3", "--min-kill-ms", "20", "--max-kill-ms", "120"
+    )
+    assert report["passed"] is True
+    assert report["lost_ops"] == 0
+    assert report["corrupted_runs"] == 0
+    assert report["acked_ops"] > 0
+
+
+def test_crash_recovery_bench_wal_mode_no_loss_or_corruption() -> None:
+    report = _run_bench(
+        "crash_recovery_bench.py",
+        "--runs",
+        "3",
+        "--min-kill-ms",
+        "20",
+        "--max-kill-ms",
+        "120",
+        env={"VERIDIAN_LEDGER_WAL": "1"},
     )
     assert report["passed"] is True
     assert report["lost_ops"] == 0
