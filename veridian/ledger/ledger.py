@@ -34,7 +34,7 @@ from veridian.core.exceptions import (
     TaskNotFound,
     TaskNotPaused,
 )
-from veridian.core.task import LedgerStats, Task, TaskResult, TaskStatus
+from veridian.core.task import LedgerStats, Task, TaskPriority, TaskResult, TaskStatus
 
 log = logging.getLogger(__name__)
 
@@ -215,14 +215,18 @@ class TaskLedger:
     def phases(self) -> builtins.list[str]:
         """Return distinct phase names, ordered by first-seen task priority."""
         data = self._read_raw()
-        tasks = sorted(
-            [Task.from_dict(t) for t in data["tasks"].values()],
-            key=lambda t: -t.priority,
+        # Raw-dict read like list()/get_next()/stats(): only priority and
+        # phase are needed, with defaults mirroring Task.from_dict. sorted()
+        # is stable, so first-seen ordering is identical.
+        raw_tasks = sorted(
+            data["tasks"].values(),
+            key=lambda d: -d.get("priority", TaskPriority.NORMAL),
         )
         seen: list[str] = []
-        for t in tasks:
-            if t.phase not in seen:
-                seen.append(t.phase)
+        for d in raw_tasks:
+            phase = d.get("phase", "default")
+            if phase not in seen:
+                seen.append(phase)
         return seen
 
     # ------ WRITE INTERFACE ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
