@@ -258,6 +258,7 @@ class TaskLedger:
         If skip_duplicates=True and a task with the same id exists, skip it.
         """
         added = 0
+        self._validate_tasks(tasks)
         with self._lock:
             data = self._load_for_write()
             changed: builtins.list[dict[str, Any]] = []
@@ -270,6 +271,15 @@ class TaskLedger:
             self._commit(data, changed)
         log.debug("ledger.add count=%d skip_dup=%s", added, skip_duplicates)
         return added
+
+    @staticmethod
+    def _validate_tasks(tasks: builtins.list[Task]) -> None:
+        """Fail fast for verifier IDs that can never run."""
+        from veridian.verify.base import registry  # noqa: PLC0415
+
+        for task in tasks:
+            if not registry.has(task.verifier_id):
+                registry.get(task.verifier_id, None)
 
     def claim(self, task_id: str, runner_id: str) -> Task:
         """
@@ -461,7 +471,7 @@ class TaskLedger:
     def reset_in_progress(self, runner_id: str | None = None) -> int:
         """
         CRITICAL: Call this at the start of EVERY run().
-        Resets IN_PROGRESS tasks back to PENDING (crash recovery).
+        Resets active tasks back to PENDING (crash recovery).
         If runner_id given: only reset tasks claimed by that runner.
         Returns count reset.
 
@@ -477,7 +487,7 @@ class TaskLedger:
             data = self._load_for_write()
             changed: builtins.list[dict[str, Any]] = []
             for task_dict in data["tasks"].values():
-                if task_dict.get("status") != "in_progress":
+                if task_dict.get("status") not in {"in_progress", "verifying"}:
                     continue
                 if runner_id and task_dict.get("claimed_by") != runner_id:
                     continue
@@ -491,7 +501,7 @@ class TaskLedger:
 
         if reset:
             log.info("ledger.reset_in_progress count=%d", reset)
-            self.log(f"[RESET] {reset} stale IN_PROGRESS tasks --- PENDING (crash recovery)")
+            self.log(f"[RESET] {reset} stale active tasks --- PENDING (crash recovery)")
         return reset
 
     def reset_failed(self, task_ids: builtins.list[str] | None = None) -> int:
@@ -551,6 +561,10 @@ class TaskLedger:
         """Read and parse ledger.json. Raises LedgerCorrupted on parse failure."""
         try:
             text = self.path.read_text(encoding="utf-8")
+            if not text.strip():
+                self._quarantine_corrupt_ledger("empty")
+                self._write_raw({"schema_version": SCHEMA_VERSION, "tasks": {}})
+                return {"schema_version": SCHEMA_VERSION, "tasks": {}}
             payload = json.loads(text)
             if not isinstance(payload, dict):
                 raise LedgerCorrupted("ledger.json root must be an object")
@@ -637,6 +651,15 @@ class TaskLedger:
             self._write_cache = None
             self._write_stamp = None
             raise
+
+    def _quarantine_corrupt_ledger(self, reason: str) -> None:
+        """Preserve a corrupt ledger artifact before self-healing."""
+        if not self.path.exists():
+            return
+        stamp = datetime.now(tz=UTC).strftime("%Y%m%d%H%M%S%f")
+        quarantine = self.path.with_name(f"{self.path.name}.{reason}.{stamp}.corrupt")
+        with contextlib.suppress(OSError):
+            os.replace(self.path, quarantine)
 
     @staticmethod
     def _normalize_legacy_shape(data: dict[str, Any]) -> dict[str, Any]:

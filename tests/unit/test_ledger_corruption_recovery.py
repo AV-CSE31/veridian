@@ -5,6 +5,7 @@ Durability tests for ``TaskLedger`` under failure modes:
 
 - malformed JSON --- ``LedgerCorrupted``
 - non-object root --- ``LedgerCorrupted``
+- empty ledger file --- quarantine + self-heal to an empty ledger
 - orphaned ``.tmp`` files left by a crashed writer don't break subsequent reads
 - ``reset_in_progress`` is idempotent (safe to call repeatedly after partial
   recovery)
@@ -57,14 +58,19 @@ class TestMalformedJsonDetection:
         with pytest.raises(LedgerCorrupted, match="must be an object"):
             ledger.list()
 
-    def test_empty_file_raises_ledger_corrupted(self, tmp_path: Path) -> None:
+    def test_empty_file_is_quarantined_and_self_healed(self, tmp_path: Path) -> None:
         ledger = _mk_ledger(tmp_path)
         ledger.add([_task()])
 
         ledger.path.write_text("", encoding="utf-8")
 
-        with pytest.raises(LedgerCorrupted):
-            ledger.list()
+        assert ledger.list() == []
+        assert ledger.path.exists()
+        healed = json.loads(ledger.path.read_text(encoding="utf-8"))
+        assert healed["tasks"] == {}
+        assert isinstance(healed["schema_version"], int)
+        assert "updated_at" in healed
+        assert list(tmp_path.glob("ledger.json.empty.*.corrupt"))
 
     def test_missing_file_is_treated_as_empty_not_corrupted(self, tmp_path: Path) -> None:
         # Fresh ledger with no file on disk yet --- list() must succeed empty,

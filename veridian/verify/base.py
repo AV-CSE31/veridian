@@ -10,7 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
-from veridian.core.exceptions import VerifierNotFound
+from veridian.core.exceptions import VeridianConfigError, VeridianError, VerifierNotFound
 from veridian.core.task import Task, TaskResult
 
 log = logging.getLogger(__name__)
@@ -139,6 +139,29 @@ class VerifierRegistry:
 
     def get(self, verifier_id: str, config: dict[str, Any] | None = None) -> BaseVerifier:
         """Instantiate and return a verifier by ID."""
+        cls = self._resolve_class(verifier_id)
+
+        if getattr(cls, "shareable", False):
+            key = (verifier_id, self._config_key(config))
+            if key[1] != "__unhashable__":
+                cached = self._instance_cache.get(key)
+                if cached is not None:
+                    return cached
+                instance = self._instantiate(cls, verifier_id, config)
+                self._instance_cache[key] = instance
+                return instance
+
+        return self._instantiate(cls, verifier_id, config)
+
+    def has(self, verifier_id: str) -> bool:
+        """Return True when a verifier ID can be resolved without instantiating it."""
+        try:
+            self._resolve_class(verifier_id)
+            return True
+        except VerifierNotFound:
+            return False
+
+    def _resolve_class(self, verifier_id: str) -> type[BaseVerifier]:
         self._load_lazy(verifier_id)
         if verifier_id not in self._classes:
             self._autodiscover()
@@ -152,20 +175,26 @@ class VerifierRegistry:
                 f"Available: {available}. "
                 f"Register with verifier_registry.register(MyVerifier)."
             )
+        return cls
 
-        if getattr(cls, "shareable", False):
-            key = (verifier_id, self._config_key(config))
-            if key[1] != "__unhashable__":
-                cached = self._instance_cache.get(key)
-                if cached is not None:
-                    return cached
-                instance = cls(**config) if config else cls()
-                self._instance_cache[key] = instance
-                return instance
-
-        if config:
-            return cls(**config)
-        return cls()
+    @staticmethod
+    def _instantiate(
+        cls: type[BaseVerifier],
+        verifier_id: str,
+        config: dict[str, Any] | None,
+    ) -> BaseVerifier:
+        try:
+            return cls(**config) if config else cls()
+        except VeridianError:
+            raise
+        except TypeError as exc:
+            raise VeridianConfigError(
+                f"Invalid verifier_config for verifier {verifier_id!r}: {exc}"
+            ) from exc
+        except Exception as exc:
+            raise VeridianConfigError(
+                f"Invalid configuration for verifier {verifier_id!r}: {exc}"
+            ) from exc
 
     def _autodiscover(self) -> None:
         """Load third-party verifier entry points once."""
