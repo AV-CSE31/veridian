@@ -38,14 +38,6 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
-from tenacity import (
-    RetryError,
-    Retrying,
-    retry_if_exception,
-    stop_after_attempt,
-    wait_exponential_jitter,
-)
-
 from veridian.core.exceptions import (
     ContextWindowExceeded,
     ProviderError,
@@ -215,6 +207,8 @@ def _is_retryable(exc: BaseException) -> bool:
     True - tenacity will retry.
     False - fail immediately (permanent error).
     """
+    if isinstance(exc, (ValueError, TypeError, KeyError, IndexError, AssertionError)):
+        return False
     msg = str(exc).lower()
     # Rate limits / server errors
     for code in _TRANSIENT_STATUS_CODES:
@@ -223,8 +217,20 @@ def _is_retryable(exc: BaseException) -> bool:
     # Connection / timeout errors
     if any(kw in msg for kw in ("timeout", "connection", "network", "overloaded")):
         return True
-    # Permanent: bad request, auth failure, not found - default: retry on unknown errors
-    return not any(code in msg for code in ("400", "401", "403", "404"))
+    # Permanent: bad request, auth failure, not found. Unknown errors fail closed
+    # so deterministic bugs do not burn retry budget.
+    if any(code in msg for code in ("400", "401", "403", "404")):
+        return False
+    return False
+
+
+class _ProviderAttemptsExhausted(ProviderError):
+    """Internal error carrying the number of provider calls consumed."""
+
+    def __init__(self, message: str, attempts_used: int, cause: BaseException) -> None:
+        self.attempts_used = attempts_used
+        super().__init__(message)
+        self.__cause__ = cause
 
 
 # -- LITELLM PROVIDER ---------------------------------------------------------
@@ -276,6 +282,7 @@ class LiteLLMProvider(LLMProvider):
         cb_cooldown_seconds: int = 60,
         # Fallback
         fallback_models: list[str] | None = None,
+        max_total_attempts: int | None = None,
         # Context guard
         context_window_budget: int | None = None,
     ) -> None:
@@ -291,6 +298,7 @@ class LiteLLMProvider(LLMProvider):
         self.max_backoff = max_backoff
         self.jitter = jitter
         self.fallback_models = fallback_models or []
+        self.max_total_attempts = max_total_attempts or (max_retries + 1)
         self.context_window_budget = context_window_budget or self._model_context_limit()
 
         # One circuit breaker per model in the chain
@@ -315,8 +323,11 @@ class LiteLLMProvider(LLMProvider):
         """
         models_to_try = [self.model] + self.fallback_models
         last_exc: Exception | None = None
+        remaining_attempts = max(1, self.max_total_attempts)
 
         for model in models_to_try:
+            if remaining_attempts <= 0:
+                break
             cb = self._circuit_breakers.get(model)
             if cb and not cb.allow_request():
                 log.warning("circuit_breaker.blocked model=%s", model)
@@ -326,11 +337,30 @@ class LiteLLMProvider(LLMProvider):
                 continue
 
             try:
-                response = self._complete_with_retry(model, messages, **kwargs)
+                response = self._complete_with_retry(
+                    model,
+                    messages,
+                    max_attempts=remaining_attempts,
+                    **kwargs,
+                )
                 if cb:
                     cb.record_success()
                 return response
+            except _ProviderAttemptsExhausted as exc:
+                remaining_attempts -= exc.attempts_used
+                last_exc = exc
+                if cb:
+                    cb.record_failure()
+                log.warning(
+                    "provider.complete failed model=%s err=%s trying_fallback=%s remaining_attempts=%d",
+                    model,
+                    exc,
+                    bool(self.fallback_models) and remaining_attempts > 0,
+                    remaining_attempts,
+                )
+                continue
             except Exception as exc:
+                remaining_attempts -= 1
                 last_exc = exc
                 if cb:
                     cb.record_failure()
@@ -338,7 +368,7 @@ class LiteLLMProvider(LLMProvider):
                     "provider.complete failed model=%s err=%s trying_fallback=%s",
                     model,
                     exc,
-                    bool(self.fallback_models),
+                    bool(self.fallback_models) and remaining_attempts > 0,
                 )
                 # Only try fallback if primary exhausted all retries
                 continue
@@ -351,7 +381,11 @@ class LiteLLMProvider(LLMProvider):
         return await loop.run_in_executor(None, self.complete, messages)
 
     def _complete_with_retry(
-        self, model: str, messages: list[Message], **kwargs: Any
+        self,
+        model: str,
+        messages: list[Message],
+        max_attempts: int | None = None,
+        **kwargs: Any,
     ) -> LLMResponse:
         """
         Call LiteLLM with tenacity retry (exponential backoff + jitter).
@@ -389,26 +423,29 @@ class LiteLLMProvider(LLMProvider):
                 finish_reason=resp.choices[0].finish_reason or "",
             )
 
-        try:
-            for attempt in Retrying(
-                retry=retry_if_exception(_is_retryable),
-                stop=stop_after_attempt(self.max_retries + 1),
-                wait=wait_exponential_jitter(
-                    initial=self.min_backoff,
-                    max=self.max_backoff,
-                    jitter=self.jitter,
-                ),
-                reraise=True,
-            ):
-                with attempt:
-                    log.debug(
-                        "provider.call model=%s attempt=%d",
-                        model,
-                        attempt.retry_state.attempt_number,
-                    )
-                    return _call()
-        except RetryError as e:
-            raise ProviderError(f"Retries exhausted for {model}: {e}") from e
+        attempts_allowed = max(1, min(max_attempts or (self.max_retries + 1), self.max_retries + 1))
+        last_exc: BaseException | None = None
+        for attempt_number in range(1, attempts_allowed + 1):
+            try:
+                log.debug("provider.call model=%s attempt=%d", model, attempt_number)
+                return _call()
+            except Exception as exc:
+                last_exc = exc
+                if attempt_number >= attempts_allowed or not _is_retryable(exc):
+                    raise _ProviderAttemptsExhausted(
+                        f"Retries exhausted for {model}: {exc}",
+                        attempt_number,
+                        exc,
+                    ) from exc
+                delay = min(self.max_backoff, self.min_backoff * (2 ** (attempt_number - 1)))
+                if delay > 0:
+                    time.sleep(delay)
+        if last_exc is not None:
+            raise _ProviderAttemptsExhausted(
+                f"Retries exhausted for {model}: {last_exc}",
+                attempts_allowed,
+                last_exc,
+            ) from last_exc
         raise ProviderError(f"No attempts executed for {model}")
 
     def count_tokens(self, text: str) -> int:
