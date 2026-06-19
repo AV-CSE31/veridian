@@ -8,9 +8,12 @@ operators get JSON logs, trace export, and alerting by setting env vars
 without code changes.
 
 Recognised environment variables:
-  VERIDIAN_LOG_FORMAT    "json" enables :class:`JsonLogFormatter`
-  VERIDIAN_TRACE_PATH    File path for :class:`JsonlTraceHook` JSONL output
-  VERIDIAN_ALERT_WEBHOOK URL for :class:`WebhookAlertHook` POSTs
+  VERIDIAN_LOG_FORMAT           "json" enables :class:`JsonLogFormatter`
+  VERIDIAN_TRACE_PATH           File path for :class:`JsonlTraceHook` JSONL output
+  VERIDIAN_ALERT_WEBHOOK        URL for :class:`WebhookAlertHook` POSTs
+  VERIDIAN_ALERT_WEBHOOK_SECRET HMAC-SHA256 secret; when set, outbound
+                                webhook bodies are signed and receivers
+                                can verify ``X-Veridian-Signature``.
 """
 
 from __future__ import annotations
@@ -50,8 +53,9 @@ def auto_register(registry: HookRegistry) -> list[str]:
 
     webhook = os.getenv("VERIDIAN_ALERT_WEBHOOK")
     if webhook and WebhookAlertHook.id not in existing_ids:
+        secret = os.getenv("VERIDIAN_ALERT_WEBHOOK_SECRET") or None
         try:
-            registry.register(WebhookAlertHook(webhook))
+            registry.register(WebhookAlertHook(webhook, secret=secret))
             attached.append(WebhookAlertHook.id)
         except ValueError as exc:
             log.warning("observability.alert_hook_failed err=%s", exc)

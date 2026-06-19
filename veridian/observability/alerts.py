@@ -10,9 +10,12 @@ abort and lets operators route to Slack, PagerDuty, opsgenie, etc.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import logging
 import threading
+import uuid
 from typing import Any, ClassVar
 from urllib import error as urllib_error
 from urllib import request as urllib_request
@@ -55,7 +58,22 @@ class AlertHook(BaseHook):
             value = getattr(event, attr, None)
             if value:
                 payload[attr] = str(value)[:500]
+        payload["idempotency_key"] = self._idempotency_key(kind, payload)
         return payload
+
+    @staticmethod
+    def _idempotency_key(kind: str, payload: dict[str, Any]) -> str:
+        """Derive a stable key per logical alert event.
+
+        Hashes the (kind, run_id, task_id) tuple so identical events get the
+        same key on retry; falls back to a uuid4 when none of those are
+        present (defensive — shouldn't happen in practice).
+        """
+        parts = [kind, str(payload.get("run_id", "")), str(payload.get("task_id", ""))]
+        if any(parts[1:]):
+            blob = "|".join(parts).encode("utf-8")
+            return hashlib.sha256(blob).hexdigest()[:32]
+        return uuid.uuid4().hex
 
     def on_failure(self, event: Any) -> None:
         try:
@@ -88,11 +106,22 @@ class WebhookAlertHook(AlertHook):
 
     id: ClassVar[str] = "webhook_alert"
 
-    def __init__(self, url: str, timeout_seconds: float = 5.0) -> None:
+    SIGNATURE_HEADER: ClassVar[str] = "X-Veridian-Signature"
+    IDEMPOTENCY_HEADER: ClassVar[str] = "X-Idempotency-Key"
+
+    def __init__(
+        self,
+        url: str,
+        timeout_seconds: float = 5.0,
+        secret: str | None = None,
+    ) -> None:
         if not url:
             raise ValueError("WebhookAlertHook requires a non-empty url")
         self.url = url
         self.timeout_seconds = timeout_seconds
+        self._secret_bytes: bytes | None = (
+            secret.encode("utf-8") if isinstance(secret, str) and secret else None
+        )
 
     def emit(self, alert: dict[str, Any]) -> None:
         thread = threading.Thread(
@@ -102,10 +131,17 @@ class WebhookAlertHook(AlertHook):
 
     def _post(self, alert: dict[str, Any]) -> None:
         body = json.dumps(alert, default=str).encode("utf-8")
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        idempotency_key = alert.get("idempotency_key")
+        if isinstance(idempotency_key, str) and idempotency_key:
+            headers[self.IDEMPOTENCY_HEADER] = idempotency_key
+        if self._secret_bytes is not None:
+            digest = hmac.new(self._secret_bytes, body, hashlib.sha256).hexdigest()
+            headers[self.SIGNATURE_HEADER] = f"sha256={digest}"
         req = urllib_request.Request(
             self.url,
             data=body,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             method="POST",
         )
         try:
