@@ -228,6 +228,8 @@ def test_builtin_hooks_are_runtime_only() -> None:
         "human_review.py",
         "logging_hook.py",
         "rate_limit.py",
+        "repetition_guard.py",
+        "wall_clock_budget.py",
     }
     actual = {path.name for path in (ROOT / "veridian" / "hooks" / "builtin").glob("*.py")}
     assert actual == allowed
