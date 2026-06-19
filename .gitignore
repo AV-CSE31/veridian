@@ -1,5 +1,6 @@
 # Private/internal workspace docs
-docs/
+docs/*
+!docs/anthropic-foundations-fitment.md
 guides/
 planning/
 research/
