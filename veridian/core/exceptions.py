@@ -65,13 +65,62 @@ class ControlFlowSignal(VeridianError):
     """Base class for hook-raised control-flow signals."""
 
 
-class CostLimitExceeded(VeridianError):
-    """CostGuardHook: cumulative cost exceeded max_cost_usd."""
+class RunAbortRequested(ControlFlowSignal):
+    """Hook-raised signal that halts the entire run.
+
+    Distinct from :class:`TaskPauseRequested` (which suspends one task and
+    leaves the queue running). The dispatcher catches this in the outer
+    loop, records the reason in ``RunSummary.errors``, and breaks out so
+    no further tasks are claimed.
+    """
+
+    def __init__(self, reason: str, source: str = "") -> None:
+        self.reason = reason
+        self.source = source
+        msg = f"Run aborted: {reason}"
+        if source:
+            msg = f"Run aborted by {source}: {reason}"
+        super().__init__(msg)
+
+
+class CostLimitExceeded(RunAbortRequested):
+    """CostGuardHook: cumulative cost exceeded max_cost_usd.
+
+    Routed through RunAbortRequested so the dispatcher halts the run
+    instead of swallowing or pausing a single task.
+    """
 
     def __init__(self, current: float, limit: float):
         self.current = current
         self.limit = limit
-        super().__init__(f"Cost ${current:.4f} exceeded limit ${limit:.2f}")
+        super().__init__(
+            reason=f"cost ${current:.4f} exceeded limit ${limit:.2f}",
+            source="cost_guard",
+        )
+
+
+class WallClockBudgetExceeded(RunAbortRequested):
+    """WallClockBudgetHook: run wall-clock duration exceeded max_seconds."""
+
+    def __init__(self, elapsed: float, limit: float):
+        self.elapsed = elapsed
+        self.limit = limit
+        super().__init__(
+            reason=f"wall clock {elapsed:.1f}s exceeded budget {limit:.1f}s",
+            source="wall_clock_budget",
+        )
+
+
+class RepetitionDetected(RunAbortRequested):
+    """RepetitionGuardHook: N consecutive task outputs hashed identically."""
+
+    def __init__(self, window: int, fingerprint: str):
+        self.window = window
+        self.fingerprint = fingerprint
+        super().__init__(
+            reason=f"{window} consecutive identical outputs (fp={fingerprint[:8]})",
+            source="repetition_guard",
+        )
 
 
 class HumanReviewRequired(ControlFlowSignal):

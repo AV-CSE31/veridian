@@ -16,6 +16,8 @@ those attributes keep working.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import time
 from typing import TYPE_CHECKING, Any
@@ -29,7 +31,12 @@ from veridian.core.events import (
     TaskPaused,
     TaskResumed,
 )
-from veridian.core.exceptions import ControlFlowSignal, HumanReviewRequired, TaskPauseRequested
+from veridian.core.exceptions import (
+    ControlFlowSignal,
+    HumanReviewRequired,
+    RunAbortRequested,
+    TaskPauseRequested,
+)
 from veridian.core.task import Task, TaskResult, TaskStatus, TraceStep
 from veridian.hooks.registry import HookRegistry
 from veridian.loop.replay_compat import build_run_replay_snapshot, check_replay_compatibility
@@ -107,6 +114,9 @@ class _TaskDispatcher:
                         "on_resume",
                         TaskResumed(run_id=run_id, task=task, resume_count=resume_count),
                     )
+                except RunAbortRequested as signal:
+                    self._handle_run_abort(signal, summary)
+                    return
                 except ControlFlowSignal as signal:
                     self._handle_pause_signal(task, run_id, signal, summary)
                     paused_this_run.add(task.id)
@@ -114,6 +124,9 @@ class _TaskDispatcher:
 
             try:
                 self._process_task(task, run_id, summary)
+            except RunAbortRequested as signal:
+                self._handle_run_abort(signal, summary)
+                return
             except ControlFlowSignal as signal:
                 self._handle_pause_signal(task, run_id, signal, summary)
                 paused_this_run.add(task.id)
@@ -126,6 +139,16 @@ class _TaskDispatcher:
                 )
                 summary.failed_count += 1
                 summary.errors.append(str(exc))
+
+    # ------ run abort routing -----------------------------------------------
+    def _handle_run_abort(self, signal: RunAbortRequested, summary: RunSummary) -> None:
+        """Halt the run: request shutdown so future iterations break."""
+        self.controller.request_shutdown()
+        msg = f"run_aborted: {signal.reason}"
+        if signal.source:
+            msg = f"run_aborted[{signal.source}]: {signal.reason}"
+        summary.errors.append(msg)
+        log.warning("runner.run_aborted source=%s reason=%s", signal.source, signal.reason)
 
     # ------ pause routing ----------------------------------------------------
     def _handle_pause_signal(
@@ -228,6 +251,9 @@ class _TaskDispatcher:
         result.verification_evidence = verify_meta.get("evidence", {})
         if verify_meta.get("verification_ms") is not None:
             result.timing["verification_ms"] = verify_meta["verification_ms"]
+        grader_meta = verify_meta.get("grader_metadata")
+        if isinstance(grader_meta, dict):
+            result.extras["grader_metadata"] = grader_meta
         result.trace_steps.append(
             TraceStep(
                 step_id=f"verify_{len(result.trace_steps) + 1}",
@@ -289,6 +315,7 @@ class _TaskDispatcher:
                     "score": vresult.score,
                     "evidence": vresult.evidence or {},
                     "verification_ms": round((time.perf_counter() - verify_start) * 1000, 1),
+                    "grader_metadata": self._grader_metadata(task, verifier),
                 },
             )
         except Exception as exc:
@@ -302,6 +329,33 @@ class _TaskDispatcher:
                     "verification_ms": round((time.perf_counter() - verify_start) * 1000, 1),
                 },
             )
+
+    def _grader_metadata(self, task: Task, verifier: Any) -> dict[str, Any]:
+        """Pin verifier identity + config digest into the audit trail.
+
+        Lets operators detect rubric drift and pinpoint which verifier
+        version produced a given verdict. The provider's model id is
+        included opportunistically — useful when an operator routes the
+        verifier through an LLM-backed provider.
+        """
+        cls = type(verifier)
+        config = task.verifier_config or {}
+        try:
+            config_blob = json.dumps(config, sort_keys=True, default=str).encode("utf-8")
+            config_hash = hashlib.sha256(config_blob).hexdigest()[:16]
+        except (TypeError, ValueError):
+            config_hash = "__unhashable__"
+
+        meta: dict[str, Any] = {
+            "verifier_id": task.verifier_id,
+            "verifier_class": f"{cls.__module__}:{cls.__qualname__}",
+            "verifier_config_hash": config_hash,
+        }
+        provider_model = getattr(self.provider, "model", None)
+        if isinstance(provider_model, str) and provider_model:
+            meta["grader_provider_model"] = provider_model
+        meta["grader_provider_class"] = type(self.provider).__name__
+        return meta
 
     def _build_confidence(
         self,
