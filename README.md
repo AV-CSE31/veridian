@@ -28,8 +28,14 @@ Use it when you need:
 - verifier logic that lives outside the model
 
 Veridian is not an orchestration framework, dashboard, policy engine, or prompt
-library. The `0.3.0` release is intentionally light: core runtime, ledger,
+library. The `0.4.0` release is intentionally light: core runtime, ledger,
 providers, hooks, and practical verifiers.
+
+Scale note: the default ledger rewrites its snapshot on every transition,
+which is comfortable up to roughly a thousand tasks per ledger file. For
+larger or write-heavy workloads, set `VERIDIAN_LEDGER_WAL=1` (experimental)
+to switch to an append-only write-ahead log with near-constant write cost;
+see [`benchmarks/`](benchmarks/) for measured numbers in both modes.
 
 ## Install
 
@@ -217,7 +223,7 @@ from veridian.core.report import VerificationReport, validate_report_chain
 
 ## Built-In Verifiers
 
-The `0.3.0` core includes practical verifier building blocks:
+The `0.4.0` core includes practical verifier building blocks:
 
 - `schema`: required fields, small JSON Schema subset, optional Pydantic models
 - `file_exists`: require an artifact path to exist
