@@ -9,7 +9,7 @@ Production-grade LiteLLM provider with:
   -  1. CircuitBreaker  - stops hammering a dead endpoint    -
   -     CLOSED - OPEN after N failures - HALF_OPEN probe    -
   -                                                          -
-  -  2. Retry w/ exponential backoff + jitter (tenacity)     -
+  -  2. Bounded retry with exponential backoff               -
   -     Retries transient errors: 429, 503, timeout         -
   -     Fails fast on permanent errors: 400, 401, 404       -
   -                                                          -
@@ -30,7 +30,6 @@ Circuit breaker states:
 from __future__ import annotations
 
 import asyncio
-import importlib
 import logging
 import os
 import threading
@@ -205,7 +204,7 @@ _TRANSIENT_STATUS_CODES = {429, 500, 502, 503, 504}
 
 def _is_retryable(exc: BaseException) -> bool:
     """
-    True - tenacity will retry.
+    True - the bounded provider loop will retry.
     False - fail immediately (permanent error).
     """
     if isinstance(exc, (ValueError, TypeError, KeyError, IndexError, AssertionError)):
@@ -248,7 +247,7 @@ class LiteLLMProvider(LLMProvider):
 
     Resilience features (all configurable):
       - Circuit breaker per model endpoint
-      - Exponential backoff with jitter via tenacity
+      - Bounded exponential backoff
       - Fallback model chain
       - Context window budget guard
       - Retry-After header respect (via LiteLLM)
@@ -389,30 +388,9 @@ class LiteLLMProvider(LLMProvider):
         **kwargs: Any,
     ) -> LLMResponse:
         """
-        Call LiteLLM with tenacity retry (exponential backoff + jitter).
+        Call LiteLLM with bounded exponential-backoff retry.
         Fails immediately on permanent errors (4xx non-429).
         """
-        # Lazy like ``litellm`` below: the module stays importable on minimal
-        # installs; the missing extra surfaces on first use with a fix-it hint.
-        try:
-            tenacity = importlib.import_module("tenacity")
-            # Validate the same retry API surface as the former from-import.
-            # This is intentionally a lazy dependency check: minimal installs
-            # remain importable, but incomplete/incompatible extras fail here.
-            for retry_symbol in (
-                "RetryError",
-                "Retrying",
-                "retry_if_exception",
-                "stop_after_attempt",
-                "wait_exponential_jitter",
-            ):
-                getattr(tenacity, retry_symbol)
-        except (AttributeError, ImportError) as exc:
-            raise ProviderError(
-                "LiteLLMProvider requires the 'tenacity' package for its retry "
-                "stack. Install the LLM extra: pip install 'veridian-ai[llm]'"
-            ) from exc
-
         import litellm  # noqa: PLC0415
 
         # Guard: check context window before making the API call

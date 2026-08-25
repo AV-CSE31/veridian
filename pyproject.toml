@@ -50,7 +50,6 @@ veridian = "veridian.cli:main"
 [project.optional-dependencies]
 llm = [
     "litellm>=1.55.0",
-    "tenacity>=9.0",
     "tiktoken>=0.7",
 ]
 pdf = [

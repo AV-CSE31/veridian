@@ -72,6 +72,9 @@ def test_I5_2_deterministic_bug_is_not_retried(monkeypatch) -> None:
     guaranteed failure N times. _is_retryable's 'retry on unknown' default does
     exactly that.
     """
+    # The retry loop is implemented by Veridian itself; the optional provider
+    # backend must not acquire a second, unused Tenacity dependency at runtime.
+    monkeypatch.setitem(sys.modules, "tenacity", None)
     calls = _inject_litellm(monkeypatch, lambda: ValueError("unexpected None in choices[0]"))
     provider = LiteLLMProvider(
         model="gemini/gemini-2.5-flash",
@@ -89,15 +92,3 @@ def test_I5_2_deterministic_bug_is_not_retried(monkeypatch) -> None:
         "responses are treated as transient — paying real API cost and latency for "
         "a failure that will never succeed."
     )
-
-
-def test_retry_stack_reports_missing_tenacity_extra(monkeypatch) -> None:
-    """Retry remains a lazy optional dependency with an actionable failure."""
-    monkeypatch.setitem(sys.modules, "tenacity", None)
-    provider = LiteLLMProvider(model="gemini/gemini-2.5-flash")
-
-    with pytest.raises(ProviderError, match=r"veridian-ai\[llm\]"):
-        provider._complete_with_retry(
-            provider.model,
-            [Message(role="user", content="hi")],
-        )
