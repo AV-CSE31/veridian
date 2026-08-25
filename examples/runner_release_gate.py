@@ -24,6 +24,10 @@ RELEASE_CONTRACT = {
     },
 }
 
+# Demonstration material only. Production callers must load a unique secret
+# from their secret manager and retain the resulting chain head independently.
+DEMO_REPORT_SIGNING_KEY = "demo-only-veridian-report-key-2026-0001"
+
 
 def main() -> None:
     with TemporaryDirectory() as tmp:
@@ -32,6 +36,8 @@ def main() -> None:
             ledger_file=root / "ledger.json",
             progress_file=root / "progress.md",
             report_file=root / "verification-reports.jsonl",
+            report_signing_key=DEMO_REPORT_SIGNING_KEY,
+            report_signing_key_id="demo-local-key",
         )
         ledger = TaskLedger(config.ledger_file, progress_file=str(config.progress_file))
         ledger.add(
@@ -54,7 +60,10 @@ def main() -> None:
             }
         )
         summary = VeridianRunner(ledger=ledger, provider=provider, config=config).run()
-        validation = validate_report_chain(config.report_file)
+        validation = validate_report_chain(
+            config.report_file,
+            signing_key=DEMO_REPORT_SIGNING_KEY,
+        )
         task = ledger.get("release-2026-06")
 
         print(f"done={summary.done_count} failed={summary.failed_count}")

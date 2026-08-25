@@ -16,7 +16,8 @@ __all__ = ["BaseHook"]
 class BaseHook:
     """
     Abstract base hook. Override only the lifecycle methods you need.
-    Hook errors are swallowed by HookRegistry.fire() --- they never propagate.
+    Ordinary hook errors are isolated by HookRegistry.fire(). Explicit control
+    flow and hard-control violations propagate to the runner.
 
     Priority convention (ClassVar[int]):
       logging_hook = 0   (runs first --- always sees the unmodified state)

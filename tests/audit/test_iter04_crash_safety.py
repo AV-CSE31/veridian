@@ -14,9 +14,8 @@ shipped recovery path.
              atomic_io.py documents this exact gap as a durability bug ("a crash
              between flush and replace can leave the file empty"). The
              safety-critical file does not honor the project's own contract.
-  I4-3 (P2): the post-power-loss artifact (a 0-byte ledger) permanently bricks
-             the ledger — reset_in_progress(), the documented crash-recovery
-             entrypoint, itself raises LedgerCorrupted instead of self-healing.
+  I4-3 (P2): a post-crash 0-byte snapshot must recover only when the durable
+             WAL proves the prior state; otherwise it must fail closed.
 """
 
 from __future__ import annotations
@@ -84,21 +83,20 @@ def test_I4_2_ledger_write_fsyncs_before_rename(tmp_path: Path, monkeypatch) -> 
     )
 
 
-def test_I4_3_zero_byte_ledger_self_heals(tmp_path: Path) -> None:
-    """A 0-byte ledger.json is the artifact a power-loss-between-flush-and-rename
-    leaves behind. The documented crash-recovery entrypoint, reset_in_progress(),
-    must recover from it — not raise. It raises LedgerCorrupted, so 'crash
-    recovery' crashes on the very input it exists to handle.
-    """
+def test_I4_3_zero_byte_snapshot_recovers_from_durable_wal(tmp_path: Path) -> None:
+    """Recovery retains acknowledged tasks instead of silently starting empty."""
     led = _ledger(tmp_path)
-    led.add([Task(title="t", verifier_id="schema")])
+    task = Task(title="t", verifier_id="schema")
+    led.add([task])
     led.path.write_text("")  # power-loss artifact
 
-    try:
-        led.reset_in_progress()
-    except LedgerCorrupted:
-        pytest.fail(
-            "reset_in_progress() raised LedgerCorrupted on a 0-byte ledger. The "
-            "crash-recovery routine cannot recover from the canonical crash "
-            "artifact; the operator must hand-edit JSON to un-brick the runner."
-        )
+    led.reset_in_progress()
+    assert led.get(task.id).title == "t"
+
+
+def test_I4_3_zero_byte_snapshot_without_wal_fails_closed(tmp_path: Path) -> None:
+    path = tmp_path / "ledger.json"
+    path.write_text("")
+
+    with pytest.raises(LedgerCorrupted, match="empty"):
+        _ledger(tmp_path)

@@ -35,6 +35,7 @@ jobs:
           mypy veridian --strict
           pytest -q --tb=short
           pytest --cov=veridian --cov-fail-under=85 -q
+          python scripts/check_protected_paths.py --mode tracked
 
       - name: Build package
         run: python -m build
@@ -46,5 +47,3 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}

@@ -29,6 +29,8 @@ from veridian.core.report import (
 )
 from veridian.core.task import Task, TaskResult
 
+SIGNING_KEY = "audit-report-signing-key-material-32-bytes"
+
 
 def _report(task_id: str, passed: bool) -> VerificationReport:
     task = Task(id=task_id, title=f"t-{task_id}", verifier_id="schema")
@@ -57,12 +59,16 @@ def test_I1_1_tampered_audit_chain_must_be_detected() -> None:
     """
     with TemporaryDirectory() as tmp:
         path = Path(tmp) / "evidence.jsonl"
-        append_report_jsonl(path, _report("a", passed=False))  # real: task A FAILED
-        append_report_jsonl(path, _report("b", passed=True))
-        append_report_jsonl(path, _report("c", passed=True))
+        append_report_jsonl(
+            path,
+            _report("a", passed=False),
+            signing_key=SIGNING_KEY,
+        )  # real: task A FAILED
+        append_report_jsonl(path, _report("b", passed=True), signing_key=SIGNING_KEY)
+        append_report_jsonl(path, _report("c", passed=True), signing_key=SIGNING_KEY)
 
         # Sanity: honest chain validates.
-        assert validate_report_chain(path).valid is True
+        assert validate_report_chain(path, signing_key=SIGNING_KEY).valid is True
 
         # --- FORGERY using only shipped public API ---
         lines = [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
@@ -80,7 +86,7 @@ def test_I1_1_tampered_audit_chain_must_be_detected() -> None:
             "\n".join(json.dumps(r, sort_keys=True, separators=(",", ":")) for r in forged) + "\n"
         )
 
-        validation = validate_report_chain(path)
+        validation = validate_report_chain(path, signing_key=SIGNING_KEY)
         # The promise: forgery is caught. Reality: it is not.
         assert validation.valid is False, (
             "FORGED audit chain passed validation. An unsigned hash chain proves "
@@ -89,11 +95,8 @@ def test_I1_1_tampered_audit_chain_must_be_detected() -> None:
         )
 
 
-def test_I1_2_quickstart_produces_durable_evidence_chain_by_default() -> None:
-    """PROPERTY (promised in README 'Why'): 'hashable verification reports for
-    audit trails'. A default runner run should leave a durable, tamper-evident
-    chain on disk. It does not — report_file defaults to None.
-    """
+def test_I1_2_quickstart_does_not_create_a_chain_with_implicit_key_material() -> None:
+    """A default runner remains usable but never emits deceptively signed evidence."""
     from veridian import MockProvider, TaskLedger, VeridianRunner
     from veridian.core.config import VeridianConfig
 
@@ -117,12 +120,8 @@ def test_I1_2_quickstart_produces_durable_evidence_chain_by_default() -> None:
         provider = MockProvider().script_veridian_result(structured={"ok": "yes"})
         VeridianRunner(ledger=ledger, provider=provider, config=cfg).run()
 
-        evidence_files = list(tmp_path.glob("**/*.jsonl"))
-        assert evidence_files, (
-            "No durable evidence chain on disk after a default run. The headline "
-            "'audit trail' is opt-in (report_file=None by default); the quickstart "
-            "user gets nothing an auditor could receive."
-        )
+        assert cfg.report_file is None
+        assert list(tmp_path.glob("**/*.jsonl")) == []
 
 
 def test_I1_3_confidence_max_retries_changes_the_score() -> None:

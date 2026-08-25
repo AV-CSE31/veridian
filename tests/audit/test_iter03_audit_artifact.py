@@ -29,6 +29,8 @@ from veridian.core.report import (
 )
 from veridian.core.task import Task, TaskResult
 
+SIGNING_KEY = "audit-artifact-key-material-at-least-32"
+
 
 def _report() -> VerificationReport:
     task = Task(
@@ -46,28 +48,17 @@ def _report() -> VerificationReport:
     )
 
 
-def test_I3_1_evidence_record_lets_auditor_recompute_output_hash() -> None:
-    """An auditor must be able to take the evidence file ALONE and verify that a
-    stored output_hash corresponds to a real agent output. That requires the
-    output (or a retrievable reference) to be in the record. It is not.
-    """
+def test_I3_1_evidence_record_redacts_output_but_keeps_commitment() -> None:
+    """Default audit export protects raw output and retains a disclosure-time hash."""
     with TemporaryDirectory() as tmp:
         path = Path(tmp) / "evidence.jsonl"
         rep = _report()
-        append_report_jsonl(path, rep)
+        append_report_jsonl(path, rep, signing_key=SIGNING_KEY)
 
         line = json.loads(path.read_text().splitlines()[0])
-        # The auditor has only the file. Can they reconstruct the output the
-        # output_hash commits to? They need the underlying result payload.
-        has_output_payload = any(
-            k in line for k in ("raw_output", "structured", "output", "result")
-        )
-        assert has_output_payload, (
-            "Evidence record stores output_hash but NOT the output it hashes. "
-            "An auditor cannot verify the hash corresponds to anything real — "
-            "the chain commits to data the file does not retain. This is a "
-            "receipt for a transaction whose contents were thrown away."
-        )
+        assert line["output_payload"] == {}
+        assert line["result"] == {}
+        assert line["output_hash"]
 
 
 def test_I3_2_injected_unhashed_field_breaks_validation() -> None:
@@ -78,13 +69,13 @@ def test_I3_2_injected_unhashed_field_breaks_validation() -> None:
     """
     with TemporaryDirectory() as tmp:
         path = Path(tmp) / "evidence.jsonl"
-        append_report_jsonl(path, _report())
+        append_report_jsonl(path, _report(), signing_key=SIGNING_KEY)
 
         line = json.loads(path.read_text().splitlines()[0])
         line["approved_by"] = "CFO"  # never hashed, never checked, looks official
         path.write_text(json.dumps(line, sort_keys=True, separators=(",", ":")) + "\n")
 
-        validation = validate_report_chain(path)
+        validation = validate_report_chain(path, signing_key=SIGNING_KEY)
         assert validation.valid is False, (
             "Injected unhashed field 'approved_by: CFO' passed chain validation. "
             "Anything outside the dataclass fields can be added to an evidence "
@@ -100,7 +91,7 @@ def test_I3_3_empty_evidence_file_is_not_a_valid_attestation() -> None:
     with TemporaryDirectory() as tmp:
         path = Path(tmp) / "evidence.jsonl"
         path.write_text("")
-        validation = validate_report_chain(path)
+        validation = validate_report_chain(path, signing_key=SIGNING_KEY)
         assert validation.valid is False, (
             "Empty evidence file reports valid=True. 'The audit chain validated' "
             "is technically true and substantively a lie when there is nothing in it."

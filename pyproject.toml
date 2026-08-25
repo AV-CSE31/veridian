@@ -29,17 +29,23 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Typing :: Typed",
     "Operating System :: OS Independent",
 ]
 
 dependencies = [
+    # Exact-byte Ed25519 signing and independent proof verification
+    "cryptography>=43",
     # Cross-process file locking for atomic ledger writes
     "filelock>=3.13",
     # Sound, recursive JSON Schema validation (Draft 2020-12) for the schema verifier
     "jsonschema>=4.18",
 ]
+
+[project.scripts]
+veridian = "veridian.cli:main"
 
 [project.optional-dependencies]
 llm = [
@@ -80,6 +86,7 @@ http_status = "veridian.verify.builtin.http:HttpStatusVerifier"
 file_exists = "veridian.verify.builtin.file_exists:FileExistsVerifier"
 composite = "veridian.verify.builtin.composite:CompositeVerifier"
 any_of = "veridian.verify.builtin.any_of:AnyOfVerifier"
+repo_guard = "veridian.verify.builtin.repo_guard:RepoGuardVerifier"
 
 [tool.hatch.build]
 exclude = [

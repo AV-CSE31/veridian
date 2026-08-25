@@ -16,11 +16,16 @@ from veridian.core.config import VeridianConfig
 ROOT = Path(__file__).resolve().parents[2]
 
 _EXPECTED_TOP_LEVEL_PACKAGES = {
+    "adapters",
+    "assurance",
+    "banking",
     "context",
     "core",
+    "effects",
     "hooks",
     "ledger",
     "loop",
+    "math",
     "providers",
     "verify",
 }
@@ -43,6 +48,7 @@ def test_core_package_stays_runtime_focused() -> None:
     allowed = {
         "__init__.py",
         "atomic_io.py",
+        "contract.py",
         "config.py",
         "events.py",
         "exceptions.py",
@@ -66,7 +72,7 @@ def test_verify_package_stays_runtime_focused() -> None:
 
 
 def test_public_api_stays_small() -> None:
-    assert len(veridian.__all__) <= 20
+    assert len(veridian.__all__) <= 24
 
 
 def test_removed_root_extras_stay_removed() -> None:
@@ -204,6 +210,7 @@ def test_builtin_verifier_package_stays_practical() -> None:
         "file_exists.py",
         "http.py",
         "quote.py",
+        "repo_guard.py",
         "schema.py",
     }
     existing = {path.name for path in (ROOT / "veridian" / "verify" / "builtin").glob("*.py")}
@@ -269,6 +276,8 @@ def test_examples_stay_small_and_release_focused() -> None:
     }
     assert example_files == {
         "examples/artifact_verification_gate.py",
+        "examples/banking_agent_verification_demo.py",
+        "examples/coding_agent_verification_demo.py",
         "examples/decorator_release_gate.py",
         "examples/runner_release_gate.py",
     }

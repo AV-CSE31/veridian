@@ -225,6 +225,7 @@ registry.register_lazy_many(
         "file_exists": "veridian.verify.builtin.file_exists:FileExistsVerifier",
         "http_status": "veridian.verify.builtin.http:HttpStatusVerifier",
         "quote_match": "veridian.verify.builtin.quote:QuoteMatchVerifier",
+        "repo_guard": "veridian.verify.builtin.repo_guard:RepoGuardVerifier",
         "schema": "veridian.verify.builtin.schema:SchemaVerifier",
     }
 )

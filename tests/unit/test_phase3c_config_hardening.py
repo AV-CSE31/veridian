@@ -10,7 +10,34 @@ from veridian.core.exceptions import VeridianConfigError
 
 class TestConfigBounds:
     def test_defaults_are_valid(self) -> None:
-        VeridianConfig()
+        config = VeridianConfig()
+
+        assert config.report_file is None
+        assert config.report_signing_key is None
+
+    def test_durable_reporting_requires_operator_key_material(self, tmp_path) -> None:
+        with pytest.raises(VeridianConfigError, match="report_signing_key"):
+            VeridianConfig(report_file=tmp_path / "reports.jsonl")
+
+        with pytest.raises(VeridianConfigError, match="at least 32 bytes"):
+            VeridianConfig(
+                report_file=tmp_path / "reports.jsonl",
+                report_signing_key="weak-key",
+            )
+
+    def test_report_key_can_be_loaded_from_environment_without_repr_leak(self, tmp_path) -> None:
+        key = "environment-report-signing-material-32"
+        config = VeridianConfig.from_env(
+            env={
+                "VERIDIAN_REPORT_FILE": str(tmp_path / "reports.jsonl"),
+                "VERIDIAN_REPORT_SIGNING_KEY": key,
+                "VERIDIAN_REPORT_INCLUDE_PAYLOADS": "true",
+            }
+        )
+
+        assert config.report_signing_key == key
+        assert config.report_include_payloads is True
+        assert key not in repr(config)
 
     @pytest.mark.parametrize(
         ("field", "value"),

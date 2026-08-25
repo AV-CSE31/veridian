@@ -1,6 +1,7 @@
 """Package export hygiene tests for public subpackages."""
 
 from veridian.core import VerificationReport
+from veridian.core.contract import VerificationContract, VerifierStep, verify_completion
 from veridian.ledger import SCHEMA_VERSION, TaskLedger
 from veridian.providers import (
     LiteLLMProvider,
@@ -41,3 +42,9 @@ def test_verify_package_exports_registry_primitives() -> None:
 
 def test_core_package_exports_report_schema_by_module_path() -> None:
     assert VerificationReport.__name__ == "VerificationReport"
+
+
+def test_core_package_exports_completion_contract_primitives() -> None:
+    assert VerificationContract.__name__ == "VerificationContract"
+    assert VerifierStep.__name__ == "VerifierStep"
+    assert callable(verify_completion)

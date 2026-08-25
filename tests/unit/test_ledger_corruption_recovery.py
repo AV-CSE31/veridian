@@ -5,7 +5,7 @@ Durability tests for ``TaskLedger`` under failure modes:
 
 - malformed JSON --- ``LedgerCorrupted``
 - non-object root --- ``LedgerCorrupted``
-- empty ledger file --- quarantine + self-heal to an empty ledger
+- empty ledger file --- recover from WAL evidence or fail closed
 - orphaned ``.tmp`` files left by a crashed writer don't break subsequent reads
 - ``reset_in_progress`` is idempotent (safe to call repeatedly after partial
   recovery)
@@ -21,7 +21,6 @@ from pathlib import Path
 import pytest
 from filelock import FileLock, Timeout
 
-from veridian.core.exceptions import LedgerCorrupted
 from veridian.core.task import Task, TaskStatus
 from veridian.ledger.ledger import TaskLedger
 
@@ -39,37 +38,35 @@ def _task(title: str = "test") -> Task:
 
 
 class TestMalformedJsonDetection:
-    def test_truncated_json_raises_ledger_corrupted(self, tmp_path: Path) -> None:
+    def test_truncated_snapshot_recovers_from_valid_wal(self, tmp_path: Path) -> None:
         ledger = _mk_ledger(tmp_path)
-        ledger.add([_task()])
+        task = _task()
+        ledger.add([task])
 
         # Simulate a crash that left a truncated file behind.
         ledger.path.write_text('{"schema_version": 1, "tasks": {"foo"', encoding="utf-8")
 
-        with pytest.raises(LedgerCorrupted, match="malformed"):
-            ledger.list()
+        assert ledger.get(task.id).title == task.title
 
-    def test_non_object_root_raises_ledger_corrupted(self, tmp_path: Path) -> None:
+    def test_non_object_snapshot_recovers_from_valid_wal(self, tmp_path: Path) -> None:
         ledger = _mk_ledger(tmp_path)
-        ledger.add([_task()])
+        task = _task()
+        ledger.add([task])
 
         ledger.path.write_text("[]", encoding="utf-8")
 
-        with pytest.raises(LedgerCorrupted, match="must be an object"):
-            ledger.list()
+        assert ledger.get(task.id).title == task.title
 
-    def test_empty_file_is_quarantined_and_self_healed(self, tmp_path: Path) -> None:
+    def test_empty_file_recovers_from_wal_without_losing_tasks(self, tmp_path: Path) -> None:
         ledger = _mk_ledger(tmp_path)
-        ledger.add([_task()])
+        task = _task()
+        ledger.add([task])
 
         ledger.path.write_text("", encoding="utf-8")
 
-        assert ledger.list() == []
-        assert ledger.path.exists()
-        healed = json.loads(ledger.path.read_text(encoding="utf-8"))
-        assert healed["tasks"] == {}
-        assert isinstance(healed["schema_version"], int)
-        assert "updated_at" in healed
+        assert [item.id for item in ledger.list()] == [task.id]
+        restarted = _mk_ledger(tmp_path)
+        assert restarted.get(task.id).title == task.title
         assert list(tmp_path.glob("ledger.json.empty.*.corrupt"))
 
     def test_missing_file_is_treated_as_empty_not_corrupted(self, tmp_path: Path) -> None:
@@ -165,17 +162,14 @@ class TestFileLockContention:
         ledger.add([_task("third")])
         assert len(ledger.list()) == 2
 
-    def test_corrupted_file_after_partial_recovery_is_isolated(self, tmp_path: Path) -> None:
-        # If a writer corrupts the on-disk JSON after the lock is released,
-        # the next reader must surface LedgerCorrupted instead of returning
-        # stale or partial state.
+    def test_corrupted_snapshot_after_write_recovers_exact_state(self, tmp_path: Path) -> None:
         ledger = _mk_ledger(tmp_path)
-        ledger.add([_task()])
+        task = _task()
+        ledger.add([task])
 
         good_text = ledger.path.read_text(encoding="utf-8")
         assert json.loads(good_text)  # sanity
 
         ledger.path.write_text(good_text[:30], encoding="utf-8")
 
-        with pytest.raises(LedgerCorrupted):
-            ledger.stats()
+        assert ledger.get(task.id).title == task.title

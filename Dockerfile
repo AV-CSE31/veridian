@@ -5,11 +5,9 @@
 # into the runtime stage. Keeps the runtime image free of pip / build
 # toolchain.
 #
-# Stage 2 (runtime): python:3.11-slim, non-root user, writable
-# /var/lib/veridian for ledger + progress persistence. Honours
-# VERIDIAN_DATA_DIR (default: /var/lib/veridian) and VERIDIAN_LOG_FORMAT
-# so production deployments can pin a mounted volume + structured logs
-# without code changes.
+# Stage 2 (runtime): python:3.11-slim, non-root user, and the supported
+# ``veridian`` CLI. /var/lib/veridian remains writable for callers that use
+# the Python runtime with a mounted ledger volume.
 #
 # Build:    docker build -t veridian:latest .
 # Run:      docker run --rm -v veridian-data:/var/lib/veridian veridian:latest --help
@@ -41,7 +39,11 @@ COPY veridian ./veridian
 
 RUN python -m venv /opt/veridian-venv \
     && /opt/veridian-venv/bin/pip install --upgrade pip \
-    && /opt/veridian-venv/bin/pip install ".[${VERIDIAN_EXTRAS}]"
+    && if [ -n "${VERIDIAN_EXTRAS}" ]; then \
+        /opt/veridian-venv/bin/pip install ".[${VERIDIAN_EXTRAS}]"; \
+    else \
+        /opt/veridian-venv/bin/pip install .; \
+    fi
 
 # ── Stage 2: runtime ────────────────────────────────────────────────────────
 FROM python:${PYTHON_VERSION}-slim AS runtime
@@ -55,9 +57,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     VERIDIAN_DATA_DIR=/var/lib/veridian \
     VERIDIAN_LOG_FORMAT=json
 
-# Minimal runtime dependencies. ca-certificates lets the LiteLLM provider
-# reach HTTPS endpoints; tini gives us PID-1 signal forwarding so SIGTERM
-# from k8s flows into the Python process (Phase 1.B contract).
+# Minimal runtime dependencies. ca-certificates supports optional HTTPS
+# verifiers/providers; tini forwards container signals to the CLI process.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -73,8 +74,7 @@ COPY --from=build /opt/veridian-venv /opt/veridian-venv
 USER veridian
 WORKDIR /home/veridian
 
-# tini propagates SIGTERM to the entrypoint so the SIGTERM drain path in
-# ParallelRunner (Phase 1.B) actually fires.
+# The image and installed wheel share one public entrypoint.
 ENTRYPOINT ["/usr/bin/tini", "--", "veridian"]
 CMD ["--help"]
 
