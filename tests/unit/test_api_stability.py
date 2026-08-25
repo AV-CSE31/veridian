@@ -25,6 +25,10 @@ _EXPECTED_STABLE_ALL = sorted(
         "VeridianError",
         "VerificationError",
         "ProviderError",
+        "VerificationContract",
+        "VerificationDecision",
+        "VerifierStep",
+        "verify_completion",
         "verified",
     ]
 )
@@ -40,7 +44,7 @@ class TestStableSurfaceIsExact:
         )
 
     def test_stable_surface_count(self) -> None:
-        assert len(veridian.__all__) <= 20
+        assert len(veridian.__all__) <= 24
 
     def test_removed_symbols_are_module_path_only(self) -> None:
         removed = [

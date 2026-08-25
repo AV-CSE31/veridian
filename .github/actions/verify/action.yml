@@ -8,9 +8,14 @@ branding:
 
 inputs:
   verifier:
-    description: "Verifier ID to run (e.g. not_empty, schema, bash_exit)"
+    description: "Registered verifier ID to run (e.g. schema, repo_guard, bash_exit)"
     required: false
-    default: "not_empty"
+    default: "schema"
+
+  verifier-config:
+    description: "Verifier constructor configuration as a JSON object"
+    required: false
+    default: '{"schema":{"type":"object","required":["output"],"properties":{"output":{"type":"string","minLength":1}}}}'
 
   agent-output:
     description: "The agent output text to verify"
@@ -54,28 +59,54 @@ runs:
   using: "composite"
   steps:
     - name: "Set up Python"
-      uses: "actions/setup-python@v5"
+      uses: "actions/setup-python@v6"
       with:
         python-version: ${{ inputs.python-version }}
 
     - name: "Install Veridian"
       shell: bash
       run: |
-        pip install veridian-ai --quiet
+        python -m pip install --quiet "${{ github.action_path }}/../../.."
 
     - name: "Run Verification"
       id: verify
       shell: bash
       env:
         VERIDIAN_VERIFIER: ${{ inputs.verifier }}
+        VERIDIAN_VERIFIER_CONFIG: ${{ inputs.verifier-config }}
         VERIDIAN_AGENT_OUTPUT: ${{ inputs.agent-output }}
         VERIDIAN_TASK: ${{ inputs.task }}
         VERIDIAN_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
         VERIDIAN_OUTPUT_PATH: ${{ inputs.output-path }}
       run: |
-        python -m veridian.gh_action
-        # Extract outputs from result file
-        PASSED=$(python -c "import json; d=json.load(open('${{ inputs.output-path }}')); print(str(d['passed']).lower())")
-        ERROR=$(python -c "import json; d=json.load(open('${{ inputs.output-path }}')); print(d.get('error') or '')")
-        echo "passed=${PASSED}" >> "$GITHUB_OUTPUT"
-        echo "error=${ERROR}" >> "$GITHUB_OUTPUT"
+        FAIL_FLAG=()
+        if [[ "${VERIDIAN_FAIL_ON_ERROR,,}" == "false" ]]; then
+          FAIL_FLAG+=(--no-fail-on-error)
+        fi
+
+        set +e
+        veridian verify \
+          --verifier "$VERIDIAN_VERIFIER" \
+          --verifier-config "$VERIDIAN_VERIFIER_CONFIG" \
+          --agent-output "$VERIDIAN_AGENT_OUTPUT" \
+          --task "$VERIDIAN_TASK" \
+          --output-path "$VERIDIAN_OUTPUT_PATH" \
+          "${FAIL_FLAG[@]}"
+        STATUS=$?
+        set -e
+
+        python - <<'PY'
+        import json
+        import os
+        import uuid
+
+        with open(os.environ["VERIDIAN_OUTPUT_PATH"], encoding="utf-8") as handle:
+            result = json.load(handle)
+
+        delimiter = f"VERIDIAN_{uuid.uuid4().hex}"
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+            handle.write(f"passed={str(bool(result['passed'])).lower()}\n")
+            handle.write(f"error<<{delimiter}\n{result.get('error') or ''}\n{delimiter}\n")
+        PY
+
+        exit "$STATUS"

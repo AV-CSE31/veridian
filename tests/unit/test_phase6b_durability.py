@@ -110,25 +110,30 @@ class TestLedgerWriteFsync:
         ledger.add([self._make_task()])
         assert called == []
 
-    def test_fsync_oserror_swallowed_but_write_succeeds(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    def test_fsync_oserror_prevents_successful_acknowledgement(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import logging
-
-        import veridian.ledger.ledger as mod
+        import veridian.ledger.wal as mod
 
         ledger = self._build_ledger(tmp_path)
+        task = self._make_task()
+        real_fsync = mod.os.fsync
 
         def _boom(_fd: int) -> None:
             raise OSError("fsync unsupported")
 
         monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
         monkeypatch.setattr(mod.os, "fsync", _boom)
-        with caplog.at_level(logging.WARNING, logger="veridian.ledger.ledger"):
-            ledger.add([self._make_task()])
-        assert (tmp_path / "ledger.json").exists()
-        assert len(ledger.list()) == 1
-        assert any("fsync_failed" in rec.message for rec in caplog.records)
+        with pytest.raises(OSError, match="fsync unsupported"):
+            ledger.add([task])
+
+        # Restore the durability primitive before observing recovery. The WAL
+        # bytes may have reached the file, but without an advanced durable head
+        # they were never acknowledged and must not become visible.
+        monkeypatch.setattr(mod.os, "fsync", real_fsync)
+        assert ledger.list() == []
+        reopened = self._build_ledger(tmp_path)
+        assert reopened.list() == []
 
 
 # ------ Bootstrap write race ------------------------------------------------------------------------------------------------------------------------------
@@ -164,6 +169,12 @@ class TestBootstrapRace:
                     winner.progress_path = tmp_path / "winner-progress.md"
                     winner._lock_path = ledger_path.with_suffix(".lock")
                     winner._lock = self
+                    # ``_write_raw`` persists the fail-closed WAL identity in
+                    # every snapshot.  This deliberately partial test double
+                    # must therefore model the constructor state established
+                    # before a real TaskLedger attempts to acquire its lock.
+                    winner._ledger_id = "winner-ledger"
+                    winner._generation = 1
                     winner._write_raw(
                         {
                             "schema_version": mod.SCHEMA_VERSION,
@@ -197,7 +208,7 @@ class TestOrphanTmpSweep:
             path=tmp_path / "ledger.json", progress_file=str(tmp_path / "progress.md")
         )
 
-    def test_stale_tmp_files_removed_on_reset(self, tmp_path: Path) -> None:
+    def test_stale_legacy_named_tmp_is_preserved_on_reset(self, tmp_path: Path) -> None:
         import os
         import time
 
@@ -208,7 +219,10 @@ class TestOrphanTmpSweep:
         os.utime(stale, (old, old))
 
         ledger.reset_in_progress()
-        assert not stale.exists()
+        # Cleanup is deliberately restricted to this ledger's atomic snapshot,
+        # WAL, and WAL-head temp names. A generic legacy-looking temp may belong
+        # to another producer and must not be deleted based on age alone.
+        assert stale.exists()
 
     def test_fresh_tmp_files_are_preserved(self, tmp_path: Path) -> None:
         # A young temp file may belong to a sibling ledger mid-write in a

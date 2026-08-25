@@ -11,11 +11,31 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
-        extras: ["dev", "dev,all"]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.11"
+            extras: "dev"
+            primary: true
+          - os: ubuntu-latest
+            python-version: "3.12"
+            extras: "dev,all"
+            primary: false
+          - os: ubuntu-latest
+            python-version: "3.13"
+            extras: "dev"
+            primary: false
+          - os: windows-latest
+            python-version: "3.11"
+            extras: "dev"
+            primary: false
+          - os: macos-latest
+            python-version: "3.12"
+            extras: "dev"
+            primary: false
 
     steps:
       - uses: actions/checkout@v5
@@ -42,12 +62,79 @@ jobs:
         run: pytest -q --tb=short
 
       - name: Coverage
+        if: matrix.primary
         run: pytest --cov=veridian --cov-report=term-missing --cov-fail-under=85 -q
 
       - name: Build package
+        if: matrix.primary
         run: python -m build
 
       - name: Check artifacts
+        if: matrix.primary
         run: |
           python -m twine check dist/*
           python scripts/check_package_artifacts.py dist/*
+
+      - name: Check protected paths
+        if: matrix.primary
+        run: python scripts/check_protected_paths.py --mode tracked
+
+  minimal-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Build and install base wheel
+        run: |
+          python -m pip install build
+          python -m build
+          python -m pip install --force-reinstall dist/*.whl
+          python -m pip check
+      - name: Smoke-test installed interfaces
+        run: |
+          python -c "import veridian, veridian.assurance, veridian.effects, veridian.math"
+          veridian --help
+
+  composite-action-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Execute checked-out Veridian Action
+        id: veridian
+        uses: ./.github/actions/verify
+        with:
+          verifier: schema
+          verifier-config: '{"required_fields":["decision"]}'
+          agent-output: '{"decision":"ship"}'
+          task: "Composite Action smoke verification"
+          output-path: veridian-action-smoke.json
+
+      - name: Assert Action outputs and evidence artifact
+        env:
+          VERIDIAN_ACTION_PASSED: ${{ steps.veridian.outputs.passed }}
+        run: |
+          test "$VERIDIAN_ACTION_PASSED" = "true"
+          python -c "import json; result=json.load(open('veridian-action-smoke.json', encoding='utf-8')); assert result['passed'] is True"
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build runtime image
+        run: docker build --tag veridian-ci:${{ github.sha }} .
+
+      - name: Execute installed container entrypoint
+        run: |
+          docker run --rm veridian-ci:${{ github.sha }} --help
+          docker run --rm veridian-ci:${{ github.sha }} verify \
+            --verifier schema \
+            --verifier-config '{"required_fields":["decision"]}' \
+            --agent-output '{"decision":"ship"}' \
+            --task "Container smoke verification" \
+            --output-path /tmp/veridian-container-smoke.json

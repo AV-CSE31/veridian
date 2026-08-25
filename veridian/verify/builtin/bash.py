@@ -72,6 +72,7 @@ class BashExitCodeVerifier(BaseVerifier):
         blocklist: list[str] | None = None,
         env_allowlist: tuple[str, ...] | None = None,
         inherit_env: bool = False,
+        cwd: str | None = None,
     ) -> None:
         """
         Args:
@@ -85,6 +86,7 @@ class BashExitCodeVerifier(BaseVerifier):
                 leakage of credentials into shell commands.
             inherit_env: Set to ``True`` to inherit the full parent env. Only
                 use in trusted, non-adversarial contexts.
+            cwd: Optional working directory for the command.
         """
         if not command or not command.strip():
             raise VeridianConfigError(
@@ -109,6 +111,11 @@ class BashExitCodeVerifier(BaseVerifier):
         self.timeout_seconds = timeout_seconds
         self.env_allowlist = env_allowlist if env_allowlist is not None else DEFAULT_ENV_ALLOWLIST
         self.inherit_env = inherit_env
+        self.cwd = cwd
+        if self.cwd is not None and not os.path.isdir(self.cwd):
+            raise VeridianConfigError(
+                f"BashExitCodeVerifier: cwd does not exist or is not a directory: {self.cwd}"
+            )
 
     def verify(self, task: Task, result: TaskResult) -> VerificationResult:
         """Run self.command in a subprocess and check its exit code."""
@@ -124,6 +131,7 @@ class BashExitCodeVerifier(BaseVerifier):
                 text=True,
                 timeout=self.timeout_seconds,
                 env=child_env,
+                cwd=self.cwd,
             )
         except subprocess.TimeoutExpired:
             return VerificationResult(
@@ -141,6 +149,7 @@ class BashExitCodeVerifier(BaseVerifier):
                 evidence={
                     "exit_code": actual,
                     "command": self.command,
+                    "cwd": self.cwd,
                     "stdout_tail": proc.stdout[-200:] if proc.stdout else "",
                 },
             )
@@ -160,6 +169,7 @@ class BashExitCodeVerifier(BaseVerifier):
                 "exit_code": actual,
                 "expected_exit": self.expected_exit,
                 "command": self.command,
+                "cwd": self.cwd,
                 "stdout": proc.stdout[-500:] if proc.stdout else "",
                 "stderr": proc.stderr[-500:] if proc.stderr else "",
             },

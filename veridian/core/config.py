@@ -132,7 +132,21 @@ class VeridianConfig:
     # like ``ledger.json`` continue to resolve relative to that root.
     ledger_file: Path = field(default_factory=lambda: default_data_dir() / "ledger.json")
     progress_file: Path = field(default_factory=lambda: default_data_dir() / "progress.md")
-    report_file: Path | None = None  # optional JSONL verification evidence export
+    # Durable report export is deliberately opt-in because a signed report log
+    # cannot be created safely with package-owned or implicit key material.
+    report_file: Path | None = None
+    report_signing_key: str | None = field(
+        default_factory=lambda: os.getenv("VERIDIAN_REPORT_SIGNING_KEY"),
+        repr=False,
+    )
+    report_signing_key_id: str = field(
+        default_factory=lambda: os.getenv("VERIDIAN_REPORT_SIGNING_KEY_ID", "operator")
+    )
+    report_include_payloads: bool = False
+    report_include_evidence: bool = False
+    report_include_metadata: bool = False
+    report_trusted_head: str | None = None
+    report_lock_timeout: float = 15.0
     # FileLock acquire timeout for ledger writes. Tight enough that a
     # crashed peer with a stale lock surfaces a clear Timeout instead of
     # blocking pod startup indefinitely.
@@ -222,7 +236,29 @@ class VeridianConfig:
         _require_positive("context_window_tokens", self.context_window_tokens)
         _require_positive("max_cost_usd", self.max_cost_usd)
         _require_positive("ledger_lock_timeout", self.ledger_lock_timeout)
+        _require_positive("report_lock_timeout", self.report_lock_timeout)
         if self.temperature < 0.0:
             raise VeridianConfigError(
                 f"VeridianConfig.temperature must be >= 0, got {self.temperature!r}"
+            )
+        if (
+            self.report_signing_key is not None
+            and len(self.report_signing_key.encode("utf-8")) < 32
+        ):
+            raise VeridianConfigError(
+                "VeridianConfig.report_signing_key must contain at least 32 bytes"
+            )
+        if self.report_file is not None:
+            if self.report_signing_key is None:
+                raise VeridianConfigError(
+                    "VeridianConfig.report_signing_key is required when report_file is set"
+                )
+            if not self.report_signing_key_id:
+                raise VeridianConfigError("VeridianConfig.report_signing_key_id must be non-empty")
+        if self.report_trusted_head is not None and (
+            len(self.report_trusted_head) != 64
+            or any(character not in "0123456789abcdef" for character in self.report_trusted_head)
+        ):
+            raise VeridianConfigError(
+                "VeridianConfig.report_trusted_head must be a lowercase SHA-256 digest"
             )

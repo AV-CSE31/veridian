@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from veridian.core.task import Task, TaskResult, TaskStatus
@@ -32,7 +31,7 @@ def _simulate_execution_with_crash(
     return True
 
 
-def test_ledger_file_remains_valid_json_after_injected_crash(tmp_path: Path) -> None:
+def test_acknowledged_task_remains_visible_after_injected_crash(tmp_path: Path) -> None:
     ledger = TaskLedger(
         path=tmp_path / "ledger.json",
         progress_file=str(tmp_path / "progress.md"),
@@ -41,9 +40,11 @@ def test_ledger_file_remains_valid_json_after_injected_crash(tmp_path: Path) -> 
 
     assert not _simulate_execution_with_crash(ledger, task, crash_at_step=2)
 
-    raw = json.loads((tmp_path / "ledger.json").read_text(encoding="utf-8"))
-    assert "tasks" in raw
-    assert task.id in raw["tasks"]
+    restarted = TaskLedger(
+        path=tmp_path / "ledger.json",
+        progress_file=str(tmp_path / "progress.md"),
+    )
+    assert restarted.get(task.id).status == TaskStatus.IN_PROGRESS
 
 
 def test_reset_in_progress_after_crash_returns_task_to_pending(tmp_path: Path) -> None:

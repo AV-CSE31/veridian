@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, ParamSpec
 
 from veridian import __version__
-from veridian.core.exceptions import VerificationError
+from veridian.core.exceptions import VeridianConfigError, VerificationError
 from veridian.core.report import VerificationReport, append_report_jsonl
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import VerificationResult, VerifierRegistry, registry
@@ -64,12 +64,34 @@ def verified(
     strict: bool = False,
     verifier_registry: VerifierRegistry | None = None,
     report_file: str | Path | None = None,
+    report_signing_key: str | bytes | None = None,
+    report_signing_key_id: str = "operator",
+    report_include_payloads: bool = False,
+    report_include_evidence: bool = False,
+    report_include_metadata: bool = False,
 ) -> Callable[[Callable[P, Any]], Callable[P, VerifiedCall]]:
     """Verify a function's return value with a Veridian verifier.
 
     The wrapped function returns ``VerifiedCall`` instead of the raw value.
     Set ``strict=True`` to raise ``VerificationError`` on failed verification.
+    Durable export requires explicit key material. Payload, verifier evidence,
+    and metadata disclosure are independent opt-ins.
     """
+
+    if report_file is not None:
+        if report_signing_key is None:
+            raise VeridianConfigError(
+                "report_signing_key is required when report_file is configured"
+            )
+        key_bytes = (
+            report_signing_key.encode("utf-8")
+            if isinstance(report_signing_key, str)
+            else report_signing_key
+        )
+        if len(key_bytes) < 32:
+            raise VeridianConfigError("report_signing_key must contain at least 32 bytes")
+        if not report_signing_key_id:
+            raise VeridianConfigError("report_signing_key_id must be non-empty")
 
     def decorate(fn: Callable[P, Any]) -> Callable[P, VerifiedCall]:
         @wraps(fn)
@@ -98,9 +120,17 @@ def verified(
                 score=verification.score,
                 runtime_version=__version__,
                 metadata={"source": "decorator", "function": fn.__name__},
+                include_payloads=report_include_payloads,
+                include_evidence=report_include_evidence,
+                include_metadata=report_include_metadata,
             )
             if report_file is not None:
-                report = append_report_jsonl(report_file, report)
+                report = append_report_jsonl(
+                    report_file,
+                    report,
+                    signing_key=report_signing_key,
+                    signing_key_id=report_signing_key_id,
+                )
             result.verification_report = report.to_dict()
 
             call = VerifiedCall(

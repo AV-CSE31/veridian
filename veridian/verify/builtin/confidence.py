@@ -30,8 +30,10 @@ class ConfidenceScore:
         consistency_score: float | None = None,
     ) -> ConfidenceScore:
         """Compute a bounded confidence score from retry and verifier signals."""
-        del max_retries
-        attempt_score = max(0.1, 1.0 - (retry_count * 0.25))
+        if max_retries <= 0:
+            attempt_score = 1.0 if retry_count <= 0 else 0.1
+        else:
+            attempt_score = max(0.1, 1.0 - (retry_count / max_retries))
         vs = verifier_score if verifier_score is not None else 1.0
         cs = consistency_score if consistency_score is not None else 1.0
 

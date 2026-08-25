@@ -45,8 +45,18 @@ from veridian.core.events import (
     TaskPaused,
     TaskResumed,
 )
-from veridian.core.exceptions import ControlFlowSignal, HumanReviewRequired, TaskPauseRequested
-from veridian.core.report import VerificationReport, append_report_jsonl
+from veridian.core.exceptions import (
+    ControlFlowSignal,
+    HardControlViolation,
+    HumanReviewRequired,
+    TaskPauseRequested,
+    VerificationError,
+)
+from veridian.core.report import (
+    VerificationReport,
+    append_report_jsonl,
+    validate_report_chain,
+)
 from veridian.core.task import (
     Task,
     TaskResult,
@@ -157,6 +167,7 @@ class VeridianRunner:
         )
         # ------ Step 1: Crash recovery --- ALWAYS FIRST ------------------------------------------------------------------------------------
         self.ledger.reset_in_progress()
+        self._preflight_report_chain()
 
         # Count total schedulable tasks. RV3-001: when resume_paused_on_start
         # is enabled, PAUSED tasks also count so the runner doesn't short-circuit
@@ -209,6 +220,33 @@ class VeridianRunner:
             return summary
         finally:
             self._restore_signal_handler(previous_sigint)
+
+    def _preflight_report_chain(self) -> None:
+        """Reject an unsafe or corrupted durable-report sink before agent work."""
+        report_file = self.config.report_file
+        if report_file is None:
+            return
+        signing_key = self.config.report_signing_key
+        if signing_key is None:
+            raise HardControlViolation(
+                "durable report export requires an explicit report_signing_key"
+            )
+        report_path = Path(report_file)
+        if not report_path.exists():
+            if self.config.report_trusted_head is not None:
+                raise HardControlViolation(
+                    "report chain preflight failed: trusted head supplied but chain is missing"
+                )
+            return
+        validation = validate_report_chain(
+            report_path,
+            signing_key=signing_key,
+            trusted_head=self.config.report_trusted_head,
+        )
+        if not validation.valid:
+            raise HardControlViolation(
+                f"report chain preflight failed: {validation.error or 'invalid chain'}"
+            )
 
     def _task_loop(
         self,
@@ -285,6 +323,8 @@ class VeridianRunner:
                 # is preserved across restarts. DO NOT count as failure.
                 self._handle_pause_signal(task, run_id, signal, summary)
                 paused_this_run.add(task.id)
+            except HardControlViolation as violation:
+                self._handle_hard_control_violation(task, run_id, violation, summary)
             except Exception as exc:
                 log.error(
                     "runner.task_error task_id=%s err=%s",
@@ -294,6 +334,35 @@ class VeridianRunner:
                 )
                 summary.failed_count += 1
                 summary.errors.append(str(exc))
+
+    def _handle_hard_control_violation(
+        self,
+        task: Task,
+        run_id: str,
+        violation: HardControlViolation,
+        summary: RunSummary,
+    ) -> None:
+        """Persist a hard denial and stop before any later task can execute."""
+        error = str(violation)[:300]
+        self._shutdown = True
+        try:
+            updated = self.ledger.mark_failed(task.id, error)
+        except Exception as exc:
+            log.error("runner.hard_control_persist_failed task_id=%s err=%s", task.id, exc)
+            summary.failed_count += 1
+            summary.errors.append(f"hard_control_persist_failed: {exc}")
+            return
+
+        self.hooks.fire(
+            "on_failure",
+            TaskFailed(run_id=run_id, task=updated, error=error),
+        )
+        if updated.status == TaskStatus.ABANDONED:
+            summary.abandoned_count += 1
+        else:
+            summary.failed_count += 1
+        summary.errors.append(error)
+        log.warning("runner.hard_control_denied task_id=%s err=%s", task.id, error)
 
     def _handle_pause_signal(
         self,
@@ -433,17 +502,23 @@ class VeridianRunner:
             runtime_version=__version__,
             run_id=run_id,
             metadata={"source": "runner", "phase": task.phase},
+            include_payloads=self.config.report_include_payloads,
+            include_evidence=self.config.report_include_evidence,
+            include_metadata=self.config.report_include_metadata,
         )
         if self.config.report_file is not None:
             try:
-                report = append_report_jsonl(self.config.report_file, report)
-            except Exception as exc:
-                log.warning(
-                    "runner.report_export_failed task_id=%s path=%s err=%s",
-                    task.id,
+                report = append_report_jsonl(
                     self.config.report_file,
-                    exc,
+                    report,
+                    signing_key=self.config.report_signing_key,
+                    signing_key_id=self.config.report_signing_key_id,
+                    lock_timeout=self.config.report_lock_timeout,
                 )
+            except VerificationError as exc:
+                raise HardControlViolation(
+                    f"durable report export failed for task {task.id}: {exc}"
+                ) from exc
         result.verification_report = report.to_dict()
 
         self.ledger.submit_result(task.id, result)

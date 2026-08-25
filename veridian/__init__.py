@@ -24,7 +24,11 @@ _LAZY_EXPORTS = {
     "VeridianRunner": "veridian.loop.runner:VeridianRunner",
     "VerifiedCall": "veridian.decorators:VerifiedCall",
     "VerificationError": "veridian.core.exceptions:VerificationError",
+    "VerificationContract": "veridian.core.contract:VerificationContract",
+    "VerificationDecision": "veridian.core.contract:VerificationDecision",
     "VerificationResult": "veridian.verify.base:VerificationResult",
+    "VerifierStep": "veridian.core.contract:VerifierStep",
+    "verify_completion": "veridian.core.contract:verify_completion",
     "verified": "veridian.decorators:verified",
 }
 
@@ -60,7 +64,11 @@ __all__ = [
     "MockProvider",
     "LiteLLMProvider",
     "VerifiedCall",
+    "VerificationContract",
+    "VerificationDecision",
     "verified",
+    "VerifierStep",
+    "verify_completion",
     "VeridianError",
     "VerificationError",
     "ProviderError",

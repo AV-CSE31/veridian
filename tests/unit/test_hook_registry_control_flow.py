@@ -16,6 +16,8 @@ import pytest
 from veridian.core.events import TaskClaimed
 from veridian.core.exceptions import (
     ControlFlowSignal,
+    CostLimitExceeded,
+    HardControlViolation,
     HumanReviewRequired,
     TaskPauseRequested,
     VeridianError,
@@ -63,6 +65,21 @@ class TestControlFlowSignalPropagation:
         reg.register(BrokenHook())
         # Must not raise --- run continues
         reg.fire("before_task", TaskClaimed(run_id="r1"))
+
+    def test_hard_control_violation_propagates(self) -> None:
+        """A hard-control denial must never be swallowed as hook telemetry."""
+
+        class BudgetHook(BaseHook):
+            id = "budget"
+
+            def before_task(self, event: object) -> None:
+                raise CostLimitExceeded(current=2.0, limit=1.0)
+
+        reg = HookRegistry()
+        reg.register(BudgetHook())
+
+        with pytest.raises(HardControlViolation):
+            reg.fire("before_task", TaskClaimed(run_id="r1"))
 
     def test_control_flow_signal_propagates(self) -> None:
         """TaskPauseRequested must escape HookRegistry.fire() so runner can act."""

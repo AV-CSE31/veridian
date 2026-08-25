@@ -65,7 +65,11 @@ class ControlFlowSignal(VeridianError):
     """Base class for hook-raised control-flow signals."""
 
 
-class CostLimitExceeded(VeridianError):
+class HardControlViolation(VeridianError):
+    """A mandatory safety or authorization control denied an operation."""
+
+
+class CostLimitExceeded(HardControlViolation):
     """CostGuardHook: cumulative cost exceeded max_cost_usd."""
 
     def __init__(self, current: float, limit: float):

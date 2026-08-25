@@ -8,6 +8,7 @@ from veridian.verify.builtin.composite import CompositeVerifier
 from veridian.verify.builtin.file_exists import FileExistsVerifier
 from veridian.verify.builtin.http import HttpStatusVerifier
 from veridian.verify.builtin.quote import QuoteMatchVerifier
+from veridian.verify.builtin.repo_guard import RepoGuardVerifier
 from veridian.verify.builtin.schema import SchemaVerifier
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "FileExistsVerifier",
     "CompositeVerifier",
     "AnyOfVerifier",
+    "RepoGuardVerifier",
 ]

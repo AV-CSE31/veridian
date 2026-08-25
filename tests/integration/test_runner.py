@@ -11,11 +11,15 @@ from pathlib import Path
 import pytest
 
 from veridian.core.config import VeridianConfig
+from veridian.core.exceptions import HardControlViolation
+from veridian.core.report import SCHEMA_VERSION as REPORT_SCHEMA_VERSION
 from veridian.core.report import validate_report_chain
 from veridian.core.task import (
     Task,
     TaskStatus,
 )
+from veridian.hooks.builtin.cost_guard import CostGuardHook
+from veridian.hooks.registry import HookRegistry
 from veridian.ledger.ledger import TaskLedger
 from veridian.loop.runner import RunSummary, VeridianRunner
 from veridian.providers.base import LLMResponse
@@ -47,6 +51,7 @@ def mock_provider() -> MockProvider:
 
 
 _SCHEMA_CONFIG = {"required_fields": ["summary"]}
+_REPORT_SIGNING_KEY = "integration-report-key-material-32-bytes"
 
 
 def make_task(title: str = "test", **kwargs) -> Task:
@@ -149,7 +154,7 @@ class TestVeridianRunnerHappyPath:
         assert isinstance(stored.result.confidence, dict)
         assert "composite" in stored.result.confidence
         assert isinstance(stored.result.verification_evidence, dict)
-        assert stored.result.verification_report["schema_version"] == "verification-report.v1"
+        assert stored.result.verification_report["schema_version"] == REPORT_SCHEMA_VERSION
         assert stored.result.verification_report["passed"] is True
         assert stored.result.verification_report["task_id"] == "e1"
         assert stored.result.verification_report["report_hash"]
@@ -161,6 +166,7 @@ class TestVeridianRunnerHappyPath:
     def test_runner_exports_tamper_evident_report_jsonl(self, config, ledger, mock_provider):
         """Configured report_file writes the same evidence chain sold by Enterprise."""
         config.report_file = config.ledger_file.parent / "reports.jsonl"
+        config.report_signing_key = _REPORT_SIGNING_KEY
         ledger.add([make_task("evidence export", id="report-1")])
         mock_provider.script([make_result_response({"summary": "done"})])
 
@@ -169,13 +175,33 @@ class TestVeridianRunnerHappyPath:
 
         assert summary.done_count == 1
         assert config.report_file is not None
-        validation = validate_report_chain(config.report_file)
+        validation = validate_report_chain(
+            config.report_file,
+            signing_key=_REPORT_SIGNING_KEY,
+        )
         assert validation.valid is True
         assert validation.checked_count == 1
 
         stored = ledger.get("report-1")
         assert stored.result is not None
         assert stored.result.verification_report["report_hash"]
+        assert stored.result.verification_report["input_payload"] == {}
+        assert stored.result.verification_report["output_payload"] == {}
+
+    def test_runner_rejects_invalid_existing_report_chain_before_provider_call(
+        self, config, ledger, mock_provider
+    ):
+        report_path = config.ledger_file.parent / "reports.jsonl"
+        report_path.write_text('{"truncated":', encoding="utf-8")
+        config.report_file = report_path
+        config.report_signing_key = _REPORT_SIGNING_KEY
+        ledger.add([make_task("must not execute", id="invalid-chain")])
+
+        with pytest.raises(HardControlViolation, match="report chain preflight failed"):
+            VeridianRunner(ledger=ledger, provider=mock_provider, config=config).run()
+
+        assert mock_provider.call_count == 0
+        assert ledger.get("invalid-chain").status == TaskStatus.PENDING
 
 
 class TestDryRun:
@@ -187,6 +213,30 @@ class TestDryRun:
         summary = runner.run()
         assert summary.dry_run is True
         assert mock_provider.call_count == 0
+
+
+class TestHardControlDenial:
+    def test_exhausted_cost_budget_blocks_execution_and_stops_run(
+        self, config, ledger, mock_provider
+    ):
+        """A hard cost denial persists failure before any provider side effect."""
+        ledger.add([make_task("denied", id="denied"), make_task("untouched", id="untouched")])
+        hooks = HookRegistry()
+        hooks.register(CostGuardHook(max_cost_usd=0.0))
+
+        summary = VeridianRunner(
+            ledger=ledger,
+            provider=mock_provider,
+            config=config,
+            hooks=hooks,
+        ).run()
+
+        assert mock_provider.call_count == 0
+        assert summary.done_count == 0
+        assert summary.failed_count == 1
+        assert "Cost $0.0000 exceeded limit $0.00" in summary.errors
+        assert ledger.get("denied").status == TaskStatus.FAILED
+        assert ledger.get("untouched").status == TaskStatus.PENDING
 
 
 class TestAtomicWrite:

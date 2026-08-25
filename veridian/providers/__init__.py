@@ -1,9 +1,8 @@
 """Provider interfaces and built-in provider implementations.
 
 ``LiteLLMProvider`` and ``CircuitBreaker`` are lazy-loaded on first attribute
-access --- the underlying module imports ``tenacity`` at module load time
-(~25-30ms) and pulling that on every ``import veridian`` slows down the
-common configuration-only import path for no benefit.
+access so the optional provider stack does not slow down the common
+configuration-only import path.
 """
 
 from __future__ import annotations

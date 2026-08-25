@@ -1,0 +1,1 @@
+"""Assurance-kernel contract tests."""

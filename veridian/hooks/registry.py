@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from veridian.core.exceptions import ControlFlowSignal
+from veridian.core.exceptions import ControlFlowSignal, HardControlViolation
 from veridian.hooks.base import BaseHook
 
 __all__ = ["HookRegistry"]
@@ -32,8 +32,9 @@ class HookRegistry:
     def fire(self, method: str, event: Any) -> None:
         """Call hook.method(event) for each registered hook.
 
-        Control-flow signals propagate to the runner. All other hook errors
-        are logged and swallowed so a broken hook cannot kill a run.
+        Control-flow signals and hard-control violations propagate to the
+        runner. All other hook errors are logged and swallowed so a broken
+        observational hook cannot kill a run.
         """
         for hook in self._hooks:
             fn = getattr(hook, method, None)
@@ -42,7 +43,7 @@ class HookRegistry:
             hook_id = getattr(hook, "id", "?")
             try:
                 fn(event)
-            except ControlFlowSignal:
+            except (ControlFlowSignal, HardControlViolation):
                 raise
             except Exception as exc:
                 log.error(
