@@ -92,3 +92,41 @@ def test_I5_2_deterministic_bug_is_not_retried(monkeypatch) -> None:
         "responses are treated as transient — paying real API cost and latency for "
         "a failure that will never succeed."
     )
+
+
+def test_transient_primary_failure_preserves_an_attempt_for_fallback(monkeypatch) -> None:
+    """A global retry cap must still leave a reachable configured fallback."""
+    calls: list[str] = []
+    fake = types.ModuleType("litellm")
+
+    def completion(**kwargs):
+        model = kwargs["model"]
+        calls.append(model)
+        if model == "gpt-primary":
+            raise TimeoutError("transient timeout")
+        return types.SimpleNamespace(
+            usage=types.SimpleNamespace(prompt_tokens=1, completion_tokens=1),
+            choices=[
+                types.SimpleNamespace(
+                    message=types.SimpleNamespace(content="fallback-ok"),
+                    finish_reason="stop",
+                )
+            ],
+        )
+
+    fake.completion = completion  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "litellm", fake)
+    provider = LiteLLMProvider(
+        model="gpt-primary",
+        fallback_models=["gpt-fallback"],
+        max_retries=3,
+        max_total_attempts=2,
+        min_backoff=0.0,
+        max_backoff=0.0,
+        jitter=0.0,
+    )
+
+    response = provider.complete([Message(role="user", content="hi")])
+
+    assert response.content == "fallback-ok"
+    assert calls == ["gpt-primary", "gpt-fallback"]

@@ -5,7 +5,8 @@ TaskLedger --- the single source of truth for all task state.
 
 RULES:
 - Ledger is the ONLY object allowed to transition task status.
-- All writes are atomic (temp-file --- rename via os.replace).
+- Snapshot and WAL-head replacement is atomic (temp-file + os.replace).
+- WAL transitions are append + flush + fsync before the atomic head advances.
 - FileLock ensures single writer across processes.
 - reset_in_progress() MUST be called at the start of every run().
 """

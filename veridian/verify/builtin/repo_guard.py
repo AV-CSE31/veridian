@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import fnmatch
+import hashlib
+import os
 import re
 import subprocess
 from pathlib import Path
 from typing import ClassVar
 
 from veridian.core.exceptions import VeridianConfigError
+from veridian.core.report import stable_hash
 from veridian.core.task import Task, TaskResult
 from veridian.verify.base import BaseVerifier, VerificationResult
 
@@ -77,11 +80,16 @@ class RepoGuardVerifier(BaseVerifier):
         changed = [
             path for path in self._changed_files() if not self._matches(path, self.ignored_paths)
         ]
+        repo_state_digest = self._repo_state_digest(changed)
+        base_evidence = {
+            "changed_files": changed,
+            "repo_state_digest": repo_state_digest,
+        }
         if self.require_changes and not changed:
             return VerificationResult(
                 passed=False,
                 error="Repo guard failed: no changed files detected.",
-                evidence={"changed_files": changed},
+                evidence=base_evidence,
             )
 
         protected = [path for path in changed if self._matches(path, self.protected_paths)]
@@ -89,7 +97,7 @@ class RepoGuardVerifier(BaseVerifier):
             return VerificationResult(
                 passed=False,
                 error=f"Repo guard failed: protected path changed: {protected[0]}",
-                evidence={"changed_files": changed, "protected_paths": protected},
+                evidence={**base_evidence, "protected_paths": protected},
             )
 
         outside_allowed = [
@@ -101,7 +109,7 @@ class RepoGuardVerifier(BaseVerifier):
             return VerificationResult(
                 passed=False,
                 error=f"Repo guard failed: changed file outside allowed paths: {outside_allowed[0]}",
-                evidence={"changed_files": changed, "outside_allowed": outside_allowed},
+                evidence={**base_evidence, "outside_allowed": outside_allowed},
             )
 
         secret_hits = self._scan_for_secrets(changed)
@@ -110,13 +118,13 @@ class RepoGuardVerifier(BaseVerifier):
             return VerificationResult(
                 passed=False,
                 error=f"Repo guard failed: possible secret introduced in {first['path']}",
-                evidence={"changed_files": changed, "secret_hits": secret_hits},
+                evidence={**base_evidence, "secret_hits": secret_hits},
             )
 
         return VerificationResult(
             passed=True,
             evidence={
-                "changed_files": changed,
+                **base_evidence,
                 "allowed_paths": self.allowed_paths,
                 "protected_paths": self.protected_paths,
                 "ignored_paths": self.ignored_paths,
@@ -143,6 +151,39 @@ class RepoGuardVerifier(BaseVerifier):
                 path = path.rsplit(" -> ", 1)[1]
             changed.append(path.replace("\\", "/"))
         return sorted(dict.fromkeys(changed))
+
+    def _repo_state_digest(self, changed_files: list[str]) -> str:
+        """Bind a verdict to the exact changed paths and worktree bytes observed."""
+        entries: list[dict[str, str]] = []
+        for relative in changed_files:
+            path = self.repo_root / relative
+            if path.is_symlink():
+                entries.append(
+                    {
+                        "path": relative,
+                        "kind": "symlink",
+                        "content_hash": stable_hash(os.readlink(path)),
+                    }
+                )
+                continue
+            if not path.exists():
+                entries.append({"path": relative, "kind": "missing", "content_hash": ""})
+                continue
+            if not path.is_file():
+                entries.append({"path": relative, "kind": "other", "content_hash": ""})
+                continue
+            digest = hashlib.sha256()
+            with path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            entries.append(
+                {
+                    "path": relative,
+                    "kind": "file",
+                    "content_hash": digest.hexdigest(),
+                }
+            )
+        return f"sha256:{stable_hash(entries)}"
 
     @staticmethod
     def _matches(path: str, patterns: list[str]) -> bool:

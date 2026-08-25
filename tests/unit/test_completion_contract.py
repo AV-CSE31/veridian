@@ -691,6 +691,14 @@ def test_repo_guard_allows_expected_diff_and_blocks_secret(tmp_path: Path) -> No
     allowed = RepoGuardVerifier(repo_root=str(tmp_path), allowed_paths=["app.py"])
     allowed_result = allowed.verify(Task(title="guard"), TaskResult(raw_output="done"))
     assert allowed_result.passed is True
+    snapshot_digest = allowed_result.evidence["repo_state_digest"]
+    assert snapshot_digest.startswith("sha256:")
+    repeated_result = allowed.verify(Task(title="guard"), TaskResult(raw_output="done"))
+    assert repeated_result.evidence["repo_state_digest"] == snapshot_digest
+
+    (tmp_path / "app.py").write_text("VALUE = 3\n", encoding="utf-8")
+    changed_result = allowed.verify(Task(title="guard"), TaskResult(raw_output="done"))
+    assert changed_result.evidence["repo_state_digest"] != snapshot_digest
 
     (tmp_path / ".env").write_text("OPENAI_API_KEY=sk-testsecret1234567890\n", encoding="utf-8")
     blocked = RepoGuardVerifier(repo_root=str(tmp_path), allowed_paths=["app.py"])

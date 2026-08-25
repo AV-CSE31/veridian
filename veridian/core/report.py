@@ -26,6 +26,7 @@ from veridian.core.exceptions import VerificationError
 from veridian.core.task import Task, TaskResult
 
 SCHEMA_VERSION = "verification-report.v2"
+LEGACY_SCHEMA_VERSION = "verification-report.v1"
 SIGNATURE_VERSION = "hmac-sha256.v1"
 MIN_SIGNING_KEY_BYTES = 32
 
@@ -41,9 +42,14 @@ _COMMITMENT_LIMITATION = (
     "SHA-256 commitments conceal raw payloads but do not prevent guessing attacks "
     "against low-entropy values."
 )
+_LEGACY_UNSIGNED_LIMITATION = (
+    "Legacy verification-report.v1 records are unsigned; validation proves only "
+    "their internal SHA-256 hash chain, not who authored them."
+)
 
 __all__ = [
     "MIN_SIGNING_KEY_BYTES",
+    "LEGACY_SCHEMA_VERSION",
     "SCHEMA_VERSION",
     "SIGNATURE_VERSION",
     "ReportChainValidation",
@@ -327,6 +333,31 @@ class ReportChainValidation:
         _UNANCHORED_LIMITATION,
         _COMMITMENT_LIMITATION,
     )
+    legacy_unsigned_count: int = 0
+
+
+_LEGACY_V1_REPORT_FIELDS = frozenset(
+    {
+        "schema_version",
+        "report_id",
+        "task_id",
+        "task_title",
+        "run_id",
+        "verifier_id",
+        "verifier_version",
+        "passed",
+        "error",
+        "evidence",
+        "score",
+        "input_hash",
+        "output_hash",
+        "created_at",
+        "runtime_version",
+        "metadata",
+        "previous_hash",
+        "report_hash",
+    }
+)
 
 
 def _require_string(data: dict[str, Any], name: str, *, allow_empty: bool = False) -> str:
@@ -447,6 +478,61 @@ def _validate_report_fields(data: dict[str, Any]) -> None:
         raise ValueError("redacted metadata must be an empty object")
 
 
+def _validate_legacy_v1_fields(data: dict[str, Any]) -> None:
+    """Validate the exact historical v1 wire shape without upgrading its trust."""
+    missing = sorted(_LEGACY_V1_REPORT_FIELDS - set(data))
+    if missing:
+        raise ValueError(f"missing legacy report field(s): {', '.join(missing)}")
+    extra = sorted(set(data) - _LEGACY_V1_REPORT_FIELDS)
+    if extra:
+        raise ValueError(f"unknown legacy report field(s): {', '.join(extra)}")
+    if data["schema_version"] != LEGACY_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema_version: {data['schema_version']!r}")
+    for name in (
+        "report_id",
+        "task_id",
+        "verifier_id",
+        "verifier_version",
+        "runtime_version",
+    ):
+        _require_string(data, name)
+    _require_string(data, "task_title", allow_empty=True)
+    _require_optional_string(data, "run_id")
+    _require_optional_string(data, "error")
+    if not isinstance(data["passed"], bool):
+        raise ValueError("passed must be a boolean")
+    score = data["score"]
+    if score is not None and (
+        isinstance(score, bool)
+        or not isinstance(score, (int, float))
+        or not math.isfinite(float(score))
+    ):
+        raise ValueError("score must be a finite number or null")
+    _require_dict(data, "evidence")
+    _require_dict(data, "metadata")
+    for name in ("input_hash", "output_hash", "report_hash"):
+        value = _require_string(data, name)
+        if not _is_sha256(value):
+            raise ValueError(f"{name} must be a lowercase SHA-256 hex digest")
+    previous_hash = _require_optional_string(data, "previous_hash")
+    if previous_hash is not None and not _is_sha256(previous_hash):
+        raise ValueError("previous_hash must be a lowercase SHA-256 hex digest or null")
+    created_at = _require_string(data, "created_at")
+    try:
+        timestamp = datetime.fromisoformat(created_at)
+    except ValueError as exc:
+        raise ValueError("created_at must be an ISO-8601 timestamp") from exc
+    if timestamp.tzinfo is None:
+        raise ValueError("created_at must include a timezone")
+
+
+def _legacy_v1_hash(data: dict[str, Any]) -> str:
+    payload = dict(data)
+    payload.pop("report_hash", None)
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def _key_bytes(signing_key: str | bytes | None) -> bytes:
     if signing_key is None:
         raise VerificationError("an explicit report signing key is required")
@@ -504,17 +590,28 @@ def _no_duplicate_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def _parse_line(line: str) -> VerificationReport:
+def _parse_line_payload(line: str) -> dict[str, Any]:
     payload = json.loads(line, object_pairs_hook=_no_duplicate_object)
     if not isinstance(payload, dict):
         raise ValueError("report line must contain a JSON object")
-    return VerificationReport.from_dict(payload, strict=True)
+    return payload
 
 
-def _limitations(anchored: bool) -> tuple[str, ...]:
-    if anchored:
-        return (_KEY_HOLDER_LIMITATION, _COMMITMENT_LIMITATION)
-    return (_KEY_HOLDER_LIMITATION, _UNANCHORED_LIMITATION, _COMMITMENT_LIMITATION)
+def _limitations(
+    anchored: bool,
+    *,
+    signed_count: int,
+    legacy_unsigned_count: int,
+) -> tuple[str, ...]:
+    limitations: list[str] = []
+    if signed_count:
+        limitations.append(_KEY_HOLDER_LIMITATION)
+    if legacy_unsigned_count:
+        limitations.append(_LEGACY_UNSIGNED_LIMITATION)
+    if not anchored:
+        limitations.append(_UNANCHORED_LIMITATION)
+    limitations.append(_COMMITMENT_LIMITATION)
+    return tuple(limitations)
 
 
 def _validate_text(
@@ -523,6 +620,7 @@ def _validate_text(
     require_signature: bool,
     signing_key: bytes | None,
     trusted_head: str | None,
+    allow_legacy_v1: bool = False,
 ) -> ReportChainValidation:
     if not text:
         return ReportChainValidation(False, 0, "empty evidence chain")
@@ -532,6 +630,8 @@ def _validate_text(
 
     previous_hash: str | None = None
     checked = 0
+    signed_count = 0
+    legacy_unsigned_count = 0
     for line_number, line in enumerate(lines, 1):
         if not line.strip():
             return ReportChainValidation(
@@ -541,7 +641,7 @@ def _validate_text(
                 head_hash=previous_hash,
             )
         try:
-            report = _parse_line(line)
+            payload = _parse_line_payload(line)
         except (TypeError, ValueError, json.JSONDecodeError, VerificationError) as exc:
             return ReportChainValidation(
                 False,
@@ -549,28 +649,82 @@ def _validate_text(
                 f"line {line_number}: invalid JSON report: {exc}",
                 head_hash=previous_hash,
             )
-        if report.previous_hash != previous_hash:
+
+        schema_version = payload.get("schema_version")
+        if schema_version == LEGACY_SCHEMA_VERSION:
+            if not allow_legacy_v1:
+                return ReportChainValidation(
+                    False,
+                    checked,
+                    f"line {line_number}: legacy {LEGACY_SCHEMA_VERSION} requires "
+                    "allow_legacy_v1=True; legacy records are unsigned",
+                    head_hash=previous_hash,
+                )
+            if signed_count:
+                return ReportChainValidation(
+                    False,
+                    checked,
+                    f"line {line_number}: legacy records cannot follow signed v2 records",
+                    head_hash=previous_hash,
+                )
+            try:
+                _validate_legacy_v1_fields(payload)
+            except (TypeError, ValueError) as exc:
+                return ReportChainValidation(
+                    False,
+                    checked,
+                    f"line {line_number}: invalid legacy JSON report: {exc}",
+                    head_hash=previous_hash,
+                )
+            record_previous_hash = payload["previous_hash"]
+            computed_hash = _legacy_v1_hash(payload)
+            report_hash = payload["report_hash"]
+            legacy_unsigned_count += 1
+        else:
+            try:
+                report = VerificationReport.from_dict(payload, strict=True)
+            except (TypeError, ValueError, VerificationError) as exc:
+                return ReportChainValidation(
+                    False,
+                    checked,
+                    f"line {line_number}: invalid JSON report: {exc}",
+                    head_hash=previous_hash,
+                )
+            record_previous_hash = report.previous_hash
+            computed_hash = report.compute_hash()
+            report_hash = report.report_hash
+            if require_signature:
+                if signing_key is None:
+                    return ReportChainValidation(
+                        False,
+                        checked,
+                        "an explicit report signing key is required",
+                        head_hash=previous_hash,
+                    )
+                if not _signature_valid(report, signing_key):
+                    return ReportChainValidation(
+                        False,
+                        checked,
+                        f"line {line_number}: signature mismatch",
+                        head_hash=previous_hash,
+                    )
+            signed_count += 1
+
+        if record_previous_hash != previous_hash:
             return ReportChainValidation(
                 False,
                 checked,
                 f"line {line_number}: previous_hash mismatch",
                 head_hash=previous_hash,
             )
-        if report.compute_hash() != report.report_hash:
+        if computed_hash != report_hash:
             return ReportChainValidation(
                 False,
                 checked,
                 f"line {line_number}: hash mismatch",
                 head_hash=previous_hash,
             )
-        if require_signature and (signing_key is None or not _signature_valid(report, signing_key)):
-            return ReportChainValidation(
-                False,
-                checked,
-                f"line {line_number}: signature mismatch",
-                head_hash=previous_hash,
-            )
-        previous_hash = report.report_hash
+        previous_hash = report_hash
         checked += 1
 
     anchored = trusted_head is not None
@@ -587,7 +741,12 @@ def _validate_text(
         checked,
         anchored=anchored,
         head_hash=previous_hash,
-        limitations=_limitations(anchored),
+        limitations=_limitations(
+            anchored,
+            signed_count=signed_count,
+            legacy_unsigned_count=legacy_unsigned_count,
+        ),
+        legacy_unsigned_count=legacy_unsigned_count,
     )
 
 
@@ -597,12 +756,15 @@ def validate_report_chain(
     require_signature: bool = True,
     signing_key: str | bytes | None = None,
     trusted_head: str | None = None,
+    allow_legacy_v1: bool = False,
 ) -> ReportChainValidation:
     """Strictly validate all records, links, signatures, and optional anchor.
 
     A successful unanchored result proves only the internal integrity of the
-    file under the supplied symmetric key. Its ``limitations`` field states
-    the remaining guarantees explicitly.
+    file under the supplied symmetric key. ``allow_legacy_v1=True`` additionally
+    permits read-only validation of historical unsigned v1 records; it never
+    upgrades them to signed evidence. The result's ``limitations`` and
+    ``legacy_unsigned_count`` fields state the remaining guarantees explicitly.
     """
     report_path = Path(path)
     if not report_path.exists():
@@ -610,7 +772,7 @@ def validate_report_chain(
     if trusted_head is not None and not _is_sha256(trusted_head):
         return ReportChainValidation(False, 0, "trusted_head must be a SHA-256 digest")
     key: bytes | None = None
-    if require_signature:
+    if require_signature and (signing_key is not None or not allow_legacy_v1):
         try:
             key = _key_bytes(signing_key)
         except VerificationError as exc:
@@ -624,6 +786,7 @@ def validate_report_chain(
         require_signature=require_signature,
         signing_key=key,
         trusted_head=trusted_head,
+        allow_legacy_v1=allow_legacy_v1,
     )
 
 

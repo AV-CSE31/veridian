@@ -325,7 +325,7 @@ class LiteLLMProvider(LLMProvider):
         last_exc: Exception | None = None
         remaining_attempts = max(1, self.max_total_attempts)
 
-        for model in models_to_try:
+        for model_index, model in enumerate(models_to_try):
             if remaining_attempts <= 0:
                 break
             cb = self._circuit_breakers.get(model)
@@ -336,11 +336,18 @@ class LiteLLMProvider(LLMProvider):
                 )
                 continue
 
+            # Reserve one attempt for each reachable fallback before assigning
+            # retries to the current model. Without this reservation the first
+            # transiently failing model can consume the entire global budget,
+            # making the advertised fallback chain unreachable.
+            later_models = len(models_to_try) - model_index - 1
+            reserved_for_fallbacks = min(later_models, max(0, remaining_attempts - 1))
+            model_attempt_budget = remaining_attempts - reserved_for_fallbacks
             try:
                 response = self._complete_with_retry(
                     model,
                     messages,
-                    max_attempts=remaining_attempts,
+                    max_attempts=model_attempt_budget,
                     **kwargs,
                 )
                 if cb:
@@ -370,7 +377,7 @@ class LiteLLMProvider(LLMProvider):
                     exc,
                     bool(self.fallback_models) and remaining_attempts > 0,
                 )
-                # Only try fallback if primary exhausted all retries
+                # Continue to the next model while the global budget permits.
                 continue
 
         raise ProviderError(f"All models failed. Last error: {last_exc}") from last_exc

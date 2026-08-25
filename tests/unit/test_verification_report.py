@@ -17,6 +17,19 @@ from veridian.core.report import (
 from veridian.core.task import Task, TaskResult
 
 SIGNING_KEY = "unit-test-report-key-material-32-bytes"
+LEGACY_V1_REPORT = (
+    '{"created_at":"2025-01-02T03:04:05+00:00","error":null,'
+    '"evidence":{"required":["decision"]},'
+    '"input_hash":"1111111111111111111111111111111111111111111111111111111111111111",'
+    '"metadata":{"source":"archived"},'
+    '"output_hash":"2222222222222222222222222222222222222222222222222222222222222222",'
+    '"passed":true,"previous_hash":null,'
+    '"report_hash":"a2c0fc5a94f6bfa359a4794871c580c77d2c457d334ea3eff35146f2d9f19e25",'
+    '"report_id":"legacy-report-1","run_id":"legacy-run-1",'
+    '"runtime_version":"0.7.0","schema_version":"verification-report.v1",'
+    '"score":1.0,"task_id":"legacy-task-1","task_title":"Legacy release gate",'
+    '"verifier_id":"schema","verifier_version":"0.7.0"}'
+)
 
 
 def _report(passed: bool = True) -> VerificationReport:
@@ -213,6 +226,30 @@ def test_full_chain_validation_rejects_duplicate_keys_and_wrong_types(tmp_path) 
     type_validation = validate_report_chain(report_path, signing_key=SIGNING_KEY)
     assert type_validation.valid is False
     assert "passed must be a boolean" in (type_validation.error or "")
+
+
+def test_legacy_v1_validation_is_read_only_explicit_and_marks_unsigned_evidence(
+    tmp_path,
+) -> None:
+    report_path = tmp_path / "legacy-reports.jsonl"
+    report_path.write_text(LEGACY_V1_REPORT + "\n", encoding="utf-8")
+
+    default_validation = validate_report_chain(report_path, signing_key=SIGNING_KEY)
+    assert default_validation.valid is False
+    assert "allow_legacy_v1=True" in (default_validation.error or "")
+
+    legacy_validation = validate_report_chain(report_path, allow_legacy_v1=True)
+    assert legacy_validation.valid is True
+    assert legacy_validation.checked_count == 1
+    assert legacy_validation.legacy_unsigned_count == 1
+    assert any("unsigned" in limitation for limitation in legacy_validation.limitations)
+
+    tampered = json.loads(LEGACY_V1_REPORT)
+    tampered["passed"] = False
+    report_path.write_text(json.dumps(tampered) + "\n", encoding="utf-8")
+    tampered_validation = validate_report_chain(report_path, allow_legacy_v1=True)
+    assert tampered_validation.valid is False
+    assert "hash mismatch" in (tampered_validation.error or "")
 
 
 def test_payload_disclosure_is_explicit_and_self_consistent() -> None:

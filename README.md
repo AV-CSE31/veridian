@@ -213,6 +213,13 @@ checksummed, hash-chained and anchored locally before success is returned;
 snapshots are compacted by generation. This is a single-host durability model,
 not a distributed consensus or cross-region database.
 
+The persistence boundary is explicit: snapshots and the durable WAL-head
+sidecar use same-directory temporary files followed by `os.replace`; transition
+records use append, flush and `fsync` before the atomic head advances. Recovery
+accepts only the checksummed prefix named by that head and may discard only an
+unacknowledged partial tail. An append-only WAL is therefore a durable journal,
+not an atomic snapshot file.
+
 ## Completion Contracts and Legacy Reports
 
 `verify_completion(...)` supports framework-neutral completion gates. The
@@ -262,6 +269,23 @@ validation = validate_report_chain(config.report_file, signing_key=key)
 assert validation.valid
 ```
 
+Historical `verification-report.v1` archives were hash-chained but unsigned.
+They remain read-only and fail closed unless an auditor opts in explicitly:
+
+```python
+legacy = validate_report_chain(
+    "archived-v1-reports.jsonl",
+    allow_legacy_v1=True,
+    trusted_head="<independently-retained-sha256-head>",
+)
+assert legacy.valid
+assert legacy.legacy_unsigned_count > 0
+```
+
+Opt-in validates the historical bytes and links; it does not sign, upgrade or
+append to a v1 chain. The returned limitations always identify unsigned legacy
+records.
+
 HMAC is symmetric: any holder of the key can create or rewrite a valid chain.
 An unanchored local chain cannot detect a valid rollback, fork selection or
 suffix truncation. Prefer the Ed25519 assurance kernel for independently
@@ -289,7 +313,9 @@ The synthetic packs are:
 - `veridian.math.banking`: critical payment accounting, liquidity and trajectory checks
 - `veridian.math.deployment`: quorum, separation of duties, canary, change window,
   rollback readiness, error-budget barrier and deployment trajectory checks
-- `repo_guard` plus the coding-agent demo: repository acceptance controls
+- `repo_guard` plus the coding-agent demo: repository acceptance controls whose
+  verdict evidence binds the observed changed paths and bytes with a stable
+  `repo_state_digest`
 
 ## Protocol and Telemetry Adapters
 

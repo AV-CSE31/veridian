@@ -1,8 +1,10 @@
 """Checksummed append-only storage for :class:`~veridian.ledger.TaskLedger`.
 
 The WAL is deliberately small: it records complete task upserts, not Python
-objects or arbitrary commands.  A completed append is flushed and fsynced
-before the caller can acknowledge the ledger mutation.
+objects or arbitrary commands. A completed append is flushed and fsynced, then
+the durable head is atomically replaced, before the caller can acknowledge the
+ledger mutation. Snapshot and head files use temp + ``os.replace``; the journal
+itself is append-only and is not represented as an atomic snapshot write.
 """
 
 from __future__ import annotations

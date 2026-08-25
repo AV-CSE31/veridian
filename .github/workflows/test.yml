@@ -96,3 +96,45 @@ jobs:
         run: |
           python -c "import veridian, veridian.assurance, veridian.effects, veridian.math"
           veridian --help
+
+  composite-action-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Execute checked-out Veridian Action
+        id: veridian
+        uses: ./.github/actions/verify
+        with:
+          verifier: schema
+          verifier-config: '{"required_fields":["decision"]}'
+          agent-output: '{"decision":"ship"}'
+          task: "Composite Action smoke verification"
+          output-path: veridian-action-smoke.json
+
+      - name: Assert Action outputs and evidence artifact
+        env:
+          VERIDIAN_ACTION_PASSED: ${{ steps.veridian.outputs.passed }}
+        run: |
+          test "$VERIDIAN_ACTION_PASSED" = "true"
+          python -c "import json; result=json.load(open('veridian-action-smoke.json', encoding='utf-8')); assert result['passed'] is True"
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build runtime image
+        run: docker build --tag veridian-ci:${{ github.sha }} .
+
+      - name: Execute installed container entrypoint
+        run: |
+          docker run --rm veridian-ci:${{ github.sha }} --help
+          docker run --rm veridian-ci:${{ github.sha }} verify \
+            --verifier schema \
+            --verifier-config '{"required_fields":["decision"]}' \
+            --agent-output '{"decision":"ship"}' \
+            --task "Container smoke verification" \
+            --output-path /tmp/veridian-container-smoke.json
