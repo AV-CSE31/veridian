@@ -191,6 +191,18 @@ def main() -> int:
         "orphan_temp_files": sum(item["orphan_temp_files"] for item in runs),
         "losses": [loss for item in runs for loss in item["losses"]],
     }
+    # Keep the pre-WAL benchmark schema available to existing dashboards while
+    # the more explicit canonical names above remain authoritative.
+    report.update(
+        {
+            "acked_ops": report["acknowledged_operations"],
+            "lost_ops": report["lost_operations"],
+            "corruption_runs": report["corrupted_runs"],
+            "recovered_in_progress": report["recovered_active_tasks"],
+            "orphan_tmp_files": report["orphan_temp_files"],
+            "loss_detail": report["losses"],
+        }
+    )
     report["passed"] = report["lost_operations"] == 0 and report["corrupted_runs"] == 0
     print(json.dumps(report, indent=2))
     return 0 if report["passed"] else 1

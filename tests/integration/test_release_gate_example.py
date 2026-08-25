@@ -49,3 +49,22 @@ def test_artifact_verification_gate_example_demonstrates_file_evidence() -> None
 
     assert "done=1 failed=0" in result.stdout
     assert "artifact_verified=True" in result.stdout
+
+
+def test_coding_agent_verification_example_allows_fix_and_blocks_secret(
+    tmp_path: Path,
+) -> None:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "examples" / "coding_agent_verification_demo.py")],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Positive path:" in result.stdout
+    assert "  passed: True" in result.stdout
+    assert "Negative path:" in result.stdout
+    assert "  passed: False" in result.stdout

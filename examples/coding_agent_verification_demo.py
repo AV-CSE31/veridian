@@ -21,6 +21,10 @@ from pathlib import Path
 
 from veridian import VerificationContract, VerifierStep, verify_completion
 
+# Demonstration material only. Production callers must load a unique secret
+# from their secret manager and retain the resulting chain head independently.
+DEMO_PROOF_SIGNING_KEY = "demo-only-veridian-proof-key-2026-0001"
+
 
 def main() -> None:
     workspace = Path("demo_runs") / "coding_agent_verification"
@@ -102,6 +106,7 @@ def _run_agent_claim(repo: Path, *, inject_secret: bool):
             "changed_files": _git_changed_files(repo),
         },
         proof_file=repo / "veridian-proof.jsonl",
+        signing_key=DEMO_PROOF_SIGNING_KEY,
     )
     (repo / "veridian-pr-comment.md").write_text(decision.to_pr_comment(), encoding="utf-8")
     return decision

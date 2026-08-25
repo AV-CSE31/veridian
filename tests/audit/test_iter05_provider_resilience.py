@@ -89,3 +89,15 @@ def test_I5_2_deterministic_bug_is_not_retried(monkeypatch) -> None:
         "responses are treated as transient — paying real API cost and latency for "
         "a failure that will never succeed."
     )
+
+
+def test_retry_stack_reports_missing_tenacity_extra(monkeypatch) -> None:
+    """Retry remains a lazy optional dependency with an actionable failure."""
+    monkeypatch.setitem(sys.modules, "tenacity", None)
+    provider = LiteLLMProvider(model="gemini/gemini-2.5-flash")
+
+    with pytest.raises(ProviderError, match=r"veridian-ai\[llm\]"):
+        provider._complete_with_retry(
+            provider.model,
+            [Message(role="user", content="hi")],
+        )

@@ -70,7 +70,8 @@ dev = [
     "ruff>=0.5",
     "mypy>=1.10",
     "pre-commit>=3.7",
-    "twine>=5.1",
+    # Twine 7+ validates Core Metadata 2.5 emitted by current Hatchling.
+    "twine>=7.0",
 ]
 all = ["veridian-ai[http,llm,pdf,pydantic]"]
 

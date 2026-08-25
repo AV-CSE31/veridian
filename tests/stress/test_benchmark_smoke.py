@@ -35,9 +35,12 @@ def test_crash_recovery_bench_no_loss_or_corruption() -> None:
         "crash_recovery_bench.py", "--runs", "3", "--min-kill-ms", "20", "--max-kill-ms", "120"
     )
     assert report["passed"] is True
-    assert report["lost_ops"] == 0
-    assert report["corrupted_runs"] == 0
-    assert report["acked_ops"] > 0
+    assert report["lost_operations"] == report["lost_ops"] == 0
+    assert report["corrupted_runs"] == report["corruption_runs"] == 0
+    assert report["acknowledged_operations"] == report["acked_ops"] > 0
+    assert report["orphan_temp_files"] == report["orphan_tmp_files"]
+    assert report["recovered_active_tasks"] == report["recovered_in_progress"]
+    assert report["losses"] == report["loss_detail"]
 
 
 def test_crash_recovery_bench_wal_mode_no_loss_or_corruption() -> None:
@@ -52,9 +55,12 @@ def test_crash_recovery_bench_wal_mode_no_loss_or_corruption() -> None:
         env={"VERIDIAN_LEDGER_WAL": "1"},
     )
     assert report["passed"] is True
-    assert report["lost_ops"] == 0
-    assert report["corrupted_runs"] == 0
-    assert report["acked_ops"] > 0
+    assert report["lost_operations"] == report["lost_ops"] == 0
+    assert report["corrupted_runs"] == report["corruption_runs"] == 0
+    assert report["acknowledged_operations"] == report["acked_ops"] > 0
+    assert report["orphan_temp_files"] == report["orphan_tmp_files"]
+    assert report["recovered_active_tasks"] == report["recovered_in_progress"]
+    assert report["losses"] == report["loss_detail"]
 
 
 def test_verified_completion_bench_gate_catches_all_defects() -> None:

@@ -1,10 +1,4 @@
-"""
-tests.unit.test_ledger_wal
----------------------------------------------------------------------
-Opt-in WAL write path (VERIDIAN_LEDGER_WAL=1): parity with the default
-rewrite path, torn-tail recovery, compaction, idempotent replay, and
-cache isolation.
-"""
+"""Default checksummed-WAL behavior and snapshot-only compatibility."""
 
 from __future__ import annotations
 
@@ -19,7 +13,7 @@ from veridian.ledger.ledger import TaskLedger
 
 @pytest.fixture
 def wal_ledger(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TaskLedger:
-    monkeypatch.setenv("VERIDIAN_LEDGER_WAL", "1")
+    monkeypatch.delenv("VERIDIAN_LEDGER_WAL", raising=False)
     return TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "p.md"))
 
 
@@ -36,14 +30,14 @@ def _lifecycle(ledger: TaskLedger) -> tuple[str, str]:
 
 
 class TestWalParity:
-    def test_lifecycle_state_matches_default_path(
+    def test_lifecycle_state_matches_snapshot_only_opt_out(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.delenv("VERIDIAN_LEDGER_WAL", raising=False)
+        monkeypatch.setenv("VERIDIAN_LEDGER_WAL", "0")
         plain = TaskLedger(path=tmp_path / "plain.json", progress_file=str(tmp_path / "p1.md"))
         plain_done, plain_failed = _lifecycle(plain)
 
-        monkeypatch.setenv("VERIDIAN_LEDGER_WAL", "1")
+        monkeypatch.delenv("VERIDIAN_LEDGER_WAL")
         wal = TaskLedger(path=tmp_path / "wal.json", progress_file=str(tmp_path / "p2.md"))
         wal_done, wal_failed = _lifecycle(wal)
 
@@ -63,18 +57,25 @@ class TestWalParity:
         done_id, _ = _lifecycle(wal_ledger)
         snapshot = json.loads((tmp_path / "ledger.json").read_text(encoding="utf-8"))
         assert snapshot["tasks"] == {}  # all state lives in the WAL pre-compaction
-        assert (tmp_path / "ledger.wal").stat().st_size > 0
+        records = [
+            json.loads(line)
+            for line in (tmp_path / "ledger.json.wal").read_text(encoding="utf-8").splitlines()
+        ]
+        assert records
+        assert all(record["checksum"].startswith("sha256:") for record in records)
+        assert (tmp_path / "ledger.json.wal.head").is_file()
         assert wal_ledger.get(done_id).status == TaskStatus.DONE
 
     def test_v2_snapshot_without_wal_opens_transparently(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.delenv("VERIDIAN_LEDGER_WAL", raising=False)
+        monkeypatch.setenv("VERIDIAN_LEDGER_WAL", "0")
         plain = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "p.md"))
         t = Task(title="legacy", description="d")
         plain.add([t])
+        assert not (tmp_path / "ledger.json.wal").exists()
 
-        monkeypatch.setenv("VERIDIAN_LEDGER_WAL", "1")
+        monkeypatch.delenv("VERIDIAN_LEDGER_WAL")
         wal = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "p.md"))
         assert wal.get(t.id).title == "legacy"
         wal.claim(t.id, runner_id="w")  # appends rather than rewriting
@@ -84,7 +85,7 @@ class TestWalParity:
 class TestWalCrashSemantics:
     def test_torn_tail_is_ignored_by_readers(self, wal_ledger: TaskLedger, tmp_path: Path) -> None:
         done_id, _ = _lifecycle(wal_ledger)
-        with open(tmp_path / "ledger.wal", "a", encoding="utf-8") as f:
+        with open(tmp_path / "ledger.json.wal", "a", encoding="utf-8") as f:
             f.write('{"seq": 99, "tasks": [{"id": "ghost"')  # torn: no newline
         reopened = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "p2.md"))
         assert reopened.get(done_id).status == TaskStatus.DONE
@@ -93,7 +94,7 @@ class TestWalCrashSemantics:
         self, wal_ledger: TaskLedger, tmp_path: Path
     ) -> None:
         done_id, failed_id = _lifecycle(wal_ledger)
-        wal_path = tmp_path / "ledger.wal"
+        wal_path = tmp_path / "ledger.json.wal"
         with open(wal_path, "a", encoding="utf-8") as f:
             f.write("GARBAGE-NOT-JSON")
 
@@ -125,7 +126,7 @@ class TestWalCompaction:
     def test_compaction_snapshots_and_truncates(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("VERIDIAN_LEDGER_WAL", "1")
+        monkeypatch.delenv("VERIDIAN_LEDGER_WAL", raising=False)
         monkeypatch.setenv("VERIDIAN_LEDGER_WAL_COMPACT_ENTRIES", "4")
         ledger = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "p.md"))
         # 6 commits: compaction fires at entry 4, then 2 more entries append.
@@ -133,9 +134,15 @@ class TestWalCompaction:
 
         snapshot = json.loads((tmp_path / "ledger.json").read_text(encoding="utf-8"))
         assert len(snapshot["tasks"]) == 2  # compaction moved state into the snapshot
-        wal_lines = (tmp_path / "ledger.wal").read_text(encoding="utf-8").splitlines()
-        assert len(wal_lines) == 2  # only post-compaction entries remain
-        assert json.loads(wal_lines[0])["seq"] == 1  # seq restarted after truncate
+        wal_records = [
+            json.loads(line)
+            for line in (tmp_path / "ledger.json.wal").read_text(encoding="utf-8").splitlines()
+        ]
+        assert len(wal_records) == 2  # only post-compaction entries remain
+        assert [record["seq"] for record in wal_records] == [1, 2]
+        assert wal_records[1]["previous_hash"] == wal_records[0]["checksum"]
+        assert snapshot["_ledger"]["generation"] == wal_records[0]["generation"] == 2
+        assert len(list(tmp_path.glob("ledger.json.wal.g*.sealed"))) == 1
 
         reopened = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "p2.md"))
         assert reopened.get(done_id).status == TaskStatus.DONE
@@ -156,7 +163,7 @@ class TestWalIsolation:
     def test_cross_instance_visibility(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("VERIDIAN_LEDGER_WAL", "1")
+        monkeypatch.delenv("VERIDIAN_LEDGER_WAL", raising=False)
         a = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "pa.md"))
         b = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "pb.md"))
 

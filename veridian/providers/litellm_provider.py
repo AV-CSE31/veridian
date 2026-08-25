@@ -30,6 +30,7 @@ Circuit breaker states:
 from __future__ import annotations
 
 import asyncio
+import importlib
 import logging
 import os
 import threading
@@ -394,14 +395,19 @@ class LiteLLMProvider(LLMProvider):
         # Lazy like ``litellm`` below: the module stays importable on minimal
         # installs; the missing extra surfaces on first use with a fix-it hint.
         try:
-            from tenacity import (  # noqa: PLC0415
-                RetryError,
-                Retrying,
-                retry_if_exception,
-                stop_after_attempt,
-                wait_exponential_jitter,
-            )
-        except ImportError as exc:
+            tenacity = importlib.import_module("tenacity")
+            # Validate the same retry API surface as the former from-import.
+            # This is intentionally a lazy dependency check: minimal installs
+            # remain importable, but incomplete/incompatible extras fail here.
+            for retry_symbol in (
+                "RetryError",
+                "Retrying",
+                "retry_if_exception",
+                "stop_after_attempt",
+                "wait_exponential_jitter",
+            ):
+                getattr(tenacity, retry_symbol)
+        except (AttributeError, ImportError) as exc:
             raise ProviderError(
                 "LiteLLMProvider requires the 'tenacity' package for its retry "
                 "stack. Install the LLM extra: pip install 'veridian-ai[llm]'"
