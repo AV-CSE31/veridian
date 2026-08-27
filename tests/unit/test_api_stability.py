@@ -30,6 +30,16 @@ _EXPECTED_STABLE_ALL = sorted(
         "VerifierStep",
         "verify_completion",
         "verified",
+        # Gate porcelain: the documented front door over assurance + effects.
+        "Gate",
+        "Check",
+        "CheckContext",
+        "CheckOutcome",
+        "Verdict",
+        "GateOutcome",
+        "GateDeniedError",
+        "GateHeldError",
+        "check",
     ]
 )
 
@@ -44,7 +54,7 @@ class TestStableSurfaceIsExact:
         )
 
     def test_stable_surface_count(self) -> None:
-        assert len(veridian.__all__) <= 24
+        assert len(veridian.__all__) <= 33
 
     def test_removed_symbols_are_module_path_only(self) -> None:
         removed = [

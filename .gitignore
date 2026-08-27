@@ -1,5 +1,6 @@
-# Private/internal workspace docs
-docs/
+# Private/internal workspace docs. Everything under docs/ stays private
+# unless it is explicitly allowlisted at the bottom of this file.
+docs/*
 guides/
 planning/
 research/
@@ -7,7 +8,6 @@ AGENTS.md
 CLAUDE.md
 ONBOARDING.md
 GEMINI.md
-CHANGELOG.md
 ARCHITECTURE.md
 CODEBASE_HEALTH.md
 SESSION_HANDOFF.md
@@ -18,6 +18,7 @@ examples/*
 !examples/banking_agent_verification_demo.py
 !examples/coding_agent_verification_demo.py
 !examples/decorator_release_gate.py
+!examples/gate_quickstart.py
 !examples/runner_release_gate.py
 
 # Internal logs and reports
@@ -106,3 +107,12 @@ quarantine.jsonl
 *.swo
 .DS_Store
 Thumbs.db
+
+# Public documentation subtree. Added deliberately, file by file, so the
+# rest of docs/ (planning notes, research, drafts) stays private by default.
+!docs/README.md
+!docs/quickstart.md
+!docs/threat-model.md
+!docs/proof-format.md
+!docs/mapping-eu-ai-act-article-12.md
+!docs/mapping-open-agent-passport.md

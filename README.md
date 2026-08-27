@@ -21,8 +21,9 @@ a durable outbox, and returns a signed effect receipt.
 
 ## What Is Included
 
-- a deterministic task runner and local crash-recoverable WAL ledger
+- `veridian.gate`: a composed front door that turns the flow below into a decorator
 - fail-closed `ALLOW` / `DENY` / `HOLD` decision algebra
+- a deterministic task runner and local crash-recoverable WAL ledger
 - canonical action, authorization, snapshot, evidence and transport models
 - Ed25519-signed portable proof bundles with offline verification
 - signed single-use execution permits, revocation and a transactional SQLite outbox
@@ -44,6 +45,65 @@ Agent proposal
     -> trusted credential-holding executor + durable outbox
     -> signed effect receipt + domain postcondition verification
 ```
+
+## Quick Start
+
+Authorize one action behind a signed, single-use permit and get a receipt an
+auditor can verify without you:
+
+```python
+from veridian import Gate, check
+
+@check("amount_within_limit", config={"limit_minor": 100_000})
+def amount_within_limit(ctx):
+    return int(ctx.parameters["amount_minor"]) <= 100_000
+
+@check("recipient_allowlisted")
+def recipient_allowlisted(ctx):
+    return str(ctx.parameters["to"]).startswith("acct:")
+
+gate = Gate.for_development(
+    audience="treasury-rail",
+    checks=[amount_within_limit, recipient_allowlisted],
+    store_path="permits.db",
+)
+
+@gate.guard("payment.transfer", target=lambda to, **_: to)
+def transfer(*, to: str, amount_minor: int) -> str:
+    """The credential holder. Runs only behind a verified ALLOW permit."""
+    return f"rail-ref-{to}-{amount_minor}"
+
+outcome = transfer(to="acct:1234", amount_minor=25_000)
+```
+
+`outcome.receipt` is signed, `outcome.proof_bundle` verifies offline, and
+re-presenting the same permit replays the receipt instead of producing a second
+effect. An over-limit call raises `GateDeniedError` and never reaches the
+function body; a check that cannot decide yields `HOLD`, never `ALLOW`.
+
+`veridian.gate` is porcelain over `veridian.assurance` and `veridian.effects`.
+It adds no trust properties — every artifact it emits is an ordinary assurance
+value that the same offline verifier accepts. Build them by hand when you need
+control; use the gate when you need the common case.
+
+Runnable: [`examples/gate_quickstart.py`](examples/gate_quickstart.py).
+Full walkthrough: [`docs/quickstart.md`](docs/quickstart.md).
+
+`Gate.for_development` generates an ephemeral key that nothing outside the
+process can verify. Production gates take an operator-owned signer (KMS/HSM) and
+a durable store — see [`docs/threat-model.md`](docs/threat-model.md).
+
+## Documentation
+
+| Document | Answers |
+|---|---|
+| [`docs/quickstart.md`](docs/quickstart.md) | How do I get from install to a verified receipt? |
+| [`docs/threat-model.md`](docs/threat-model.md) | What is this trusted to do, and what defeats it? |
+| [`docs/proof-format.md`](docs/proof-format.md) | What is in a proof bundle, and how does an independent party check it? |
+| [`docs/mapping-eu-ai-act-article-12.md`](docs/mapping-eu-ai-act-article-12.md) | Which Article 12 obligations do these records support — and which do they not? |
+| [`docs/mapping-open-agent-passport.md`](docs/mapping-open-agent-passport.md) | How do these objects relate to OAP and AP2? |
+| [`CHANGELOG.md`](CHANGELOG.md) | What changed, and what was actually published |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to propose a change |
 
 ## Install
 
@@ -167,7 +227,7 @@ coverage regression, Python compilation, changed-path policy, protected paths
 and obvious secret patterns, then emits a signed completion proof and a Markdown
 PR comment. It is not a hosted GitHub App.
 
-## Task Runner Quick Start
+## Task Runner
 
 ```python
 from pathlib import Path
@@ -378,6 +438,7 @@ an externally validated 1.0 or universal safety proof.
 
 ## Examples
 
+- [`examples/gate_quickstart.py`](examples/gate_quickstart.py) — permit, receipt and offline proof in one file
 - [`examples/banking_agent_verification_demo.py`](examples/banking_agent_verification_demo.py)
 - [`examples/coding_agent_verification_demo.py`](examples/coding_agent_verification_demo.py)
 - [`examples/decorator_release_gate.py`](examples/decorator_release_gate.py)
@@ -393,8 +454,12 @@ uv run mypy veridian --strict
 uv run pytest --cov=veridian --cov-fail-under=85 -q
 ```
 
-Protected local planning and research material is intentionally not part of the
-public package.
+Public documentation lives in [`docs/`](docs/README.md). Local planning and
+research material stays private and is not part of the public package; files
+under `docs/` are made public individually in `.gitignore`.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request, and
+[`RELEASING.md`](RELEASING.md) before cutting a release.
 
 ## License
 
