@@ -9,6 +9,15 @@ __license__ = "MIT"
 _LAZY_EXPORTS = {
     "BaseHook": "veridian.hooks.base:BaseHook",
     "BaseVerifier": "veridian.verify.base:BaseVerifier",
+    "Check": "veridian.gate:Check",
+    "CheckContext": "veridian.gate:CheckContext",
+    "CheckOutcome": "veridian.gate:CheckOutcome",
+    "Gate": "veridian.gate:Gate",
+    "GateDeniedError": "veridian.gate:GateDeniedError",
+    "GateHeldError": "veridian.gate:GateHeldError",
+    "GateOutcome": "veridian.gate:GateOutcome",
+    "Verdict": "veridian.gate:Verdict",
+    "check": "veridian.gate:check",
     "HookRegistry": "veridian.hooks.registry:HookRegistry",
     "LiteLLMProvider": "veridian.providers.litellm_provider:LiteLLMProvider",
     "LLMProvider": "veridian.providers.base:LLMProvider",
@@ -72,4 +81,16 @@ __all__ = [
     "VeridianError",
     "VerificationError",
     "ProviderError",
+    # Gate porcelain — the documented front door over the assurance kernel and
+    # the effects boundary. Everything it emits is a plain assurance/effects
+    # value; see veridian.gate for the full surface.
+    "Gate",
+    "Check",
+    "CheckContext",
+    "CheckOutcome",
+    "Verdict",
+    "GateOutcome",
+    "GateDeniedError",
+    "GateHeldError",
+    "check",
 ]

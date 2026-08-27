@@ -1,8 +1,26 @@
 name: Publish to PyPI
 
+# Authentication is PyPI OIDC trusted publishing. There is no PYPI_API_TOKEN
+# secret and one must not be reintroduced — see RELEASING.md.
+#
+# The v0.2.0 publish failed three times and the cause is now unrecoverable
+# (GitHub log retention expired). The `workflow_dispatch` TestPyPI path below
+# exists so a configuration failure surfaces on a throwaway index before a tag
+# is public, rather than on a release nobody can debug four months later.
+
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Index to publish to. Use testpypi to rehearse before tagging."
+        required: true
+        default: testpypi
+        type: choice
+        options:
+          - testpypi
+          - pypi
 
 permissions:
   contents: read
@@ -11,12 +29,15 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     environment:
-      name: pypi
-      url: https://pypi.org/project/veridian-ai/
+      name: ${{ (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi') && 'testpypi' || 'pypi' }}
+      url: ${{ (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi') && 'https://test.pypi.org/project/veridian-ai/' || 'https://pypi.org/project/veridian-ai/' }}
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -45,5 +66,36 @@ jobs:
           python -m twine check dist/*
           python scripts/check_package_artifacts.py dist/*
 
-      - name: Publish to PyPI
+      - name: Smoke-install the exact built wheel in a clean environment
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install --upgrade pip
+          /tmp/smoke/bin/pip install dist/*.whl
+          /tmp/smoke/bin/pip check
+          /tmp/smoke/bin/python -c "import veridian, veridian.assurance, veridian.effects, veridian.gate"
+          /tmp/smoke/bin/veridian --help
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist/*
+          retention-days: 90
+
+      - name: Publish to TestPyPI (rehearsal)
+        if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish to PyPI
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Confirm tag and PyPI agree
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
+        # PyPI's CDN needs a moment to serve the new version as latest. A
+        # failure here means the release is NOT done, per RELEASING.md.
+        run: |
+          sleep 30
+          python scripts/check_release_parity.py

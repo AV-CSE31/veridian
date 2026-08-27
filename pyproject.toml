@@ -88,13 +88,17 @@ composite = "veridian.verify.builtin.composite:CompositeVerifier"
 any_of = "veridian.verify.builtin.any_of:AnyOfVerifier"
 repo_guard = "veridian.verify.builtin.repo_guard:RepoGuardVerifier"
 
+# docs/ is deliberately absent from wheel AND sdist. The public documentation
+# subtree is served from the repository; keeping every artifact free of docs/
+# lets scripts/check_package_artifacts.py stay an absolute rule rather than a
+# split one that could let private drafts through.
 [tool.hatch.build]
 exclude = [
-    "/.claude",
-    "/docs",
-    "/guides",
-    "/planning",
-    "/research",
+    "/.claude/**",
+    "/docs/**",
+    "/guides/**",
+    "/planning/**",
+    "/research/**",
     "/AGENTS.md",
     "/CLAUDE.md",
     "/ONBOARDING.md",
@@ -106,6 +110,22 @@ exclude = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["veridian"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.claude/**",
+    "/docs/**",
+    "/guides/**",
+    "/planning/**",
+    "/research/**",
+    "/AGENTS.md",
+    "/CLAUDE.md",
+    "/ONBOARDING.md",
+    "/GEMINI.md",
+    "/ARCHITECTURE.md",
+    "/CODEBASE_HEALTH.md",
+    "/SESSION_HANDOFF.md",
+]
 
 [project.urls]
 Homepage = "https://github.com/AV-CSE31/veridian"

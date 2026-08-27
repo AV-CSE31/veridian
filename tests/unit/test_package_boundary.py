@@ -22,6 +22,9 @@ _EXPECTED_TOP_LEVEL_PACKAGES = {
     "context",
     "core",
     "effects",
+    # The gate porcelain composes assurance + effects into the documented
+    # front door. It adds no new trust primitives; it removes ceremony.
+    "gate",
     "hooks",
     "ledger",
     "loop",
@@ -72,7 +75,11 @@ def test_verify_package_stays_runtime_focused() -> None:
 
 
 def test_public_api_stays_small() -> None:
-    assert len(veridian.__all__) <= 24
+    # Raised 24 -> 33 when the gate porcelain was promoted to the top level.
+    # The assurance kernel was 54% of the library and reachable only by
+    # submodule path; `import veridian` showed callers the task runner and
+    # hid the differentiator. Growth beyond this stays deliberate.
+    assert len(veridian.__all__) <= 33
 
 
 def test_removed_root_extras_stay_removed() -> None:
@@ -279,5 +286,6 @@ def test_examples_stay_small_and_release_focused() -> None:
         "examples/banking_agent_verification_demo.py",
         "examples/coding_agent_verification_demo.py",
         "examples/decorator_release_gate.py",
+        "examples/gate_quickstart.py",
         "examples/runner_release_gate.py",
     }
