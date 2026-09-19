@@ -3,18 +3,18 @@
 The shortest honest answer to "should I depend on this?" — including where the
 answer is no.
 
-Veridian is alpha software. Passing tests and finite benchmarks are evidence for
+Chit is alpha software. Passing tests and finite benchmarks are evidence for
 the disclosed cases only. They are not proof of zero residual risk and not a
 substitute for domain, security and cryptography review.
 
 ## The boundary
 
-Veridian assumes an agent is **untrusted** and may propose any action, including
+Chit assumes an agent is **untrusted** and may propose any action, including
 a malicious or subtly wrong one. It places a deterministic decision between the
 proposal and the effect, and produces evidence afterwards.
 
 ```
-untrusted agent  ──proposes──▶  [ Veridian ]  ──permit──▶  trusted executor  ──▶  world
+untrusted agent  ──proposes──▶  [ Chit ]  ──permit──▶  trusted executor  ──▶  world
                                      │                       (holds credentials)
                                      └──────── signed decision + receipt ────────▶ auditor
 ```
@@ -30,7 +30,7 @@ Three separations do the work:
 3. **Signing from proposing.** The agent never holds a signing key. If it did,
    every property below collapses.
 
-## What Veridian is trusted to do
+## What Chit is trusted to do
 
 | Property | Mechanism | Bound |
 |---|---|---|
@@ -41,17 +41,17 @@ Three separations do the work:
 | An auditor can check a decision offline | `verify_proof_bundle` re-derives every disclosed digest | Signature and binding only — see below. |
 | A decision names the code that made it | Each `ClauseResultV1` carries a `verifier_manifest_digest` binding verifier id, version, config, source and runtime | For gate checks, source binding is best-effort; the manifest records `source_bound: false` when source is unavailable. |
 
-## What Veridian cannot protect against
+## What Chit cannot protect against
 
 These are not bugs to be fixed later. They are outside the boundary by
 construction, and any of them defeats the whole chain:
 
 - **A compromised signer.** Anyone holding the permit or receipt key can mint
-  authority. Veridian ships no fallback key and no key management; use a KMS or
+  authority. Chit ships no fallback key and no key management; use a KMS or
   HSM and rotate.
 - **A compromised trusted executor.** It holds the credentials. If it lies about
   dispatching, the receipt attests a lie in good faith.
-- **A compromised evidence producer.** Veridian binds a *reference* to evidence
+- **A compromised evidence producer.** Chit binds a *reference* to evidence
   and its declared trust class. It cannot tell you the sanctions feed was
   correct — only which feed was cited and when it was observed.
 - **A compromised anchor or witness.** Without an independently retained head,
@@ -60,7 +60,7 @@ construction, and any of them defeats the whole chain:
 - **A malicious verifier implementation.** `IsolatedVerifierRunner` is a bounded
   subprocess protocol, **not an OS security sandbox**. It bounds accidents, not
   adversaries.
-- **A downstream adapter that ignores idempotency.** Veridian guarantees one
+- **A downstream adapter that ignores idempotency.** Chit guarantees one
   redemption per permit. Exactly-once *economic* effect additionally requires the
   payment API to honour the supplied idempotency key.
 - **Prompt injection reaching the policy.** Checks must be deterministic
@@ -96,7 +96,7 @@ the returned limitations always identify the unsigned records.
 
 ## Deliberate non-goals
 
-Veridian `0.4.0` is not a managed control plane, a distributed ledger, a hosted
+Chit `0.4.0` is not a managed control plane, a distributed ledger, a hosted
 PR reviewer, a general policy DSL, an identity issuer, a production RTGS
 connector, or an OS-level sandbox. The banking and deployment packs are
 synthetic: they use no credentials, no network and no production data, and

@@ -12,18 +12,18 @@ from typing import ClassVar, cast
 import pytest
 from filelock import FileLock
 
-from veridian import VerificationContract, VerifierStep, verify_completion
-from veridian.core.contract import (
+from chit import VerificationContract, VerifierStep, verify_completion
+from chit.core.contract import (
     append_decision_jsonl,
     latest_proof_hash,
     sign_decision,
     validate_proof_chain,
 )
-from veridian.core.exceptions import VeridianConfigError, VerificationError
-from veridian.core.task import Task, TaskResult
-from veridian.verify.base import BaseVerifier, VerificationResult, VerifierRegistry
-from veridian.verify.builtin.bash import BashExitCodeVerifier
-from veridian.verify.builtin.repo_guard import RepoGuardVerifier
+from chit.core.exceptions import ChitConfigError, VerificationError
+from chit.core.task import Task, TaskResult
+from chit.verify.base import BaseVerifier, VerificationResult, VerifierRegistry
+from chit.verify.builtin.bash import BashExitCodeVerifier
+from chit.verify.builtin.repo_guard import RepoGuardVerifier
 
 _SIGNING_KEY = "completion-proof-test-signing-key-v1"
 
@@ -77,20 +77,20 @@ class _MalformedVerifier(BaseVerifier):
         ("release_gate", [], "at least one"),
     ],
 )
-def test_invalid_contract_configuration_uses_veridian_error_hierarchy(
+def test_invalid_contract_configuration_uses_chit_error_hierarchy(
     contract_id: str, verifiers: list[VerifierStep], message: str
 ) -> None:
-    with pytest.raises(VeridianConfigError, match=message):
+    with pytest.raises(ChitConfigError, match=message):
         VerificationContract(contract_id=contract_id, verifiers=verifiers)
 
 
 def test_verifier_step_requires_nonempty_identifier() -> None:
-    with pytest.raises(VeridianConfigError, match="verifier_id"):
+    with pytest.raises(ChitConfigError, match="verifier_id"):
         VerifierStep(verifier_id="   ")
 
 
 def test_verify_completion_writes_passing_proof(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     contract = VerificationContract(
         contract_id="release_gate",
         verifiers=[
@@ -139,7 +139,7 @@ def test_verify_completion_blocks_failed_verifier(tmp_path: Path) -> None:
         contract=contract,
         input_payload={"task": "decide release"},
         output_payload={"risk": "low"},
-        proof_file=tmp_path / "veridian-proof.jsonl",
+        proof_file=tmp_path / "chit-proof.jsonl",
         signing_key=_SIGNING_KEY,
         include_diagnostics=True,
     )
@@ -150,7 +150,7 @@ def test_verify_completion_blocks_failed_verifier(tmp_path: Path) -> None:
 
 
 def test_verify_completion_requires_operator_supplied_signing_key(monkeypatch) -> None:
-    monkeypatch.delenv("VERIDIAN_PROOF_SIGNING_KEY", raising=False)
+    monkeypatch.delenv("CHIT_PROOF_SIGNING_KEY", raising=False)
     contract = VerificationContract(
         contract_id="release_gate",
         verifiers=[
@@ -161,7 +161,7 @@ def test_verify_completion_requires_operator_supplied_signing_key(monkeypatch) -
         ],
     )
 
-    with pytest.raises(VeridianConfigError, match="VERIDIAN_PROOF_SIGNING_KEY"):
+    with pytest.raises(ChitConfigError, match="CHIT_PROOF_SIGNING_KEY"):
         verify_completion(
             contract=contract,
             input_payload={"task": "decide release"},
@@ -170,7 +170,7 @@ def test_verify_completion_requires_operator_supplied_signing_key(monkeypatch) -
 
 
 def test_missing_signing_key_fails_before_any_verifier_runs(monkeypatch) -> None:
-    monkeypatch.delenv("VERIDIAN_PROOF_SIGNING_KEY", raising=False)
+    monkeypatch.delenv("CHIT_PROOF_SIGNING_KEY", raising=False)
     _CountingVerifier.calls = 0
     verifier_registry = VerifierRegistry()
     verifier_registry.register(_CountingVerifier)
@@ -179,7 +179,7 @@ def test_missing_signing_key_fails_before_any_verifier_runs(monkeypatch) -> None
         verifiers=[VerifierStep(verifier_id=_CountingVerifier.id)],
     )
 
-    with pytest.raises(VeridianConfigError):
+    with pytest.raises(ChitConfigError):
         verify_completion(
             contract=contract,
             input_payload={},
@@ -222,7 +222,7 @@ def test_verify_completion_rejects_short_signing_key() -> None:
         ],
     )
 
-    with pytest.raises(VeridianConfigError, match="at least 32 bytes"):
+    with pytest.raises(ChitConfigError, match="at least 32 bytes"):
         verify_completion(
             contract=contract,
             input_payload={"task": "decide release"},
@@ -232,7 +232,7 @@ def test_verify_completion_rejects_short_signing_key() -> None:
 
 
 def test_completion_proof_redacts_agent_payloads_by_default(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     contract = VerificationContract(
         contract_id="payment_gate",
         verifiers=[
@@ -261,7 +261,7 @@ def test_completion_proof_redacts_agent_payloads_by_default(tmp_path: Path) -> N
 
 
 def test_completion_proof_redacts_verifier_diagnostics_by_default(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     verifier_registry = VerifierRegistry()
     verifier_registry.register(_LeakyVerifier)
     contract = VerificationContract(
@@ -366,7 +366,7 @@ def test_completion_proof_binds_full_verifier_contract() -> None:
 
 
 def test_completion_proof_chain_validates_every_signed_link(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     contract = VerificationContract(
         contract_id="release_gate",
         verifiers=[
@@ -442,7 +442,7 @@ def test_trusted_head_detects_a_separately_valid_fork(tmp_path: Path) -> None:
 
 
 def test_append_rejects_replayed_decision_identifier(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     contract = VerificationContract(
         contract_id="release_gate",
         verifiers=[
@@ -465,7 +465,7 @@ def test_append_rejects_replayed_decision_identifier(tmp_path: Path) -> None:
 
 
 def test_append_surfaces_lock_contention_instead_of_blocking_forever(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     contract = VerificationContract(
         contract_id="release_gate",
         verifiers=[
@@ -493,7 +493,7 @@ def test_append_surfaces_lock_contention_instead_of_blocking_forever(tmp_path: P
 
 
 def test_append_refuses_to_reset_chain_after_malformed_tail(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     contract = VerificationContract(
         contract_id="release_gate",
         verifiers=[
@@ -528,7 +528,7 @@ def test_append_refuses_to_reset_chain_after_malformed_tail(tmp_path: Path) -> N
 
 
 def test_latest_proof_hash_fails_closed_for_malformed_chain(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     proof_file.write_text('{"truncated":', encoding="utf-8")
 
     with pytest.raises(VerificationError, match="completion proof chain is invalid"):
@@ -536,7 +536,7 @@ def test_latest_proof_hash_fails_closed_for_malformed_chain(tmp_path: Path) -> N
 
 
 def test_proof_chain_rejects_duplicate_json_fields(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     contract = VerificationContract(
         contract_id="release_gate",
         verifiers=[
@@ -566,7 +566,7 @@ def test_proof_chain_rejects_duplicate_json_fields(tmp_path: Path) -> None:
 
 
 def test_proof_chain_rejects_unknown_unattested_field(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     contract = VerificationContract(
         contract_id="release_gate",
         verifiers=[
@@ -594,7 +594,7 @@ def test_proof_chain_rejects_unknown_unattested_field(tmp_path: Path) -> None:
 
 
 def test_proof_chain_rejects_wrong_signing_key(tmp_path: Path) -> None:
-    proof_file = tmp_path / "veridian-proof.jsonl"
+    proof_file = tmp_path / "chit-proof.jsonl"
     contract = VerificationContract(
         contract_id="release_gate",
         verifiers=[

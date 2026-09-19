@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.ledger.ledger import TaskLedger
+from chit.core.task import Task, TaskResult, TaskStatus
+from chit.ledger.ledger import TaskLedger
 
 
 def _make_task(title: str = "crash-test-task") -> Task:

@@ -21,10 +21,10 @@ def test_readme_describes_the_v04_assurance_runtime_truthfully() -> None:
 def test_readme_documents_only_runnable_delivery_surfaces() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "veridian verify" in readme
-    assert "veridian verify-receipt" in readme
+    assert "chit verify" in readme
+    assert "chit verify-receipt" in readme
     assert "AV-CSE31/veridian/.github/actions/verify@<commit-sha>" in readme
-    assert "docker run --rm veridian:local verify" in readme
+    assert "docker run --rm chit:local verify" in readme
     assert "Repository source and published release artifacts can differ" in readme
 
 
@@ -32,7 +32,7 @@ def test_readme_does_not_advertise_removed_platform_surfaces() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
     removed_claims = [
-        "veridian init",
+        "chit init",
         "dashboard endpoints",
         "Redis storage backend",
         "Postgres storage backend",

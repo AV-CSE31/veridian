@@ -3,10 +3,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "veridian-ai"
+name = "chit"
 version = "0.4.0"
 description = "Deterministic verification and replay-safe runtime for production AI agent workflows."
-authors = [{ name = "Veridian contributors" }]
+authors = [{ name = "Chit contributors" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.11"
@@ -45,7 +45,7 @@ dependencies = [
 ]
 
 [project.scripts]
-veridian = "veridian.cli:main"
+chit = "chit.cli:main"
 
 [project.optional-dependencies]
 llm = [
@@ -72,21 +72,21 @@ dev = [
     # Twine 7+ validates Core Metadata 2.5 emitted by current Hatchling.
     "twine>=7.0",
 ]
-all = ["veridian-ai[http,llm,pdf,pydantic]"]
+all = ["chit[http,llm,pdf,pydantic]"]
 
 # Third-party verifiers auto-discovered at import time via this entry point.
 # In your package's pyproject.toml:
-#   [project.entry-points."veridian.verifiers"]
+#   [project.entry-points."chit.verifiers"]
 #   my_verifier = "my_package.verifiers:MyVerifier"
-[project.entry-points."veridian.verifiers"]
-bash_exit = "veridian.verify.builtin.bash:BashExitCodeVerifier"
-quote_match = "veridian.verify.builtin.quote:QuoteMatchVerifier"
-schema = "veridian.verify.builtin.schema:SchemaVerifier"
-http_status = "veridian.verify.builtin.http:HttpStatusVerifier"
-file_exists = "veridian.verify.builtin.file_exists:FileExistsVerifier"
-composite = "veridian.verify.builtin.composite:CompositeVerifier"
-any_of = "veridian.verify.builtin.any_of:AnyOfVerifier"
-repo_guard = "veridian.verify.builtin.repo_guard:RepoGuardVerifier"
+[project.entry-points."chit.verifiers"]
+bash_exit = "chit.verify.builtin.bash:BashExitCodeVerifier"
+quote_match = "chit.verify.builtin.quote:QuoteMatchVerifier"
+schema = "chit.verify.builtin.schema:SchemaVerifier"
+http_status = "chit.verify.builtin.http:HttpStatusVerifier"
+file_exists = "chit.verify.builtin.file_exists:FileExistsVerifier"
+composite = "chit.verify.builtin.composite:CompositeVerifier"
+any_of = "chit.verify.builtin.any_of:AnyOfVerifier"
+repo_guard = "chit.verify.builtin.repo_guard:RepoGuardVerifier"
 
 # docs/ is deliberately absent from wheel AND sdist. The public documentation
 # subtree is served from the repository; keeping every artifact free of docs/
@@ -109,7 +109,7 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["veridian"]
+packages = ["chit"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -155,10 +155,10 @@ testpaths = ["tests"]
 addopts = "--tb=short -q --import-mode=importlib"
 
 [tool.hatch.version]
-path = "veridian/__init__.py"
+path = "chit/__init__.py"
 
 [tool.coverage.run]
-source = ["veridian"]
+source = ["chit"]
 omit = [
     "tests/*",
 ]

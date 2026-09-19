@@ -5,8 +5,8 @@ import os
 
 import pytest
 
-from veridian.core.exceptions import VerificationError
-from veridian.core.report import (
+from chit.core.exceptions import VerificationError
+from chit.core.report import (
     SCHEMA_VERSION,
     VerificationReport,
     append_report_jsonl,
@@ -14,7 +14,7 @@ from veridian.core.report import (
     stable_hash,
     validate_report_chain,
 )
-from veridian.core.task import Task, TaskResult
+from chit.core.task import Task, TaskResult
 
 SIGNING_KEY = "unit-test-report-key-material-32-bytes"
 LEGACY_V1_REPORT = (

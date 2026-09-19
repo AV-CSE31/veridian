@@ -10,8 +10,8 @@ from dataclasses import fields
 from importlib import import_module
 from pathlib import Path
 
-import veridian
-from veridian.core.config import VeridianConfig
+import chit
+from chit.core.config import ChitConfig
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -41,7 +41,7 @@ def _pyproject() -> dict:
 def test_top_level_package_set_is_pinned() -> None:
     actual = {
         path.name
-        for path in (ROOT / "veridian").iterdir()
+        for path in (ROOT / "chit").iterdir()
         if path.is_dir() and path.name != "__pycache__"
     }
     assert actual == _EXPECTED_TOP_LEVEL_PACKAGES
@@ -58,28 +58,28 @@ def test_core_package_stays_runtime_focused() -> None:
         "report.py",
         "task.py",
     }
-    actual = {path.name for path in (ROOT / "veridian" / "core").glob("*.py")}
+    actual = {path.name for path in (ROOT / "chit" / "core").glob("*.py")}
     assert actual == allowed
 
 
 def test_context_package_stays_prompt_focused() -> None:
     allowed = {"__init__.py", "manager.py", "window.py"}
-    actual = {path.name for path in (ROOT / "veridian" / "context").glob("*.py")}
+    actual = {path.name for path in (ROOT / "chit" / "context").glob("*.py")}
     assert actual == allowed
 
 
 def test_verify_package_stays_runtime_focused() -> None:
     allowed = {"__init__.py", "base.py"}
-    actual = {path.name for path in (ROOT / "veridian" / "verify").glob("*.py")}
+    actual = {path.name for path in (ROOT / "chit" / "verify").glob("*.py")}
     assert actual == allowed
 
 
 def test_public_api_stays_small() -> None:
     # Raised 24 -> 33 when the gate porcelain was promoted to the top level.
     # The assurance kernel was 54% of the library and reachable only by
-    # submodule path; `import veridian` showed callers the task runner and
+    # submodule path; `import chit` showed callers the task runner and
     # hid the differentiator. Growth beyond this stays deliberate.
-    assert len(veridian.__all__) <= 33
+    assert len(chit.__all__) <= 33
 
 
 def test_removed_root_extras_stay_removed() -> None:
@@ -90,7 +90,7 @@ def test_removed_root_extras_stay_removed() -> None:
         "decorator.py",
         "gh_action.py",
     }
-    existing = {path.name for path in (ROOT / "veridian").glob("*.py")}
+    existing = {path.name for path in (ROOT / "chit").glob("*.py")}
     assert removed.isdisjoint(existing)
 
 
@@ -119,7 +119,7 @@ def test_deleted_platform_exceptions_stay_removed() -> None:
         "PipelineError",
         "VerifierIntegrityError",
     }
-    exceptions = import_module("veridian.core.exceptions")
+    exceptions = import_module("chit.core.exceptions")
     assert all(not hasattr(exceptions, name) for name in removed)
 
 
@@ -129,12 +129,12 @@ def test_base_dependency_count_stays_bounded() -> None:
 
 
 def test_storage_backend_config_knob_stays_removed() -> None:
-    config_fields = {field.name for field in fields(VeridianConfig)}
+    config_fields = {field.name for field in fields(ChitConfig)}
     assert "storage_backend" not in config_fields
 
 
 def test_skill_memory_config_knobs_stay_removed() -> None:
-    config_fields = {field.name for field in fields(VeridianConfig)}
+    config_fields = {field.name for field in fields(ChitConfig)}
     assert "skill_library_path" not in config_fields
     assert "skill_min_confidence" not in config_fields
     assert "skill_max_retries" not in config_fields
@@ -142,18 +142,18 @@ def test_skill_memory_config_knobs_stay_removed() -> None:
 
 
 def test_secret_provider_config_knobs_stay_removed() -> None:
-    config_fields = {field.name for field in fields(VeridianConfig)}
+    config_fields = {field.name for field in fields(ChitConfig)}
     assert "secrets_env_prefix" not in config_fields
     assert "identity_guard_enabled" not in config_fields
 
 
 def test_dashboard_config_knob_stays_removed() -> None:
-    config_fields = {field.name for field in fields(VeridianConfig)}
+    config_fields = {field.name for field in fields(ChitConfig)}
     assert "dashboard_port" not in config_fields
 
 
 def test_parallel_runner_config_knob_stays_removed() -> None:
-    config_fields = {field.name for field in fields(VeridianConfig)}
+    config_fields = {field.name for field in fields(ChitConfig)}
     assert "max_parallel" not in config_fields
 
 
@@ -164,7 +164,7 @@ def test_optional_dependency_roots_not_imported_by_base_import() -> None:
         import sys
 
         before = set(sys.modules)
-        import veridian  # noqa: F401
+        import chit  # noqa: F401
         loaded = sorted(
             root
             for root in {name.split('.')[0] for name in set(sys.modules) - before}
@@ -191,7 +191,7 @@ def test_optional_dependency_roots_not_imported_by_base_import() -> None:
 
 
 def test_removed_preview_adapter_modules_stay_removed() -> None:
-    integrations_dir = ROOT / "veridian" / "integrations"
+    integrations_dir = ROOT / "chit" / "integrations"
     assert not integrations_dir.exists()
 
 
@@ -203,7 +203,7 @@ def test_builtin_hooks_are_runtime_only() -> None:
         "logging_hook.py",
         "rate_limit.py",
     }
-    actual = {path.name for path in (ROOT / "veridian" / "hooks" / "builtin").glob("*.py")}
+    actual = {path.name for path in (ROOT / "chit" / "hooks" / "builtin").glob("*.py")}
     assert actual == allowed
 
 
@@ -220,7 +220,7 @@ def test_builtin_verifier_package_stays_practical() -> None:
         "repo_guard.py",
         "schema.py",
     }
-    existing = {path.name for path in (ROOT / "veridian" / "verify" / "builtin").glob("*.py")}
+    existing = {path.name for path in (ROOT / "chit" / "verify" / "builtin").glob("*.py")}
     assert existing == allowed
 
 
@@ -233,12 +233,12 @@ def test_loop_package_stays_runtime_focused() -> None:
         "scheduler.py",
         "trusted_executor.py",
     }
-    existing = {path.name for path in (ROOT / "veridian" / "loop").glob("*.py")}
+    existing = {path.name for path in (ROOT / "chit" / "loop").glob("*.py")}
     assert removed.isdisjoint(existing)
 
 
 def test_removed_agent_variant_modules_stay_removed() -> None:
-    assert not (ROOT / "veridian" / "agents").exists()
+    assert not (ROOT / "chit" / "agents").exists()
 
 
 def test_deleted_platform_packages_stay_removed() -> None:
@@ -269,7 +269,7 @@ def test_deleted_platform_packages_stay_removed() -> None:
     }
     existing = {
         path.name
-        for path in (ROOT / "veridian").iterdir()
+        for path in (ROOT / "chit").iterdir()
         if path.is_dir() and path.name != "__pycache__"
     }
     assert removed.isdisjoint(existing)

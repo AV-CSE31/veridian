@@ -5,6 +5,40 @@ All notable changes to this project are documented here. This project follows
 the pre-1.0 line makes no stability guarantee: minor versions have changed the
 public surface substantially and will continue to until 1.0.
 
+## Project renamed: Veridian → Chit
+
+The library, the PyPI distribution and the Python import path are now **Chit**
+(`pip install chit`, `import chit`). This happened before any 0.4-line release
+ever reached PyPI, so nobody upgrades across it — anyone on the last published
+version (`veridian-ai==0.1.0`) is migrating to a new name regardless, per the
+distribution-history note below.
+
+Two conflicts drove the rename, not cosmetics:
+
+- **`pip install veridian` already installed a different, unrelated package**
+  (a tabular-data-cleaning SDK) — `veridian-ai` was already a fallback slug.
+- **"Veridian" collides with a real financial institution** — Veridian Credit
+  Union, ~600 employees, rebranded to that name in 2006 for the same reason
+  ("verdant" + "veritas") this project picked it independently in 2026. That is
+  an awkward name to carry into a library whose flagship demo is payment
+  authorization.
+
+`chit` was chosen because a chit — a signed slip authorizing one transaction —
+is a literal description of an `ExecutionPermitV1`, and the name was free on
+PyPI.
+
+**The GitHub repository is not renamed.** `github.com/AV-CSE31/veridian` still
+resolves; only the package/import name changed. Renaming the repository itself
+would break every existing clone URL and issue/PR reference and is a separate,
+larger decision this change does not make.
+
+**Nothing published is affected.** No `veridian.*` schema ID, payload type or
+media type was ever shipped in a released artifact — the only PyPI release,
+0.1.0, predates the assurance kernel entirely. Every `veridian.*` identifier in
+the unreleased 0.4 line (proof bundles, permits, receipts, the gate porcelain)
+is renamed to `chit.*` below, and that is the first and only form any external
+party will ever see.
+
 ## Distribution history — read this first
 
 The repository and PyPI diverged for five months. This table is the honest
@@ -29,12 +63,12 @@ latest version diverge, so this cannot recur silently.
 
 ### Added
 
-- **`veridian.gate` — a composed front door over the assurance kernel.**
+- **`chit.gate` — a composed front door over the assurance kernel.**
   `Gate`, the `@check` decorator and the `@gate.guard(...)` decorator reduce the
   minimal permit-and-receipt flow from roughly seventeen hand-constructed
   dataclasses to about twenty lines. The porcelain introduces no new trust
-  properties: every artifact it emits is a plain `veridian.assurance` /
-  `veridian.effects` value that the existing offline verifier accepts.
+  properties: every artifact it emits is a plain `chit.assurance` /
+  `chit.effects` value that the existing offline verifier accepts.
 - Gate checks bind **verifier implementation identity** — module, qualified
   name, declared version, canonical configuration, source digest and runtime —
   into each clause's `VerifierManifestV1`. Changing a predicate body changes the
@@ -52,8 +86,8 @@ latest version diverge, so this cannot recur silently.
 
 ### Changed
 
-- `veridian.__all__` grew from 24 to 33 names to expose the gate porcelain at
-  the top level. Before this, `import veridian` showed only the task-runner era
+- `chit.__all__` grew from 24 to 33 names to expose the gate porcelain at
+  the top level. Before this, `import chit` showed only the task-runner era
   surface while the assurance kernel — 54% of the library — was reachable solely
   by submodule path. The API-stability and package-boundary guards were updated
   deliberately, with the reason recorded in each.

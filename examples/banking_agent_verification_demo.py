@@ -1,6 +1,6 @@
 """Offline industrial RTGS assurance showcase.
 
-An untrusted agent proposes a USD 12.5 million payment. Veridian binds the
+An untrusted agent proposes a USD 12.5 million payment. Chit binds the
 exact action to authenticated controls, checks two-person approval and
 separation of duties, evaluates deterministic payment mathematics, issues a
 signed single-use permit, and executes through an idempotent synthetic rail.
@@ -20,15 +20,15 @@ import tempfile
 from decimal import Decimal
 from pathlib import Path
 
-from veridian.adapters import ActionSpecV1, OpenAIResponsesAdapter
-from veridian.assurance import (
+from chit.adapters import ActionSpecV1, OpenAIResponsesAdapter
+from chit.assurance import (
     AuthorizationEnvelope,
     Disposition,
     Ed25519Signer,
     StaticKeyProvider,
     encode_profile_v1,
 )
-from veridian.banking import (
+from chit.banking import (
     BankApprovalV1,
     BankControlSnapshotV1,
     BankingGate,
@@ -39,7 +39,7 @@ from veridian.banking import (
     sign_bank_snapshot,
     verify_bank_settlement,
 )
-from veridian.effects import (
+from chit.effects import (
     ExecutionPermitV1,
     PermitError,
     SqlitePermitStore,
@@ -47,7 +47,7 @@ from veridian.effects import (
     sign_execution_permit,
     verify_effect_receipt,
 )
-from veridian.math import (
+from chit.math import (
     BankLiquidityStress,
     BankPaymentAssessment,
     BankPaymentMathPolicy,
@@ -428,7 +428,7 @@ def run_showcase(database: Path) -> dict[str, object]:
 
 
 def main() -> None:
-    with tempfile.TemporaryDirectory(prefix="veridian-banking-demo-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="chit-banking-demo-") as temporary:
         result = run_showcase(Path(temporary) / "effects.db")
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))
 

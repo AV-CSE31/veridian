@@ -5,7 +5,7 @@ Acceptance tests for Phase 6.B bug-hunt fixes:
 
 * fsync runs as part of ``atomic_write_text`` so the kernel commits
   bytes to disk before the rename.
-* ``VERIDIAN_ATOMIC_IO_SKIP_FSYNC=1`` lets test suites skip the fsync
+* ``CHIT_ATOMIC_IO_SKIP_FSYNC=1`` lets test suites skip the fsync
   without changing the rest of the write path.
 * ``ContextManager`` rejects ``context_files`` entries outside the
   configured data dir unless the operator opts in.
@@ -17,14 +17,14 @@ from pathlib import Path
 
 import pytest
 
-from veridian.core.atomic_io import atomic_write_text
+from chit.core.atomic_io import atomic_write_text
 
 # ------ fsync ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 class TestAtomicWriteFsync:
     def test_fsync_called_by_default(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        import veridian.core.atomic_io as mod
+        import chit.core.atomic_io as mod
 
         called: list[int] = []
 
@@ -32,20 +32,20 @@ class TestAtomicWriteFsync:
             called.append(fd)
 
         # Make sure no opt-out is set so the helper actually calls fsync.
-        monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
+        monkeypatch.delenv("CHIT_ATOMIC_IO_SKIP_FSYNC", raising=False)
         monkeypatch.setattr(mod.os, "fsync", _record_fsync)
         atomic_write_text(tmp_path / "out.txt", "x")
         assert len(called) == 1
 
     def test_env_var_disables_fsync(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        import veridian.core.atomic_io as mod
+        import chit.core.atomic_io as mod
 
         called: list[int] = []
 
         def _record_fsync(fd: int) -> None:
             called.append(fd)
 
-        monkeypatch.setenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", "1")
+        monkeypatch.setenv("CHIT_ATOMIC_IO_SKIP_FSYNC", "1")
         monkeypatch.setattr(mod.os, "fsync", _record_fsync)
         atomic_write_text(tmp_path / "out.txt", "x")
         assert called == []
@@ -58,15 +58,15 @@ class TestAtomicWriteFsync:
         # the durability downgrade must be visible in the logs.
         import logging
 
-        import veridian.core.atomic_io as mod
+        import chit.core.atomic_io as mod
 
         def _boom(_fd: int) -> None:
             raise OSError("fsync unsupported")
 
-        monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
+        monkeypatch.delenv("CHIT_ATOMIC_IO_SKIP_FSYNC", raising=False)
         monkeypatch.setattr(mod.os, "fsync", _boom)
         target = tmp_path / "ok.txt"
-        with caplog.at_level(logging.WARNING, logger="veridian.core.atomic_io"):
+        with caplog.at_level(logging.WARNING, logger="chit.core.atomic_io"):
             atomic_write_text(target, "payload")
         assert target.read_text(encoding="utf-8") == "payload"
         assert any("fsync_failed" in rec.message for rec in caplog.records)
@@ -77,35 +77,35 @@ class TestAtomicWriteFsync:
 
 class TestLedgerWriteFsync:
     def _build_ledger(self, tmp_path: Path):
-        from veridian.ledger.ledger import TaskLedger
+        from chit.ledger.ledger import TaskLedger
 
         return TaskLedger(
             path=tmp_path / "ledger.json", progress_file=str(tmp_path / "progress.md")
         )
 
     def _make_task(self):
-        from veridian.core.task import Task
+        from chit.core.task import Task
 
         return Task(title="durable", description="fsync before rename")
 
     def test_fsync_called_by_default(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        import veridian.ledger.ledger as mod
+        import chit.ledger.ledger as mod
 
         ledger = self._build_ledger(tmp_path)
 
         called: list[int] = []
-        monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
+        monkeypatch.delenv("CHIT_ATOMIC_IO_SKIP_FSYNC", raising=False)
         monkeypatch.setattr(mod.os, "fsync", lambda fd: called.append(fd))
         ledger.add([self._make_task()])
         assert len(called) >= 1
 
     def test_env_var_disables_fsync(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        import veridian.ledger.ledger as mod
+        import chit.ledger.ledger as mod
 
         ledger = self._build_ledger(tmp_path)
 
         called: list[int] = []
-        monkeypatch.setenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", "1")
+        monkeypatch.setenv("CHIT_ATOMIC_IO_SKIP_FSYNC", "1")
         monkeypatch.setattr(mod.os, "fsync", lambda fd: called.append(fd))
         ledger.add([self._make_task()])
         assert called == []
@@ -113,7 +113,7 @@ class TestLedgerWriteFsync:
     def test_fsync_oserror_prevents_successful_acknowledgement(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import veridian.ledger.wal as mod
+        import chit.ledger.wal as mod
 
         ledger = self._build_ledger(tmp_path)
         task = self._make_task()
@@ -122,7 +122,7 @@ class TestLedgerWriteFsync:
         def _boom(_fd: int) -> None:
             raise OSError("fsync unsupported")
 
-        monkeypatch.delenv("VERIDIAN_ATOMIC_IO_SKIP_FSYNC", raising=False)
+        monkeypatch.delenv("CHIT_ATOMIC_IO_SKIP_FSYNC", raising=False)
         monkeypatch.setattr(mod.os, "fsync", _boom)
         with pytest.raises(OSError, match="fsync unsupported"):
             ledger.add([task])
@@ -149,9 +149,9 @@ class TestBootstrapRace:
         Simulated deterministically: a stub lock lets "the other process"
         create and populate the ledger while we wait to acquire.
         """
-        import veridian.ledger.ledger as mod
-        from veridian.core.task import Task
-        from veridian.ledger.ledger import TaskLedger
+        import chit.ledger.ledger as mod
+        from chit.core.task import Task
+        from chit.ledger.ledger import TaskLedger
 
         ledger_path = tmp_path / "ledger.json"
 
@@ -202,7 +202,7 @@ class TestBootstrapRace:
 
 class TestOrphanTmpSweep:
     def _build_ledger(self, tmp_path: Path):
-        from veridian.ledger.ledger import TaskLedger
+        from chit.ledger.ledger import TaskLedger
 
         return TaskLedger(
             path=tmp_path / "ledger.json", progress_file=str(tmp_path / "progress.md")
@@ -253,9 +253,9 @@ class TestOrphanTmpSweep:
 
 class TestContextFilesPathGuard:
     def _build_manager(self, tmp_path: Path):
-        from veridian.context.manager import ContextManager
-        from veridian.context.window import TokenWindow
-        from veridian.providers.mock_provider import MockProvider
+        from chit.context.manager import ContextManager
+        from chit.context.window import TokenWindow
+        from chit.providers.mock_provider import MockProvider
 
         return ContextManager(
             window=TokenWindow(capacity=8000),
@@ -264,7 +264,7 @@ class TestContextFilesPathGuard:
         )
 
     def test_inside_data_dir_allowed(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("VERIDIAN_DATA_DIR", str(tmp_path))
+        monkeypatch.setenv("CHIT_DATA_DIR", str(tmp_path))
         ok = tmp_path / "ok.txt"
         ok.write_text("inside", encoding="utf-8")
 
@@ -279,15 +279,15 @@ class TestContextFilesPathGuard:
 
         data_dir = tmp_path / "data"
         data_dir.mkdir()
-        monkeypatch.setenv("VERIDIAN_DATA_DIR", str(data_dir))
+        monkeypatch.setenv("CHIT_DATA_DIR", str(data_dir))
         # Drop the explicit-opt-in so the guard fires.
-        monkeypatch.delenv("VERIDIAN_CONTEXT_ALLOW_OUTSIDE_DATA_DIR", raising=False)
+        monkeypatch.delenv("CHIT_CONTEXT_ALLOW_OUTSIDE_DATA_DIR", raising=False)
 
         outside = tmp_path / "outside.txt"
         outside.write_text("secret", encoding="utf-8")
 
         manager = self._build_manager(data_dir)
-        with caplog.at_level(logging.WARNING, logger="veridian.context.manager"):
+        with caplog.at_level(logging.WARNING, logger="chit.context.manager"):
             out = manager._build_environment_block([str(outside)])
 
         # The file's contents must not leak into the prompt.
@@ -299,8 +299,8 @@ class TestContextFilesPathGuard:
     ) -> None:
         data_dir = tmp_path / "data"
         data_dir.mkdir()
-        monkeypatch.setenv("VERIDIAN_DATA_DIR", str(data_dir))
-        monkeypatch.setenv("VERIDIAN_CONTEXT_ALLOW_OUTSIDE_DATA_DIR", "1")
+        monkeypatch.setenv("CHIT_DATA_DIR", str(data_dir))
+        monkeypatch.setenv("CHIT_CONTEXT_ALLOW_OUTSIDE_DATA_DIR", "1")
 
         outside = tmp_path / "outside.txt"
         outside.write_text("explicit-opt-in", encoding="utf-8")

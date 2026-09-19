@@ -12,28 +12,28 @@ from typing import Any
 
 import pytest
 
-from veridian.core.config import VeridianConfig
-from veridian.core.task import Task, TaskStatus
-from veridian.hooks.registry import HookRegistry
-from veridian.ledger.ledger import TaskLedger
-from veridian.loop.runner import VeridianRunner
-from veridian.providers.mock_provider import MockProvider
+from chit.core.config import ChitConfig
+from chit.core.task import Task, TaskStatus
+from chit.hooks.registry import HookRegistry
+from chit.ledger.ledger import TaskLedger
+from chit.loop.runner import ChitRunner
+from chit.providers.mock_provider import MockProvider
 
 _SCHEMA_CONFIG = {"required_fields": ["summary"]}
 
 
 def _passing_provider(model: str = "mock/v1") -> MockProvider:
     provider = MockProvider()
-    # MockProvider.script_veridian_result sets LLMResponse.model to "mock";
+    # MockProvider.script_chit_result sets LLMResponse.model to "mock";
     # override via callable so we can vary the model between runs.
-    from veridian.providers.base import LLMResponse
+    from chit.providers.base import LLMResponse
 
     def _responder(messages: Any, **kwargs: Any) -> LLMResponse:
         return LLMResponse(
             content=(
-                "<veridian:result>\n"
+                "<chit:result>\n"
                 '{"summary": "done", "structured": {"summary": "done"}, "artifacts": []}\n'
-                "</veridian:result>"
+                "</chit:result>"
             ),
             input_tokens=200,
             output_tokens=50,
@@ -57,8 +57,8 @@ def _make_task(title: str = "t1", **kwargs: Any) -> Task:
 
 
 @pytest.fixture
-def strict_config(tmp_path: Path) -> VeridianConfig:
-    return VeridianConfig(
+def strict_config(tmp_path: Path) -> ChitConfig:
+    return ChitConfig(
         max_turns_per_task=3,
         ledger_file=tmp_path / "ledger.json",
         progress_file=tmp_path / "progress.md",
@@ -67,8 +67,8 @@ def strict_config(tmp_path: Path) -> VeridianConfig:
 
 
 @pytest.fixture
-def loose_config(tmp_path: Path) -> VeridianConfig:
-    return VeridianConfig(
+def loose_config(tmp_path: Path) -> ChitConfig:
+    return ChitConfig(
         max_turns_per_task=3,
         ledger_file=tmp_path / "ledger.json",
         progress_file=tmp_path / "progress.md",
@@ -77,14 +77,14 @@ def loose_config(tmp_path: Path) -> VeridianConfig:
 
 
 class TestSnapshotPersistence:
-    def test_first_run_persists_snapshot_on_success(self, strict_config: VeridianConfig) -> None:
+    def test_first_run_persists_snapshot_on_success(self, strict_config: ChitConfig) -> None:
         ledger = TaskLedger(
             path=strict_config.ledger_file, progress_file=str(strict_config.progress_file)
         )
         task = _make_task()
         ledger.add([task])
 
-        runner = VeridianRunner(
+        runner = ChitRunner(
             ledger=ledger,
             provider=_passing_provider(),
             config=strict_config,
@@ -105,7 +105,7 @@ class TestSnapshotPersistence:
 
 class TestStrictReplayFailsClosed:
     def test_model_change_between_runs_fails_closed_on_retry(
-        self, strict_config: VeridianConfig
+        self, strict_config: ChitConfig
     ) -> None:
         """A failed task that retries under a different provider must fail
         closed with a replay_incompatible error rather than silently diverge."""
@@ -116,7 +116,7 @@ class TestStrictReplayFailsClosed:
         task = _make_task(max_retries=5)
         ledger.add([task])
 
-        VeridianRunner(
+        ChitRunner(
             ledger=ledger,
             provider=_passing_provider(model="mock/v1"),
             config=strict_config,
@@ -136,7 +136,7 @@ class TestStrictReplayFailsClosed:
         ledger.add([done_task], skip_duplicates=False)
 
         # Second runner uses a DIFFERENT model. Strict replay must fail closed.
-        summary = VeridianRunner(
+        summary = ChitRunner(
             ledger=ledger,
             provider=_passing_provider(model="mock/v2"),
             config=strict_config,
@@ -155,7 +155,7 @@ class TestStrictReplayFailsClosed:
 
 class TestLooseReplayAllowsDivergence:
     def test_model_change_under_loose_replay_still_completes(
-        self, loose_config: VeridianConfig
+        self, loose_config: ChitConfig
     ) -> None:
         ledger = TaskLedger(
             path=loose_config.ledger_file, progress_file=str(loose_config.progress_file)
@@ -163,7 +163,7 @@ class TestLooseReplayAllowsDivergence:
         task = _make_task(max_retries=5)
         ledger.add([task])
 
-        VeridianRunner(
+        ChitRunner(
             ledger=ledger,
             provider=_passing_provider(model="mock/v1"),
             config=loose_config,
@@ -177,7 +177,7 @@ class TestLooseReplayAllowsDivergence:
         done_task.claimed_by = None
         ledger.add([done_task], skip_duplicates=False)
 
-        summary = VeridianRunner(
+        summary = ChitRunner(
             ledger=ledger,
             provider=_passing_provider(model="mock/v2"),
             config=loose_config,

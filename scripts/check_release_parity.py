@@ -21,7 +21,7 @@ import urllib.error
 import urllib.request
 
 PYPI_JSON_URL = "https://pypi.org/pypi/{package}/json"
-DEFAULT_PACKAGE = "veridian-ai"
+DEFAULT_PACKAGE = "chit"
 TIMEOUT_SECONDS = 30
 
 

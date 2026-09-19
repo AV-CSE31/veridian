@@ -9,11 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from veridian.core.config import VeridianConfig
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.ledger.ledger import TaskLedger
-from veridian.loop.runner import VeridianRunner
-from veridian.providers.mock_provider import MockProvider
+from chit.core.config import ChitConfig
+from chit.core.task import Task, TaskResult, TaskStatus
+from chit.ledger.ledger import TaskLedger
+from chit.loop.runner import ChitRunner
+from chit.providers.mock_provider import MockProvider
 
 
 class ForwardingRuntimeStore:
@@ -101,12 +101,12 @@ def test_runner_accepts_runtime_store_protocol(tmp_path: Path) -> None:
     )
     store.add([task])
 
-    config = VeridianConfig(
+    config = ChitConfig(
         dry_run=True,
         ledger_file=ledger_path,
         progress_file=progress_path,
     )
-    summary = VeridianRunner(
+    summary = ChitRunner(
         ledger=store,
         provider=MockProvider(),
         config=config,

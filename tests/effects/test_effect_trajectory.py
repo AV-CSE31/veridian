@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from veridian.effects import (
+from chit.effects import (
     EffectEventType,
     EffectEventV1,
     EffectStatus,
@@ -30,7 +30,7 @@ def _event(
         sequence=sequence,
         event_type=event_type,
         occurred_at=f"2026-08-19T10:00:{sequence:02d}Z",
-        actor_id="service:veridian-executor",
+        actor_id="service:chit-executor",
         semantic_digest=_SEMANTIC_DIGEST,
         authorization_envelope_digest=authorization_digest,
         permit_id=permit_id,
@@ -111,7 +111,7 @@ def test_sequence_gaps_and_cross_effect_events_are_rejected() -> None:
         sequence=1,
         event_type=EffectEventType.AUTHORIZED,
         occurred_at="2026-08-19T10:00:01Z",
-        actor_id="service:veridian-executor",
+        actor_id="service:chit-executor",
         semantic_digest=_SEMANTIC_DIGEST,
         authorization_envelope_digest=_AUTHORIZATION_DIGEST,
         permit_id=None,

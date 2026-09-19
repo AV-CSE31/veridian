@@ -17,7 +17,7 @@ use.
 
 ## Supported Code
 
-Veridian is alpha software. Security fixes target the current default branch and
+Chit is alpha software. Security fixes target the current default branch and
 the latest published release when the issue is reproducible there. Older source
 snapshots may require upgrading. A version number in a checkout does not imply
 that the same artifact has been published to PyPI.
@@ -27,7 +27,7 @@ that the same artifact has been published to PyPI.
 - Agents propose actions; credential-holding executors must remain outside the
   agent trust boundary.
 - Production signing keys must be supplied explicitly through an operator-owned
-  signer, KMS or HSM. Veridian intentionally ships no fallback secret.
+  signer, KMS or HSM. Chit intentionally ships no fallback secret.
 - Offline signature verification alone does not establish freshness, single-use
   status or append-only history. Those claims require authoritative time,
   state/nonce stores and independently retained heads or witnesses.

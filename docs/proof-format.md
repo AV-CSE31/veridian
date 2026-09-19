@@ -1,6 +1,6 @@
 # Proof format
 
-What is inside a Veridian proof bundle, and how an independent party checks one.
+What is inside a Chit proof bundle, and how an independent party checks one.
 
 This document is the durable artifact. If the library were abandoned tomorrow,
 a proof bundle written today would remain checkable from this specification
@@ -8,8 +8,8 @@ alone, using only Ed25519 and SHA-256.
 
 ## Canonical JSON Profile v1
 
-Every digest in Veridian is `sha256` over bytes produced by **Veridian Canonical
-JSON Profile v1** (`veridian.cjson-sha256.v1`). The profile accepts strictly
+Every digest in Chit is `sha256` over bytes produced by **Chit Canonical
+JSON Profile v1** (`chit.cjson-sha256.v1`). The profile accepts strictly
 less than general JSON so that one value has exactly one byte encoding:
 
 | Rule | Value |
@@ -25,33 +25,33 @@ A digest is the lowercase string `sha256:` followed by 64 hex characters.
 
 ## Signature envelope
 
-Signed payloads use a DSSE-style envelope (`veridian.dsse-envelope.v1`) over
+Signed payloads use a DSSE-style envelope (`chit.dsse-envelope.v1`) over
 pre-authentication encoding, with Ed25519. Payload types:
 
 | Payload | Media type |
 |---|---|
-| Receipt statement | `application/vnd.veridian.receipt-statement.v1+json` |
-| Execution permit | `application/vnd.veridian.execution-permit.v1+json` |
-| Effect receipt | `application/vnd.veridian.effect-receipt.v1+json` |
-| Witness statement | `application/vnd.veridian.witness-statement.v1+json` |
+| Receipt statement | `application/vnd.chit.receipt-statement.v1+json` |
+| Execution permit | `application/vnd.chit.execution-permit.v1+json` |
+| Effect receipt | `application/vnd.chit.effect-receipt.v1+json` |
+| Witness statement | `application/vnd.chit.witness-statement.v1+json` |
 
 Signing over the pre-authentication encoding rather than the raw payload is what
 stops a signature being replayed under a different payload type.
 
 ## Bundle contents
 
-`veridian.proof-bundle.v1` carries exact bytes, base64-encoded for transport:
+`chit.proof-bundle.v1` carries exact bytes, base64-encoded for transport:
 
 | Field | Schema ID | Purpose |
 |---|---|---|
-| `semantic_bytes` | `veridian.action-semantics.v1` or `.completion-semantics.v1` | What was proposed, in business terms |
-| `authorization_envelope_bytes` | `veridian.authorization-envelope.v1` | Principal, audience, purpose, nonce, validity window, state and policy binding |
+| `semantic_bytes` | `chit.action-semantics.v1` or `.completion-semantics.v1` | What was proposed, in business terms |
+| `authorization_envelope_bytes` | `chit.authorization-envelope.v1` | Principal, audience, purpose, nonce, validity window, state and policy binding |
 | `contract_bytes` | caller-defined | The verification contract; its digest appears in the decision |
-| `snapshot_bytes` | `veridian.verification-snapshot.v1` | Exact evidence and verifier manifests evaluated |
-| `transport_binding_bytes` | `veridian.transport-binding.v1` | How the proposal arrived — never affects authorization |
-| `verifier_manifest_bytes[]` | `veridian.verifier-manifest.v1` | Identity of each verifier implementation |
-| `evidence_ref_bytes[]` | `veridian.evidence-ref.v1` | Governed references; never embedded evidence or plaintext locators |
-| `decision_bytes` | `veridian.decision.v1` | Clause results and the aggregate disposition |
+| `snapshot_bytes` | `chit.verification-snapshot.v1` | Exact evidence and verifier manifests evaluated |
+| `transport_binding_bytes` | `chit.transport-binding.v1` | How the proposal arrived — never affects authorization |
+| `verifier_manifest_bytes[]` | `chit.verifier-manifest.v1` | Identity of each verifier implementation |
+| `evidence_ref_bytes[]` | `chit.evidence-ref.v1` | Governed references; never embedded evidence or plaintext locators |
+| `decision_bytes` | `chit.decision.v1` | Clause results and the aggregate disposition |
 | `receipt_envelope_bytes` | signed | Event metadata binding the decision |
 | `witness_envelope_bytes[]` | signed, optional | Third-party attestations of the receipt chain |
 
@@ -100,11 +100,11 @@ true. A chain that vouches for itself vouches for nothing.
 ## Verifier implementation identity
 
 Each `ClauseResultV1` carries a `verifier_manifest_digest`. The manifest
-(`veridian.verifier-manifest.v1`) binds verifier id, semantic version,
+(`chit.verifier-manifest.v1`) binds verifier id, semantic version,
 `build_digest`, canonical configuration, input/output schema digests,
 determinism, execution mode, required capabilities and resource limits.
 
-For checks defined through `veridian.gate`, `build_digest` is derived over the
+For checks defined through `chit.gate`, `build_digest` is derived over the
 predicate's module, qualified name, declared version, canonical configuration,
 **source digest** and runtime identity. Changing a predicate's body changes the
 digest, so a decision cannot be replayed under a different implementation of the

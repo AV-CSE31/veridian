@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     ClauseSeverity,
     ClauseStatus,
     Disposition,
@@ -20,8 +20,8 @@ from veridian.assurance import (
     StaticKeyProvider,
     verify_proof_bundle,
 )
-from veridian.effects import EffectReceiptType, PermitError
-from veridian.gate import (
+from chit.effects import EffectReceiptType, PermitError
+from chit.gate import (
     Check,
     CheckOutcome,
     Gate,
@@ -300,7 +300,7 @@ class TestConfiguration:
             )
 
     def test_non_check_entries_are_refused(self, tmp_path: Path) -> None:
-        with pytest.raises(GateConfigurationError, match="must contain veridian.gate.Check"):
+        with pytest.raises(GateConfigurationError, match="must contain chit.gate.Check"):
             Gate.for_development(
                 audience="a",
                 checks=[lambda ctx: True],  # type: ignore[list-item]

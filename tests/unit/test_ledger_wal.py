@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.ledger.ledger import TaskLedger
+from chit.core.task import Task, TaskResult, TaskStatus
+from chit.ledger.ledger import TaskLedger
 
 
 @pytest.fixture
 def wal_ledger(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TaskLedger:
-    monkeypatch.delenv("VERIDIAN_LEDGER_WAL", raising=False)
+    monkeypatch.delenv("CHIT_LEDGER_WAL", raising=False)
     return TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "p.md"))
 
 
@@ -33,11 +33,11 @@ class TestWalParity:
     def test_lifecycle_state_matches_snapshot_only_opt_out(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("VERIDIAN_LEDGER_WAL", "0")
+        monkeypatch.setenv("CHIT_LEDGER_WAL", "0")
         plain = TaskLedger(path=tmp_path / "plain.json", progress_file=str(tmp_path / "p1.md"))
         plain_done, plain_failed = _lifecycle(plain)
 
-        monkeypatch.delenv("VERIDIAN_LEDGER_WAL")
+        monkeypatch.delenv("CHIT_LEDGER_WAL")
         wal = TaskLedger(path=tmp_path / "wal.json", progress_file=str(tmp_path / "p2.md"))
         wal_done, wal_failed = _lifecycle(wal)
 
@@ -69,13 +69,13 @@ class TestWalParity:
     def test_v2_snapshot_without_wal_opens_transparently(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("VERIDIAN_LEDGER_WAL", "0")
+        monkeypatch.setenv("CHIT_LEDGER_WAL", "0")
         plain = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "p.md"))
         t = Task(title="legacy", description="d")
         plain.add([t])
         assert not (tmp_path / "ledger.json.wal").exists()
 
-        monkeypatch.delenv("VERIDIAN_LEDGER_WAL")
+        monkeypatch.delenv("CHIT_LEDGER_WAL")
         wal = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "p.md"))
         assert wal.get(t.id).title == "legacy"
         wal.claim(t.id, runner_id="w")  # appends rather than rewriting
@@ -126,8 +126,8 @@ class TestWalCompaction:
     def test_compaction_snapshots_and_truncates(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.delenv("VERIDIAN_LEDGER_WAL", raising=False)
-        monkeypatch.setenv("VERIDIAN_LEDGER_WAL_COMPACT_ENTRIES", "4")
+        monkeypatch.delenv("CHIT_LEDGER_WAL", raising=False)
+        monkeypatch.setenv("CHIT_LEDGER_WAL_COMPACT_ENTRIES", "4")
         ledger = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "p.md"))
         # 6 commits: compaction fires at entry 4, then 2 more entries append.
         done_id, failed_id = _lifecycle(ledger)
@@ -163,7 +163,7 @@ class TestWalIsolation:
     def test_cross_instance_visibility(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.delenv("VERIDIAN_LEDGER_WAL", raising=False)
+        monkeypatch.delenv("CHIT_LEDGER_WAL", raising=False)
         a = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "pa.md"))
         b = TaskLedger(path=tmp_path / "ledger.json", progress_file=str(tmp_path / "pb.md"))
 

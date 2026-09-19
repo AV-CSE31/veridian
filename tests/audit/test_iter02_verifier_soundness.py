@@ -16,8 +16,8 @@ verifier: it manufactures confidence.
 
 from __future__ import annotations
 
-from veridian.core.task import Task, TaskResult
-from veridian.verify.builtin.schema import SchemaVerifier
+from chit.core.task import Task, TaskResult
+from chit.verify.builtin.schema import SchemaVerifier
 
 _TASK = Task(id="t", title="t", verifier_id="schema")
 

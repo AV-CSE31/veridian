@@ -1,11 +1,11 @@
 """Killer demo: block false "done" claims from a coding agent.
 
 The demo creates a tiny real git repo, simulates two agent runs, and gates each
-claim with a Veridian completion contract:
+claim with a Chit completion contract:
 
 1. Positive path: tests, coverage, py_compile, and repo diff guard pass.
 2. Negative path: tests still pass, but the agent also writes a secret to
-   `.env`; Veridian blocks the merge even though the agent claims success.
+   `.env`; Chit blocks the merge even though the agent claims success.
 
 Run:
     python examples/coding_agent_verification_demo.py
@@ -19,11 +19,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from veridian import VerificationContract, VerifierStep, verify_completion
+from chit import VerificationContract, VerifierStep, verify_completion
 
 # Demonstration material only. Production callers must load a unique secret
 # from their secret manager and retain the resulting chain head independently.
-DEMO_PROOF_SIGNING_KEY = "demo-only-veridian-proof-key-2026-0001"
+DEMO_PROOF_SIGNING_KEY = "demo-only-chit-proof-key-2026-0001"
 
 
 def main() -> None:
@@ -40,15 +40,15 @@ def main() -> None:
     print("Positive path:")
     print(f"  repo: {good_repo}")
     print(f"  passed: {good_decision.passed}")
-    print(f"  proof: {good_repo / 'veridian-proof.jsonl'}")
-    print(f"  PR comment: {good_repo / 'veridian-pr-comment.md'}")
+    print(f"  proof: {good_repo / 'chit-proof.jsonl'}")
+    print(f"  PR comment: {good_repo / 'chit-pr-comment.md'}")
     print()
     print("Negative path:")
     print(f"  repo: {bad_repo}")
     print(f"  passed: {bad_decision.passed}")
     print(f"  feedback: {bad_decision.feedback[0] if bad_decision.feedback else 'n/a'}")
-    print(f"  proof: {bad_repo / 'veridian-proof.jsonl'}")
-    print(f"  PR comment: {bad_repo / 'veridian-pr-comment.md'}")
+    print(f"  proof: {bad_repo / 'chit-proof.jsonl'}")
+    print(f"  PR comment: {bad_repo / 'chit-pr-comment.md'}")
 
 
 def _run_agent_claim(repo: Path, *, inject_secret: bool):
@@ -105,10 +105,10 @@ def _run_agent_claim(repo: Path, *, inject_secret: bool):
             "agent_claim": "Bug fixed and tests pass.",
             "changed_files": _git_changed_files(repo),
         },
-        proof_file=repo / "veridian-proof.jsonl",
+        proof_file=repo / "chit-proof.jsonl",
         signing_key=DEMO_PROOF_SIGNING_KEY,
     )
-    (repo / "veridian-pr-comment.md").write_text(decision.to_pr_comment(), encoding="utf-8")
+    (repo / "chit-pr-comment.md").write_text(decision.to_pr_comment(), encoding="utf-8")
     return decision
 
 
@@ -132,7 +132,7 @@ def _create_buggy_repo(path: Path) -> Path:
     )
     _run(["git", "init"], cwd=path)
     _run(["git", "config", "user.email", "demo@example.com"], cwd=path)
-    _run(["git", "config", "user.name", "Veridian Demo"], cwd=path)
+    _run(["git", "config", "user.name", "Chit Demo"], cwd=path)
     _run(["git", "add", "."], cwd=path)
     _run(["git", "commit", "-m", "buggy baseline"], cwd=path)
     return path

@@ -3,13 +3,13 @@
 From install to a signed, independently verifiable receipt.
 
 ```bash
-pip install veridian-ai
+pip install chit
 ```
 
 ## The whole thing
 
 ```python
-from veridian import Gate, GateDeniedError, check
+from chit import Gate, GateDeniedError, check
 
 @check("amount_within_limit", config={"limit_minor": 100_000})
 def amount_within_limit(ctx):
@@ -38,7 +38,7 @@ print(outcome.value, outcome.receipt.receipt_id)
 ## What just happened
 
 The decorated function did not run until every hard clause passed. Before it
-ran, Veridian:
+ran, Chit:
 
 1. normalized the call into `ActionSemanticsV1` — business meaning separate from
    how the call arrived;
@@ -51,7 +51,7 @@ ran, Veridian:
 6. redeemed that permit atomically through a SQLite outbox, dispatched, and
    signed an `EffectReceiptV1` over the result.
 
-Every one of those is an ordinary `veridian.assurance` / `veridian.effects`
+Every one of those is an ordinary `chit.assurance` / `chit.effects`
 value. `Gate` is porcelain over primitives you can also build by hand; it
 introduces no trust properties of its own.
 
@@ -101,13 +101,13 @@ Exactly-once is a property of the durable store, not of process memory — a
 different process pointed at the same `store_path` replays identically.
 
 Exactly-once *economic* effects additionally require your downstream adapter to
-honour the supplied idempotency key. Veridian guarantees one redemption per
+honour the supplied idempotency key. Chit guarantees one redemption per
 permit; it cannot guarantee your payment API does the same.
 
 ## Verifying a proof somewhere else
 
 ```python
-from veridian.assurance import verify_proof_bundle
+from chit.assurance import verify_proof_bundle
 
 result = verify_proof_bundle(outcome.proof_bundle, gate.verification_keys)
 result.valid            # True
@@ -131,14 +131,14 @@ gate = Gate(
     principal="agent://payments-bot",
     purpose="vendor-payout",
     checks=[...],
-    signer=my_kms_signer,               # implements veridian.assurance.Signer
+    signer=my_kms_signer,               # implements chit.assurance.Signer
     permit_keys=my_public_key_provider,
     receipt_signer=my_receipt_signer,
     receipt_keys=my_receipt_key_provider,
-    store_path="/var/lib/veridian/permits.db",
+    store_path="/var/lib/chit/permits.db",
     permit_ttl_seconds=120,
 )
 ```
 
 Before you rely on it, read [threat-model.md](threat-model.md) — particularly
-the list of things Veridian cannot protect against.
+the list of things Chit cannot protect against.

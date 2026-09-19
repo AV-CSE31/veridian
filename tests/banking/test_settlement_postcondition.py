@@ -4,8 +4,8 @@ from dataclasses import replace
 
 import pytest
 
-from veridian.assurance import ClauseStatus, Ed25519Signer, StaticKeyProvider
-from veridian.banking import (
+from chit.assurance import ClauseStatus, Ed25519Signer, StaticKeyProvider
+from chit.banking import (
     BankingPostconditionError,
     BankJournalDirection,
     BankJournalLegV1,

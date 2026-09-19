@@ -22,8 +22,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.ledger import TaskLedger
+from chit.core.task import Task, TaskResult, TaskStatus
+from chit.ledger import TaskLedger
 
 _MIN_STATE: dict[str, set[TaskStatus]] = {
     "add": set(TaskStatus),
@@ -119,7 +119,7 @@ def _run_once(
     maximum_kill_ms: int,
     random_source: random.Random,
 ) -> dict[str, Any]:
-    with tempfile.TemporaryDirectory(prefix="veridian-crash-campaign-") as directory:
+    with tempfile.TemporaryDirectory(prefix="chit-crash-campaign-") as directory:
         ledger_path = Path(directory) / "ledger.json"
         acknowledgement_path = Path(directory) / "acknowledgements.log"
         command = [

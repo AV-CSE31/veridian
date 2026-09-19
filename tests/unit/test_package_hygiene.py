@@ -3,7 +3,7 @@ tests.unit.test_package_hygiene
 ------------------------------------------------------------------------------------------------
 F1 from the 2026-04-06 cleanup audit: prevent the recurrence of duplicate
 ``x/x`` nested package trees that shipped by accident as
-``veridian/explain/explain/`` and ``veridian/intelligence/intelligence/``.
+``chit/explain/explain/`` and ``chit/intelligence/intelligence/``.
 
 This test walks the installed package directory and fails if any child
 subpackage repeats its parent's name. It also flags a handful of modules
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-_PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "veridian"
+_PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "chit"
 
 
 def _iter_subpackages(root: Path):
@@ -29,7 +29,7 @@ def _iter_subpackages(root: Path):
 
 class TestNoDuplicatePackageNesting:
     def test_no_child_package_repeats_parent_name(self) -> None:
-        """``veridian/foo/foo/`` pattern is forbidden.
+        """``chit/foo/foo/`` pattern is forbidden.
 
         The 2026-04-06 audit found two such duplicates
         (``explain/explain``, ``intelligence/intelligence``) that shipped
@@ -46,7 +46,7 @@ class TestNoDuplicatePackageNesting:
                 offenders.append(str(pkg_dir.relative_to(_PACKAGE_ROOT)))
         assert not offenders, (
             "Duplicate nested package trees detected --- remove them:\n"
-            + "\n".join(f"  - veridian/{p}" for p in offenders)
+            + "\n".join(f"  - chit/{p}" for p in offenders)
         )
 
     def test_deleted_duplicate_trees_stay_deleted(self) -> None:

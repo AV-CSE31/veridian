@@ -8,7 +8,7 @@ Acceptance tests for the Phase 2.B verifier-dispatch optimisations:
 * Re-registering a class invalidates any cached instance.
 * The default (``shareable=False``) behaviour is unchanged: a fresh
   instance is constructed per call.
-* ``VeridianRunner.__init__`` wires the built-in registry without importing
+* ``ChitRunner.__init__`` wires the built-in registry without importing
   verifier modules; each built-in loads lazily by ID.
 """
 
@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from veridian.core.task import Task, TaskResult
-from veridian.verify.base import BaseVerifier, VerificationResult, VerifierRegistry
+from chit.core.task import Task, TaskResult
+from chit.verify.base import BaseVerifier, VerificationResult, VerifierRegistry
 
 
 class _CountingShareable(BaseVerifier):
@@ -107,17 +107,17 @@ class TestShareableInstanceCache:
 
 class TestLazyRegistryInit:
     def test_runner_resolves_lazy_registry_in_init(self, tmp_path) -> None:
-        from veridian.core.config import VeridianConfig
-        from veridian.ledger.ledger import TaskLedger
-        from veridian.loop.runner import VeridianRunner
-        from veridian.providers.mock_provider import MockProvider
+        from chit.core.config import ChitConfig
+        from chit.ledger.ledger import TaskLedger
+        from chit.loop.runner import ChitRunner
+        from chit.providers.mock_provider import MockProvider
 
-        config = VeridianConfig(
+        config = ChitConfig(
             ledger_file=tmp_path / "ledger.json",
             progress_file=tmp_path / "progress.md",
         )
         ledger = TaskLedger(path=config.ledger_file, progress_file=str(config.progress_file))
-        runner = VeridianRunner(ledger=ledger, provider=MockProvider(), config=config)
+        runner = ChitRunner(ledger=ledger, provider=MockProvider(), config=config)
 
         assert runner._verifier_registry is not None
         assert "schema" in runner._verifier_registry._lazy

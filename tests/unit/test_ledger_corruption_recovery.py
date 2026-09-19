@@ -21,8 +21,8 @@ from pathlib import Path
 import pytest
 from filelock import FileLock, Timeout
 
-from veridian.core.task import Task, TaskStatus
-from veridian.ledger.ledger import TaskLedger
+from chit.core.task import Task, TaskStatus
+from chit.ledger.ledger import TaskLedger
 
 
 def _mk_ledger(tmp_path: Path, **kwargs: object) -> TaskLedger:
@@ -126,7 +126,7 @@ class TestResetInProgressIdempotence:
         in_progress_t = _task("in-progress")
         ledger.add([done_t, failed_t, in_progress_t])
 
-        from veridian.core.task import TaskResult
+        from chit.core.task import TaskResult
 
         # Done task
         ledger.claim(done_t.id, "r")

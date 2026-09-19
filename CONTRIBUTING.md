@@ -1,6 +1,6 @@
-# Contributing to Veridian
+# Contributing to Chit
 
-Veridian is a security-critical library maintained by one person. That shapes
+Chit is a security-critical library maintained by one person. That shapes
 what contributions are useful: a small, well-tested change with a clear
 rationale is worth more here than a large one, and a change that reduces the
 surface is worth more than one that grows it.
@@ -23,9 +23,9 @@ connector, an OS-level sandbox.
 uv sync --extra dev            # or: pip install -e ".[dev]"
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy veridian --strict
+uv run mypy chit --strict
 uv run pytest -q
-uv run pytest --cov=veridian --cov-fail-under=85 -q
+uv run pytest --cov=chit --cov-fail-under=85 -q
 ```
 
 All five must pass. CI runs them across Linux, macOS and Windows on Python
@@ -64,7 +64,7 @@ changes take a new one. A proof bundle written against a published schema must
 keep verifying. See [docs/proof-format.md](docs/proof-format.md#stability).
 
 **Growing the public surface is deliberate.** `tests/unit/test_api_stability.py`
-and `tests/unit/test_package_boundary.py` pin `veridian.__all__`, the top-level
+and `tests/unit/test_package_boundary.py` pin `chit.__all__`, the top-level
 package set and the examples list. They exist to make additions a decision, not
 an accident. If your change should grow the surface, update those tests **and
 record why in the test file** — see the gate porcelain entries for the shape.

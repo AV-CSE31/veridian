@@ -15,17 +15,17 @@ _EXEMPT_CONSTANTS: frozenset[str] = frozenset({"__version__"})
 
 
 def _public_symbols() -> list[tuple[str, object]]:
-    import veridian
+    import chit
 
-    return [(name, getattr(veridian, name)) for name in veridian.__all__]
+    return [(name, getattr(chit, name)) for name in chit.__all__]
 
 
 @pytest.mark.parametrize("name,obj", _public_symbols(), ids=lambda item: str(item))
 def test_public_symbol_is_documented(name: str, obj: object) -> None:
-    """Every name in ``veridian.__all__`` must carry a docstring."""
+    """Every name in ``chit.__all__`` must carry a docstring."""
     if name in _EXEMPT_CONSTANTS:
         return
     assert _is_documented(obj), (
-        f"veridian.{name} is exported via __all__ but has no docstring. "
-        f"Add a one-line summary so help(veridian.{name}) is useful."
+        f"chit.{name} is exported via __all__ but has no docstring. "
+        f"Add a one-line summary so help(chit.{name}) is useful."
     )

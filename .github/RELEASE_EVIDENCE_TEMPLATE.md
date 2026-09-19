@@ -8,16 +8,16 @@ Do not publish a release note without completing all fields.
 - Version: `vX.Y.Z`
 - Date (UTC): `YYYY-MM-DD`
 - Commit: `<full_sha>`
-- PyPI package: `veridian-ai==X.Y.Z`
+- PyPI package: `chit==X.Y.Z`
 - Release owner: `@handle`
 
 ### Quality Gates
 
 - [ ] `ruff check .` (pass)
 - [ ] `ruff format --check .` (pass)
-- [ ] `mypy veridian/ --strict` (pass)
+- [ ] `mypy chit/ --strict` (pass)
 - [ ] `pytest -q --tb=short` (pass)
-- [ ] `pytest --cov=veridian --cov-fail-under=85 -q` (pass, include coverage %)
+- [ ] `pytest --cov=chit --cov-fail-under=85 -q` (pass, include coverage %)
 
 ### Test Summary
 
@@ -34,12 +34,12 @@ Do not publish a release note without completing all fields.
 ### Packaging Evidence
 
 - [ ] `uv build` produced:
-  - `dist/veridian_ai-X.Y.Z.tar.gz`
-  - `dist/veridian_ai-X.Y.Z-py3-none-any.whl`
+  - `dist/chit-X.Y.Z.tar.gz`
+  - `dist/chit-X.Y.Z-py3-none-any.whl`
 - [ ] `uv run --with twine python -m twine check dist/*.whl dist/*.tar.gz` (pass)
 - SHA256:
-  - `veridian_ai-X.Y.Z.tar.gz`: `<sha256>`
-  - `veridian_ai-X.Y.Z-py3-none-any.whl`: `<sha256>`
+  - `chit-X.Y.Z.tar.gz`: `<sha256>`
+  - `chit-X.Y.Z-py3-none-any.whl`: `<sha256>`
 
 ### Claim-to-Test Mapping
 

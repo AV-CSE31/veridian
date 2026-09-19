@@ -1,4 +1,4 @@
-"""Verify an ordinary Python function with a Veridian decorator.
+"""Verify an ordinary Python function with a Chit decorator.
 
 Run with:
 
@@ -9,7 +9,7 @@ The example is deterministic and makes zero network calls.
 
 from __future__ import annotations
 
-from veridian import verified
+from chit import verified
 
 RELEASE_CONTRACT = {
     "required": ["decision", "risk", "reason"],

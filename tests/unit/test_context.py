@@ -6,9 +6,9 @@ Unit tests for TokenWindow and ContextManager.
 
 import pytest
 
-from veridian.context.manager import ContextManager
-from veridian.context.window import TokenWindow
-from veridian.core.task import Task
+from chit.context.manager import ContextManager
+from chit.context.window import TokenWindow
+from chit.core.task import Task
 
 # ------ TokenWindow ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -104,10 +104,10 @@ class TestContextManager:
         assert "[RETRY ERROR]" not in user_text
 
     def test_output_format_block_always_included(self, manager, task):
-        """[OUTPUT FMT] block with veridian:result must always appear."""
+        """[OUTPUT FMT] block with chit:result must always appear."""
         messages = manager.build_worker_context(task, run_id="r1")
         full_text = " ".join(m["content"] for m in messages)
-        assert "veridian:result" in full_text
+        assert "chit:result" in full_text
 
     def test_error_truncated_to_300_chars(self, manager, task):
         """last_error is capped at 300 chars in context."""

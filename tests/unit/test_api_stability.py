@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import veridian
+import chit
 
 _EXPECTED_STABLE_ALL = sorted(
     [
         "__version__",
         "Task",
         "TaskLedger",
-        "VeridianRunner",
-        "VeridianConfig",
+        "ChitRunner",
+        "ChitConfig",
         "RunSummary",
         "BaseVerifier",
         "VerificationResult",
@@ -22,7 +22,7 @@ _EXPECTED_STABLE_ALL = sorted(
         "MockProvider",
         "LiteLLMProvider",
         "VerifiedCall",
-        "VeridianError",
+        "ChitError",
         "VerificationError",
         "ProviderError",
         "VerificationContract",
@@ -46,15 +46,15 @@ _EXPECTED_STABLE_ALL = sorted(
 
 class TestStableSurfaceIsExact:
     def test_all_matches_expected_set(self) -> None:
-        actual = sorted(veridian.__all__)
+        actual = sorted(chit.__all__)
         assert actual == _EXPECTED_STABLE_ALL, (
-            f"veridian.__all__ drifted from the pinned slim surface.\n"
+            f"chit.__all__ drifted from the pinned slim surface.\n"
             f"Added:   {sorted(set(actual) - set(_EXPECTED_STABLE_ALL))}\n"
             f"Removed: {sorted(set(_EXPECTED_STABLE_ALL) - set(actual))}"
         )
 
     def test_stable_surface_count(self) -> None:
-        assert len(veridian.__all__) <= 33
+        assert len(chit.__all__) <= 33
 
     def test_removed_symbols_are_module_path_only(self) -> None:
         removed = [
@@ -64,7 +64,7 @@ class TestStableSurfaceIsExact:
             "LedgerStats",
             "ParallelRunner",
             "verifier_registry",
-            "VeridianEvent",
+            "ChitEvent",
             "RunStarted",
             "RunCompleted",
             "TaskClaimed",
@@ -74,4 +74,4 @@ class TestStableSurfaceIsExact:
             "BudgetState",
         ]
         for symbol in removed:
-            assert symbol not in veridian.__all__
+            assert symbol not in chit.__all__

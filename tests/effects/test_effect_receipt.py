@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from veridian.effects import EffectReceiptType, EffectReceiptV1, EffectValidationError
+from chit.effects import EffectReceiptType, EffectReceiptV1, EffectValidationError
 
 _SEMANTIC = "sha256:" + "1" * 64
 _AUTHORIZATION = "sha256:" + "2" * 64

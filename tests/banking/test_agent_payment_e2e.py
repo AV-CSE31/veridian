@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from veridian.adapters import ActionSpecV1, OpenAIResponsesAdapter
-from veridian.assurance import (
+from chit.adapters import ActionSpecV1, OpenAIResponsesAdapter
+from chit.assurance import (
     AuthorizationEnvelope,
     Disposition,
     Ed25519Signer,
     StaticKeyProvider,
     encode_profile_v1,
 )
-from veridian.banking import (
+from chit.banking import (
     BankApprovalV1,
     BankControlSnapshotV1,
     BankingGate,
@@ -20,14 +20,14 @@ from veridian.banking import (
     sign_bank_snapshot,
     verify_bank_settlement,
 )
-from veridian.effects import (
+from chit.effects import (
     ExecutionPermitV1,
     SqlitePermitStore,
     TrustedExecutor,
     sign_execution_permit,
     verify_effect_receipt,
 )
-from veridian.math import (
+from chit.math import (
     BankLiquidityStress,
     BankPaymentMathPolicy,
     ControlLevel,

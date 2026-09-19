@@ -3,7 +3,7 @@ tests.unit.test_replay_compat
 ------------------------------------------------------------------------------------------
 RV3-003: Global replay compatibility envelope.
 
-Unit tests for veridian.loop.replay_compat --- validates the replay
+Unit tests for chit.loop.replay_compat --- validates the replay
 snapshot into a runner-level invariant applied to every task. Snapshot hashes
 {model_id, provider_version, prompt_hash, verifier_id, verifier_config_hash,
 tool_allowlist_hash} so restarts fail closed when any of these change in
@@ -14,13 +14,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from veridian.core.task import Task
-from veridian.loop.replay_compat import (
+from chit.core.task import Task
+from chit.loop.replay_compat import (
     ReplaySnapshot,
     build_run_replay_snapshot,
     check_replay_compatibility,
 )
-from veridian.providers.base import LLMProvider, LLMResponse, Message
+from chit.providers.base import LLMProvider, LLMResponse, Message
 
 
 class _StubProvider(LLMProvider):

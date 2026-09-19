@@ -5,7 +5,7 @@ from dataclasses import replace
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     ActionSemanticsV1,
     AssuranceTelemetryLinkV1,
     AssuranceValidationError,
@@ -18,7 +18,7 @@ from veridian.assurance import (
     TelemetryStage,
     export_telemetry_event,
 )
-from veridian.effects import (
+from chit.effects import (
     EffectEventType,
     EffectEventV1,
     EffectReceiptType,
@@ -145,25 +145,25 @@ def test_versioned_mapping_propagates_exact_decision_permit_execution_receipt_li
     )
 
     assert link.event(TelemetryStage.DECISION).attributes == {
-        "veridian.assurance.schema_id": "veridian.otel-semconv.v1",
-        "veridian.assurance.stage": "decision",
-        "veridian.authorization.digest": decision.authorization_envelope_digest,
-        "veridian.decision.digest": decision.digest,
-        "veridian.decision.status": "allow",
+        "chit.assurance.schema_id": "chit.otel-semconv.v1",
+        "chit.assurance.stage": "decision",
+        "chit.authorization.digest": decision.authorization_envelope_digest,
+        "chit.decision.digest": decision.digest,
+        "chit.decision.status": "allow",
     }
     assert link.event(TelemetryStage.RECEIPT).attributes == {
-        "veridian.assurance.schema_id": "veridian.otel-semconv.v1",
-        "veridian.assurance.stage": "receipt",
-        "veridian.authorization.digest": decision.authorization_envelope_digest,
-        "veridian.decision.digest": decision.digest,
-        "veridian.decision.status": "allow",
-        "veridian.semantic.digest": permit.semantic_digest,
-        "veridian.permit.digest": permit.digest,
-        "veridian.permit.status": "issued",
-        "veridian.execution.digest": execution.digest,
-        "veridian.execution.status": "committed",
-        "veridian.receipt.digest": receipt.digest,
-        "veridian.receipt.status": "committed",
+        "chit.assurance.schema_id": "chit.otel-semconv.v1",
+        "chit.assurance.stage": "receipt",
+        "chit.authorization.digest": decision.authorization_envelope_digest,
+        "chit.decision.digest": decision.digest,
+        "chit.decision.status": "allow",
+        "chit.semantic.digest": permit.semantic_digest,
+        "chit.permit.digest": permit.digest,
+        "chit.permit.status": "issued",
+        "chit.execution.digest": execution.digest,
+        "chit.execution.status": "committed",
+        "chit.receipt.digest": receipt.digest,
+        "chit.receipt.status": "committed",
     }
 
 
@@ -181,7 +181,7 @@ def test_fake_span_export_sets_bounded_attributes_and_adds_one_named_event() -> 
     export_telemetry_event(span, telemetry)
 
     assert span.attributes == telemetry.attributes
-    assert span.events == [("veridian.assurance.receipt", dict(telemetry.attributes))]
+    assert span.events == [("chit.assurance.receipt", dict(telemetry.attributes))]
 
 
 def test_telemetry_never_exports_raw_payloads_or_high_cardinality_business_ids() -> None:

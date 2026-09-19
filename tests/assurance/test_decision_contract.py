@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     AssuranceValidationError,
     ClauseResultV1,
     ClauseSeverity,
@@ -79,7 +79,7 @@ def test_decision_payload_has_stable_exact_bytes_and_digest() -> None:
     )
 
     expected = (
-        b'{"algorithm_suite":"veridian.cjson-sha256.v1",'
+        b'{"algorithm_suite":"chit.cjson-sha256.v1",'
         b'"authorization_envelope_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111",'
         b'"clause_results":[{"clause_id":"sanctions-clear","details":{"list_version":"2026-08-19"},'
         b'"evidence_ids":["ev_0123456789abcdef"],"reason_code":"SANCTIONS_SATISFIED",'
@@ -88,13 +88,13 @@ def test_decision_payload_has_stable_exact_bytes_and_digest() -> None:
         b'"contract_digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222",'
         b'"disposition":"allow","hash_algorithm":"sha256","obligations":[],'
         b'"policy_digests":["sha256:2222222222222222222222222222222222222222222222222222222222222222"],'
-        b'"schema_id":"veridian.decision.v1",'
+        b'"schema_id":"chit.decision.v1",'
         b'"snapshot_digest":"sha256:3333333333333333333333333333333333333333333333333333333333333333",'
         b'"verifier_manifest_digests":["sha256:4444444444444444444444444444444444444444444444444444444444444444"]}'
     )
     assert decision.to_bytes() == expected
     assert (
-        decision.digest == "sha256:e96a56a31281a922a68aa5c51d5f181c49fa2942d1ef92af7e83341fea6028f8"
+        decision.digest == "sha256:c27466d64fbc51b77ddda2ddb87165db16e778fab7dd639b865a1b81adc95424"
     )
     assert DecisionPayloadV1.from_bytes(expected) == decision
 

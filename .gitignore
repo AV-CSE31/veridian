@@ -90,11 +90,11 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
-# Veridian runtime-generated files
+# Chit runtime-generated files
 ledger.json
 ledger.lock
 progress.md
-veridian_trace.jsonl
+chit_trace.jsonl
 demo_runs/
 entropy_report.md
 conflicts.jsonl

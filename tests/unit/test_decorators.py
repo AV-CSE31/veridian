@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from veridian import VerificationError, verified
-from veridian.core.exceptions import VeridianConfigError
-from veridian.core.report import validate_report_chain
+from chit import VerificationError, verified
+from chit.core.exceptions import ChitConfigError
+from chit.core.report import validate_report_chain
 
 CONTRACT = {
     "required": ["decision", "reason"],
@@ -76,7 +76,7 @@ def test_verified_decorator_can_export_jsonl_report(tmp_path) -> None:
 
 
 def test_verified_decorator_rejects_unsigned_durable_reporting(tmp_path) -> None:
-    with pytest.raises(VeridianConfigError, match="report_signing_key"):
+    with pytest.raises(ChitConfigError, match="report_signing_key"):
 
         @verified(verifier_config={"schema": CONTRACT}, report_file=tmp_path / "reports.jsonl")
         def decide() -> dict[str, str]:

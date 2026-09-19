@@ -1,4 +1,4 @@
-# Releasing Veridian
+# Releasing Chit
 
 This project uses evidence-based releases. Every public release post must
 include a completed release evidence block.
@@ -18,15 +18,15 @@ parity check fails loudly whenever the newest tag and PyPI latest diverge.
 ## Required inputs
 
 - Clean `main` branch, CI green on the exact commit being released.
-- Version bumped in `pyproject.toml` and `veridian/__init__.py`.
+- Version bumped in `pyproject.toml` and `chit/__init__.py`.
 - `CHANGELOG.md` updated.
-- **PyPI trusted publishing configured** for `veridian-ai`, and a GitHub
+- **PyPI trusted publishing configured** for `chit`, and a GitHub
   environment named `pypi`. The workflow authenticates by exchanging a GitHub
   OIDC token for a short-lived PyPI credential — there is **no**
   `PYPI_API_TOKEN` secret, and one must not be reintroduced.
 
 Verify trusted publishing before tagging:
-<https://pypi.org/manage/project/veridian-ai/settings/publishing/>
+<https://pypi.org/manage/project/chit/settings/publishing/>
 
 ## Release steps
 
@@ -35,9 +35,9 @@ Verify trusted publishing before tagging:
 ```bash
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy veridian --strict
+uv run mypy chit --strict
 uv run pytest -q --tb=short
-uv run pytest --cov=veridian --cov-fail-under=85 -q
+uv run pytest --cov=chit --cov-fail-under=85 -q
 ```
 
 ### 2. Build and validate artifacts
@@ -94,8 +94,8 @@ A release is complete only when **all** hold:
 - [ ] `scripts/check_release_parity.py` exits `0`.
 - [ ] The evidence block is present and complete.
 - [ ] The CI publish job succeeded.
-- [ ] `pip install veridian-ai==X.Y.Z` in a clean environment imports and runs
-      `veridian --help`.
+- [ ] `pip install chit==X.Y.Z` in a clean environment imports and runs
+      `chit --help`.
 
 If any box is unchecked, the release is not done. Do not announce it.
 

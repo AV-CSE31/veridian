@@ -1,19 +1,19 @@
 # syntax=docker/dockerfile:1.7
-# Multi-stage Dockerfile for the Veridian agent verification runtime.
+# Multi-stage Dockerfile for the Chit agent verification runtime.
 #
 # Stage 1 (build): installs build deps and the wheel into a venv we copy
 # into the runtime stage. Keeps the runtime image free of pip / build
 # toolchain.
 #
 # Stage 2 (runtime): python:3.11-slim, non-root user, and the supported
-# ``veridian`` CLI. /var/lib/veridian remains writable for callers that use
+# ``chit`` CLI. /var/lib/chit remains writable for callers that use
 # the Python runtime with a mounted ledger volume.
 #
-# Build:    docker build -t veridian:latest .
-# Run:      docker run --rm -v veridian-data:/var/lib/veridian veridian:latest --help
+# Build:    docker build -t chit:latest .
+# Run:      docker run --rm -v chit-data:/var/lib/chit chit:latest --help
 
 ARG PYTHON_VERSION=3.11
-ARG VERIDIAN_EXTRAS=""
+ARG CHIT_EXTRAS=""
 
 # ── Stage 1: build ──────────────────────────────────────────────────────────
 FROM python:${PYTHON_VERSION}-slim AS build
@@ -35,14 +35,14 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md ./
-COPY veridian ./veridian
+COPY chit ./chit
 
-RUN python -m venv /opt/veridian-venv \
-    && /opt/veridian-venv/bin/pip install --upgrade pip \
-    && if [ -n "${VERIDIAN_EXTRAS}" ]; then \
-        /opt/veridian-venv/bin/pip install ".[${VERIDIAN_EXTRAS}]"; \
+RUN python -m venv /opt/chit-venv \
+    && /opt/chit-venv/bin/pip install --upgrade pip \
+    && if [ -n "${CHIT_EXTRAS}" ]; then \
+        /opt/chit-venv/bin/pip install ".[${CHIT_EXTRAS}]"; \
     else \
-        /opt/veridian-venv/bin/pip install .; \
+        /opt/chit-venv/bin/pip install .; \
     fi
 
 # ── Stage 2: runtime ────────────────────────────────────────────────────────
@@ -53,9 +53,9 @@ ARG APP_GID=10001
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/opt/veridian-venv/bin:${PATH}" \
-    VERIDIAN_DATA_DIR=/var/lib/veridian \
-    VERIDIAN_LOG_FORMAT=json
+    PATH="/opt/chit-venv/bin:${PATH}" \
+    CHIT_DATA_DIR=/var/lib/chit \
+    CHIT_LOG_FORMAT=json
 
 # Minimal runtime dependencies. ca-certificates supports optional HTTPS
 # verifiers/providers; tini forwards container signals to the CLI process.
@@ -64,22 +64,22 @@ RUN apt-get update \
         ca-certificates \
         tini \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system --gid ${APP_GID} veridian \
-    && useradd --system --uid ${APP_UID} --gid veridian --create-home --home /home/veridian veridian \
-    && mkdir -p /var/lib/veridian \
-    && chown -R veridian:veridian /var/lib/veridian
+    && groupadd --system --gid ${APP_GID} chit \
+    && useradd --system --uid ${APP_UID} --gid chit --create-home --home /home/chit chit \
+    && mkdir -p /var/lib/chit \
+    && chown -R chit:chit /var/lib/chit
 
-COPY --from=build /opt/veridian-venv /opt/veridian-venv
+COPY --from=build /opt/chit-venv /opt/chit-venv
 
-USER veridian
-WORKDIR /home/veridian
+USER chit
+WORKDIR /home/chit
 
 # The image and installed wheel share one public entrypoint.
-ENTRYPOINT ["/usr/bin/tini", "--", "veridian"]
+ENTRYPOINT ["/usr/bin/tini", "--", "chit"]
 CMD ["--help"]
 
 # Documentation labels — populated by the build pipeline.
-LABEL org.opencontainers.image.title="Veridian" \
+LABEL org.opencontainers.image.title="Chit" \
       org.opencontainers.image.description="Deterministic verification runtime for autonomous AI agents." \
       org.opencontainers.image.source="https://github.com/AV-CSE31/veridian" \
       org.opencontainers.image.licenses="MIT"

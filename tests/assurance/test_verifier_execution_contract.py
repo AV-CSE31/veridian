@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     AssuranceVerificationError,
     ClauseStatus,
     IsolatedVerificationRequestV1,

@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 25
     environment:
       name: ${{ (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi') && 'testpypi' || 'pypi' }}
-      url: ${{ (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi') && 'https://test.pypi.org/project/veridian-ai/' || 'https://pypi.org/project/veridian-ai/' }}
+      url: ${{ (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi') && 'https://test.pypi.org/project/chit/' || 'https://pypi.org/project/chit/' }}
 
     steps:
       - uses: actions/checkout@v5
@@ -51,11 +51,11 @@ jobs:
 
       - name: Quality gates
         run: |
-          ruff check veridian tests examples
-          ruff format --check veridian tests examples
-          mypy veridian --strict
+          ruff check chit tests examples
+          ruff format --check chit tests examples
+          mypy chit --strict
           pytest -q --tb=short
-          pytest --cov=veridian --cov-fail-under=85 -q
+          pytest --cov=chit --cov-fail-under=85 -q
           python scripts/check_protected_paths.py --mode tracked
 
       - name: Build package
@@ -72,8 +72,8 @@ jobs:
           /tmp/smoke/bin/pip install --upgrade pip
           /tmp/smoke/bin/pip install dist/*.whl
           /tmp/smoke/bin/pip check
-          /tmp/smoke/bin/python -c "import veridian, veridian.assurance, veridian.effects, veridian.gate"
-          /tmp/smoke/bin/veridian --help
+          /tmp/smoke/bin/python -c "import chit, chit.assurance, chit.effects, chit.gate"
+          /tmp/smoke/bin/chit --help
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4

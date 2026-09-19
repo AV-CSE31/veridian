@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     ActionSemanticsV1,
     AuthorizationEnvelope,
     ClauseResultV1,
@@ -12,7 +12,7 @@ from veridian.assurance import (
     ClauseStatus,
     DecisionPayloadV1,
 )
-from veridian.effects import ExecutionPermitV1, PermitError
+from chit.effects import ExecutionPermitV1, PermitError
 
 _CONTRACT = "sha256:" + "c" * 64
 _SNAPSHOT = "sha256:" + "5" * 64

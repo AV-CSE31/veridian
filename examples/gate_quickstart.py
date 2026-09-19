@@ -20,8 +20,8 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from veridian import Gate, GateDeniedError, check
-from veridian.assurance import verify_proof_bundle
+from chit import Gate, GateDeniedError, check
+from chit.assurance import verify_proof_bundle
 
 
 # --- the quickstart itself: everything below fits in about twenty lines --------

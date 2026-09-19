@@ -52,7 +52,7 @@ def test_crash_recovery_bench_wal_mode_no_loss_or_corruption() -> None:
         "20",
         "--max-kill-ms",
         "120",
-        env={"VERIDIAN_LEDGER_WAL": "1"},
+        env={"CHIT_LEDGER_WAL": "1"},
     )
     assert report["passed"] is True
     assert report["lost_operations"] == report["lost_ops"] == 0

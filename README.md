@@ -1,12 +1,12 @@
-# Veridian
+# Chit
 
 **Deterministic assurance and replay-safe effects for AI agents.**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/veridian-ai.svg)](https://pypi.org/project/veridian-ai/)
+[![PyPI](https://img.shields.io/pypi/v/chit.svg)](https://pypi.org/project/chit/)
 
-Veridian is a Python library for enforcing a narrow boundary around agent work:
+Chit is a Python library for enforcing a narrow boundary around agent work:
 an agent may propose an output or action, but deterministic checks decide whether
 it may be accepted or executed.
 
@@ -14,14 +14,14 @@ For ordinary task completion, the rule is simple:
 
 > A task is not marked `DONE` unless an independent verifier passes.
 
-For side effects, Veridian goes further. It binds the exact action, authorization
+For side effects, Chit goes further. It binds the exact action, authorization
 context, policy and state snapshot into a signed single-use permit. A trusted
 executor—not the agent—holds credentials, redeems that permit, dispatches through
 a durable outbox, and returns a signed effect receipt.
 
 ## What Is Included
 
-- `veridian.gate`: a composed front door that turns the flow below into a decorator
+- `chit.gate`: a composed front door that turns the flow below into a decorator
 - fail-closed `ALLOW` / `DENY` / `HOLD` decision algebra
 - a deterministic task runner and local crash-recoverable WAL ledger
 - canonical action, authorization, snapshot, evidence and transport models
@@ -52,7 +52,7 @@ Authorize one action behind a signed, single-use permit and get a receipt an
 auditor can verify without you:
 
 ```python
-from veridian import Gate, check
+from chit import Gate, check
 
 @check("amount_within_limit", config={"limit_minor": 100_000})
 def amount_within_limit(ctx):
@@ -81,7 +81,7 @@ re-presenting the same permit replays the receipt instead of producing a second
 effect. An over-limit call raises `GateDeniedError` and never reaches the
 function body; a check that cannot decide yields `HOLD`, never `ALLOW`.
 
-`veridian.gate` is porcelain over `veridian.assurance` and `veridian.effects`.
+`chit.gate` is porcelain over `chit.assurance` and `chit.effects`.
 It adds no trust properties — every artifact it emits is an ordinary assurance
 value that the same offline verifier accepts. Build them by hand when you need
 control; use the gate when you need the common case.
@@ -108,21 +108,21 @@ a durable store — see [`docs/threat-model.md`](docs/threat-model.md).
 ## Install
 
 ```bash
-pip install veridian-ai
+pip install chit
 ```
 
 The base install requires `cryptography`, `filelock`, and `jsonschema`.
-`cryptography` supplies exact-byte Ed25519 signing and verification; Veridian has
+`cryptography` supplies exact-byte Ed25519 signing and verification; Chit has
 no embedded fallback signing key.
 
 Optional extras:
 
 ```bash
-pip install "veridian-ai[llm]"       # LiteLLM provider support
-pip install "veridian-ai[http]"      # HTTP verifier support
-pip install "veridian-ai[pdf]"       # PDF quote matching support
-pip install "veridian-ai[pydantic]"  # Pydantic model validation
-pip install "veridian-ai[all]"       # All runtime extras
+pip install "chit[llm]"       # LiteLLM provider support
+pip install "chit[http]"      # HTTP verifier support
+pip install "chit[pdf]"       # PDF quote matching support
+pip install "chit[pydantic]"  # Pydantic model validation
+pip install "chit[all]"       # All runtime extras
 ```
 
 ## Release Status
@@ -141,12 +141,12 @@ risk or a substitute for domain, security and cryptography review.
 Run one registered verifier:
 
 ```bash
-veridian verify \
+chit verify \
   --verifier schema \
   --verifier-config '{"required_fields":["decision"]}' \
   --agent-output '{"decision":"ship"}' \
   --task "Release decision" \
-  --output-path veridian-result.json
+  --output-path chit-result.json
 ```
 
 Exit status is `0` for a pass, `1` for a deterministic denial and `2` for a
@@ -157,7 +157,7 @@ Verify a portable proof bundle in a separate process with explicit public trust
 roots:
 
 ```bash
-veridian verify-receipt \
+chit verify-receipt \
   --bundle proof.bundle.json \
   --keys verification-keys.json \
   --output-path proof-result.json
@@ -187,11 +187,11 @@ substituting an older package.
 ### Container
 
 ```bash
-docker build -t veridian:local .
-docker run --rm veridian:local verify --agent-output "completion evidence"
+docker build -t chit:local .
+docker run --rm chit:local verify --agent-output "completion evidence"
 ```
 
-The image uses the same installed `veridian` entrypoint as the wheel.
+The image uses the same installed `chit` entrypoint as the wheel.
 
 ## Industrial Banking Showcase
 
@@ -233,7 +233,7 @@ PR comment. It is not a hosted GitHub App.
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from veridian import MockProvider, Task, TaskLedger, VeridianRunner
+from chit import MockProvider, Task, TaskLedger, ChitRunner
 
 schema = {
     "required": ["decision", "risk", "reason"],
@@ -257,14 +257,14 @@ with TemporaryDirectory() as tmp:
             verifier_config={"schema": schema},
         )
     ])
-    provider = MockProvider().script_veridian_result(
+    provider = MockProvider().script_chit_result(
         structured={
             "decision": "ship",
             "risk": "low",
             "reason": "tests, lint, and verification passed",
         }
     )
-    summary = VeridianRunner(ledger=ledger, provider=provider).run()
+    summary = ChitRunner(ledger=ledger, provider=provider).run()
     assert summary.done_count == 1
 ```
 
@@ -289,7 +289,7 @@ verifier diagnostics by default:
 ```python
 import os
 
-from veridian import VerificationContract, VerifierStep, verify_completion
+from chit import VerificationContract, VerifierStep, verify_completion
 
 contract = VerificationContract(
     contract_id="release_gate",
@@ -305,8 +305,8 @@ decision = verify_completion(
     contract=contract,
     input_payload={"task": "decide release"},
     output_payload={"decision": "ship"},
-    proof_file="veridian-proof.jsonl",
-    signing_key=os.environ["VERIDIAN_PROOF_SIGNING_KEY"],
+    proof_file="chit-proof.jsonl",
+    signing_key=os.environ["CHIT_PROOF_SIGNING_KEY"],
 )
 assert decision.passed
 ```
@@ -316,11 +316,11 @@ Runner report export is opt-in and also requires an explicit key:
 ```python
 import os
 
-from veridian import VeridianConfig
-from veridian.core.report import validate_report_chain
+from chit import ChitConfig
+from chit.core.report import validate_report_chain
 
-key = os.environ["VERIDIAN_REPORT_SIGNING_KEY"]
-config = VeridianConfig(
+key = os.environ["CHIT_REPORT_SIGNING_KEY"]
+config = ChitConfig(
     report_file="verification-reports.jsonl",
     report_signing_key=key,
     report_signing_key_id="kms-key-version-7",
@@ -354,7 +354,7 @@ when history integrity matters.
 
 ## Mathematics and Domain Packs
 
-`veridian.math` exposes deterministic, stateless verifiers for:
+`chit.math` exposes deterministic, stateless verifiers for:
 
 - exact linear equality, conservation and bounds with explicit units/tolerance
 - authenticated rolling aggregates and split-action detection
@@ -370,8 +370,8 @@ universal domain.
 
 The synthetic packs are:
 
-- `veridian.math.banking`: critical payment accounting, liquidity and trajectory checks
-- `veridian.math.deployment`: quorum, separation of duties, canary, change window,
+- `chit.math.banking`: critical payment accounting, liquidity and trajectory checks
+- `chit.math.deployment`: quorum, separation of duties, canary, change window,
   rollback readiness, error-budget barrier and deployment trajectory checks
 - `repo_guard` plus the coding-agent demo: repository acceptance controls whose
   verdict evidence binds the observed changed paths and bytes with a stable
@@ -379,13 +379,13 @@ The synthetic packs are:
 
 ## Protocol and Telemetry Adapters
 
-`veridian.adapters` normalizes proposed actions from direct/generic Python,
+`chit.adapters` normalizes proposed actions from direct/generic Python,
 OpenAI Responses, MCP, LangGraph and a versioned Pydantic AI deferred-tool
 profile. Adapters never execute tools and do not import framework SDKs. Business
 semantics determine `ActionSemanticsV1.digest`; protocol IDs and raw-message
 digests remain in a separate `TransportBinding`.
 
-`veridian.assurance` also provides a dependency-free OpenTelemetry semantic
+`chit.assurance` also provides a dependency-free OpenTelemetry semantic
 mapping for decision → permit → execution → receipt links. It exports only
 bounded statuses and digests/identifier commitments through a minimal Span-like
 protocol; it does not configure a global telemetry SDK or export raw payloads.
@@ -423,7 +423,7 @@ non-zero-residual-risk statement. See
 
 ## Current Boundaries
 
-Veridian `0.4.0` does not provide a managed control plane, distributed ledger,
+Chit `0.4.0` does not provide a managed control plane, distributed ledger,
 hosted PR reviewer, general policy DSL, identity issuer, production RTGS
 connector or OS-level verifier sandbox. `IsolatedVerifierRunner` is a bounded
 subprocess protocol, not a security sandbox. The SQLite permit/outbox reference
@@ -450,8 +450,8 @@ an externally validated 1.0 or universal safety proof.
 ```bash
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy veridian --strict
-uv run pytest --cov=veridian --cov-fail-under=85 -q
+uv run mypy chit --strict
+uv run pytest --cov=chit --cov-fail-under=85 -q
 ```
 
 Public documentation lives in [`docs/`](docs/README.md). Local planning and

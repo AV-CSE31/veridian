@@ -50,7 +50,7 @@ examples/
 ledger.json
 ledger.json.lock
 progress.md
-veridian_trace.jsonl
+chit_trace.jsonl
 dlq.json
 skills.json
 *.local

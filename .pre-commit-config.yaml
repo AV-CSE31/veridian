@@ -13,7 +13,7 @@ repos:
         pass_filenames: false
       - id: mypy-strict
         name: mypy strict
-        entry: mypy veridian/ --strict
+        entry: mypy chit/ --strict
         language: system
         pass_filenames: false
       - id: pytest-fast

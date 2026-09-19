@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from veridian.adapters import (
+from chit.adapters import (
     ActionSpecV1,
     AdapterValidationError,
     GenericActionAdapter,
@@ -14,7 +14,7 @@ from veridian.adapters import (
     OpenAIResponsesAdapter,
     UnknownActionError,
 )
-from veridian.core.exceptions import VeridianError
+from chit.core.exceptions import ChitError
 
 SPECS = {"transfer_funds": ActionSpecV1("bank.transfer", "destination_account")}
 ARGS = {
@@ -67,7 +67,7 @@ def _openai(arguments: str) -> dict[str, object]:
         (
             GenericActionAdapter(SPECS).normalize,
             {
-                "schema_id": "veridian.generic-action.v1",
+                "schema_id": "chit.generic-action.v1",
                 "message_id": "generic-1",
                 "action": "transfer_funds",
                 "arguments": {**ARGS, "memo": "e\u0301"},
@@ -81,7 +81,7 @@ def test_all_adapters_reject_values_outside_canonical_profile(
     with pytest.raises(AdapterValidationError) as caught:
         normalize(message)
 
-    assert isinstance(caught.value, VeridianError)
+    assert isinstance(caught.value, ChitError)
 
 
 def test_openai_rejects_noncanonical_and_duplicate_argument_json() -> None:
@@ -135,7 +135,7 @@ def test_openai_rejects_noncanonical_and_duplicate_argument_json() -> None:
         (
             GenericActionAdapter(SPECS).normalize,
             {
-                "schema_id": "veridian.generic-action.v1",
+                "schema_id": "chit.generic-action.v1",
                 "message_id": "generic-1",
                 "action": "transfer_funds",
                 "name": "other_action",
@@ -157,7 +157,7 @@ def test_unregistered_action_and_missing_target_fail_closed() -> None:
     with pytest.raises(UnknownActionError):
         adapter.normalize(
             {
-                "schema_id": "veridian.generic-action.v1",
+                "schema_id": "chit.generic-action.v1",
                 "message_id": "generic-1",
                 "action": "delete_ledger",
                 "arguments": ARGS,
@@ -166,7 +166,7 @@ def test_unregistered_action_and_missing_target_fail_closed() -> None:
     with pytest.raises(AdapterValidationError):
         adapter.normalize(
             {
-                "schema_id": "veridian.generic-action.v1",
+                "schema_id": "chit.generic-action.v1",
                 "message_id": "generic-2",
                 "action": "transfer_funds",
                 "arguments": {"amount_minor": 125_000, "currency": "USD"},
@@ -177,7 +177,7 @@ def test_unregistered_action_and_missing_target_fail_closed() -> None:
 def test_transport_only_mutation_preserves_semantics_and_changes_transport() -> None:
     adapter = GenericActionAdapter(SPECS)
     base = {
-        "schema_id": "veridian.generic-action.v1",
+        "schema_id": "chit.generic-action.v1",
         "message_id": "generic-1",
         "action": "transfer_funds",
         "arguments": ARGS,
@@ -194,7 +194,7 @@ def test_transport_only_mutation_preserves_semantics_and_changes_transport() -> 
 def test_noncanonical_raw_json_bytes_are_rejected() -> None:
     adapter = GenericActionAdapter(SPECS)
     noncanonical = (
-        b'{"schema_id": "veridian.generic-action.v1", "message_id": "generic-1", '
+        b'{"schema_id": "chit.generic-action.v1", "message_id": "generic-1", '
         b'"action": "transfer_funds", "arguments": {"amount_minor": 125000, '
         b'"currency": "USD", "destination_account": "account:merchant-42"}}'
     )
@@ -246,7 +246,7 @@ def test_mcp_rejects_ambiguous_json_rpc_ids(request_id: object) -> None:
 
 def test_sdk_like_objects_with_hidden_state_are_rejected() -> None:
     message = SimpleNamespace(
-        schema_id="veridian.generic-action.v1",
+        schema_id="chit.generic-action.v1",
         message_id="generic-1",
         action="transfer_funds",
         arguments=ARGS,

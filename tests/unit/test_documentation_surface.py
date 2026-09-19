@@ -71,9 +71,9 @@ class TestReadmeLeadsWithTheAssuranceSurface:
 
 
 class TestHonestyClaimsSurvive:
-    def test_threat_model_states_what_veridian_cannot_protect_against(self) -> None:
+    def test_threat_model_states_what_chit_cannot_protect_against(self) -> None:
         threat = _read("docs", "threat-model.md")
-        assert "## What Veridian cannot protect against" in threat
+        assert "## What Chit cannot protect against" in threat
         assert "not an OS security sandbox" in threat
         for actor in ("compromised signer", "compromised trusted executor"):
             assert actor.lower() in threat.lower()
@@ -86,8 +86,8 @@ class TestHonestyClaimsSurvive:
 
     def test_article_12_mapping_disclaims_compliance(self) -> None:
         mapping = _read("docs", "mapping-eu-ai-act-article-12.md")
-        assert "does not claim that using Veridian makes a system compliant" in mapping
-        assert "## Where Veridian gives you nothing" in mapping
+        assert "does not claim that using Chit makes a system compliant" in mapping
+        assert "## Where Chit gives you nothing" in mapping
         assert "it is not a compliance product" in mapping
 
     def test_oap_mapping_is_marked_as_analysis_not_implementation(self) -> None:

@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     ActionSemanticsV1,
     AuthorizationEnvelope,
     ClauseResultV1,
@@ -14,7 +14,7 @@ from veridian.assurance import (
     Ed25519Signer,
     StaticKeyProvider,
 )
-from veridian.effects import (
+from chit.effects import (
     EffectReceiptType,
     EffectReceiptV1,
     ExecutionPermitV1,

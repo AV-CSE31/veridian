@@ -13,17 +13,17 @@ from __future__ import annotations
 
 import pytest
 
-from veridian.core.events import TaskClaimed
-from veridian.core.exceptions import (
+from chit.core.events import TaskClaimed
+from chit.core.exceptions import (
+    ChitError,
     ControlFlowSignal,
     CostLimitExceeded,
     HardControlViolation,
     HumanReviewRequired,
     TaskPauseRequested,
-    VeridianError,
 )
-from veridian.hooks.base import BaseHook
-from veridian.hooks.registry import HookRegistry
+from chit.hooks.base import BaseHook
+from chit.hooks.registry import HookRegistry
 
 
 class _RaisingHook(BaseHook):
@@ -112,10 +112,10 @@ class TestControlFlowSignalPropagation:
             reg.fire("before_task", TaskClaimed(run_id="r1"))
 
     def test_human_review_required_is_control_flow_signal(self) -> None:
-        """Backward-compat: HumanReviewRequired must still be a VeridianError
+        """Backward-compat: HumanReviewRequired must still be a ChitError
         AND now also a ControlFlowSignal."""
         exc = HumanReviewRequired(task_id="t1", reason="x")
-        assert isinstance(exc, VeridianError)
+        assert isinstance(exc, ChitError)
         assert isinstance(exc, ControlFlowSignal)
 
     def test_first_control_flow_signal_wins(self) -> None:

@@ -6,7 +6,7 @@ RV3-001 + RV3-002 end-to-end coverage.
 Proves that:
 - A hook raising TaskPauseRequested / HumanReviewRequired transitions the
   task to PAUSED (not FAILED).
-- PAUSED state survives a fresh VeridianRunner / TaskLedger instance.
+- PAUSED state survives a fresh ChitRunner / TaskLedger instance.
 - reset_in_progress() on startup preserves the PAUSED state.
 - A second runner picks up the PAUSED task via get_next(include_paused=True)
   and completes it.
@@ -20,16 +20,16 @@ from typing import Any, ClassVar
 
 import pytest
 
-from veridian.core.config import VeridianConfig
-from veridian.core.events import TaskPaused, TaskResumed
-from veridian.core.exceptions import TaskPauseRequested
-from veridian.core.task import Task, TaskStatus
-from veridian.hooks.base import BaseHook
-from veridian.hooks.builtin.human_review import HumanReviewHook
-from veridian.hooks.registry import HookRegistry
-from veridian.ledger.ledger import TaskLedger
-from veridian.loop.runner import VeridianRunner
-from veridian.providers.mock_provider import MockProvider
+from chit.core.config import ChitConfig
+from chit.core.events import TaskPaused, TaskResumed
+from chit.core.exceptions import TaskPauseRequested
+from chit.core.task import Task, TaskStatus
+from chit.hooks.base import BaseHook
+from chit.hooks.builtin.human_review import HumanReviewHook
+from chit.hooks.registry import HookRegistry
+from chit.ledger.ledger import TaskLedger
+from chit.loop.runner import ChitRunner
+from chit.providers.mock_provider import MockProvider
 
 # ------ Fixtures ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -38,8 +38,8 @@ _SCHEMA_CONFIG = {"required_fields": ["summary"]}
 
 
 @pytest.fixture
-def config(tmp_path: Path) -> VeridianConfig:
-    return VeridianConfig(
+def config(tmp_path: Path) -> ChitConfig:
+    return ChitConfig(
         max_turns_per_task=3,
         ledger_file=tmp_path / "ledger.json",
         progress_file=tmp_path / "progress.md",
@@ -47,7 +47,7 @@ def config(tmp_path: Path) -> VeridianConfig:
 
 
 @pytest.fixture
-def ledger(config: VeridianConfig) -> TaskLedger:
+def ledger(config: ChitConfig) -> TaskLedger:
     return TaskLedger(
         path=config.ledger_file,
         progress_file=str(config.progress_file),
@@ -58,7 +58,7 @@ def _passing_provider() -> MockProvider:
     provider = MockProvider()
     # Enough scripted responses for both first run and resume.
     for _ in range(10):
-        provider.script_veridian_result({"summary": "done"})
+        provider.script_chit_result({"summary": "done"})
     return provider
 
 
@@ -100,14 +100,14 @@ class _EventSpy(BaseHook):
 
 class TestPauseOnControlFlowSignal:
     def test_human_review_pauses_task_not_fails_it(
-        self, ledger: TaskLedger, config: VeridianConfig
+        self, ledger: TaskLedger, config: ChitConfig
     ) -> None:
         task = _make_task("needs review", metadata={"requires_human_review": True})
         ledger.add([task])
 
         hooks = HookRegistry()
         hooks.register(HumanReviewHook())
-        runner = VeridianRunner(
+        runner = ChitRunner(
             ledger=ledger,
             provider=_passing_provider(),
             config=config,
@@ -127,7 +127,7 @@ class TestPauseOnControlFlowSignal:
         assert summary.failed_count == 0
 
     def test_generic_task_pause_requested_pauses_task(
-        self, ledger: TaskLedger, config: VeridianConfig
+        self, ledger: TaskLedger, config: ChitConfig
     ) -> None:
         class CustomPauseHook(BaseHook):
             id: ClassVar[str] = "custom_pause"
@@ -146,7 +146,7 @@ class TestPauseOnControlFlowSignal:
 
         hooks = HookRegistry()
         hooks.register(CustomPauseHook())
-        runner = VeridianRunner(
+        runner = ChitRunner(
             ledger=ledger,
             provider=_passing_provider(),
             config=config,
@@ -163,7 +163,7 @@ class TestPauseOnControlFlowSignal:
 
 class TestPauseAcrossRunnerRestart:
     def test_paused_task_survives_fresh_runner_and_ledger(
-        self, tmp_path: Path, config: VeridianConfig
+        self, tmp_path: Path, config: ChitConfig
     ) -> None:
         # Run 1: ledger A, runner A --- task gets paused
         ledger_a = TaskLedger(path=config.ledger_file, progress_file=str(config.progress_file))
@@ -172,7 +172,7 @@ class TestPauseAcrossRunnerRestart:
 
         hooks_a = HookRegistry()
         hooks_a.register(HumanReviewHook())
-        runner_a = VeridianRunner(
+        runner_a = ChitRunner(
             ledger=ledger_a,
             provider=_passing_provider(),
             config=config,
@@ -193,7 +193,7 @@ class TestPauseAcrossRunnerRestart:
         assert ledger_b.get(task.id).status == TaskStatus.PAUSED
 
     def test_second_runner_resumes_and_completes_task(
-        self, tmp_path: Path, config: VeridianConfig
+        self, tmp_path: Path, config: ChitConfig
     ) -> None:
         # Run 1: pause via HumanReviewHook
         ledger_a = TaskLedger(path=config.ledger_file, progress_file=str(config.progress_file))
@@ -202,7 +202,7 @@ class TestPauseAcrossRunnerRestart:
 
         hooks_pause = HookRegistry()
         hooks_pause.register(HumanReviewHook())
-        VeridianRunner(
+        ChitRunner(
             ledger=ledger_a,
             provider=_passing_provider(),
             config=config,
@@ -219,7 +219,7 @@ class TestPauseAcrossRunnerRestart:
         # skip_duplicates=False)
         ledger_b.add([stored], skip_duplicates=False)
 
-        runner_b = VeridianRunner(
+        runner_b = ChitRunner(
             ledger=ledger_b,
             provider=_passing_provider(),
             config=config,
@@ -235,9 +235,7 @@ class TestPauseAcrossRunnerRestart:
 
 
 class TestPauseResumeEvents:
-    def test_pause_fires_task_paused_event(
-        self, ledger: TaskLedger, config: VeridianConfig
-    ) -> None:
+    def test_pause_fires_task_paused_event(self, ledger: TaskLedger, config: ChitConfig) -> None:
         task = _make_task("paused", metadata={"requires_human_review": True})
         ledger.add([task])
 
@@ -245,7 +243,7 @@ class TestPauseResumeEvents:
         hooks = HookRegistry()
         hooks.register(HumanReviewHook())
         hooks.register(spy)
-        VeridianRunner(
+        ChitRunner(
             ledger=ledger,
             provider=_passing_provider(),
             config=config,
@@ -259,14 +257,14 @@ class TestPauseResumeEvents:
         assert pause_events[0].task is not None
         assert pause_events[0].task.status == TaskStatus.PAUSED
 
-    def test_resume_fires_task_resumed_event(self, tmp_path: Path, config: VeridianConfig) -> None:
+    def test_resume_fires_task_resumed_event(self, tmp_path: Path, config: ChitConfig) -> None:
         ledger_a = TaskLedger(path=config.ledger_file, progress_file=str(config.progress_file))
         task = _make_task("rr", metadata={"requires_human_review": True})
         ledger_a.add([task])
 
         hooks_a = HookRegistry()
         hooks_a.register(HumanReviewHook())
-        VeridianRunner(
+        ChitRunner(
             ledger=ledger_a,
             provider=_passing_provider(),
             config=config,
@@ -282,7 +280,7 @@ class TestPauseResumeEvents:
         spy = _EventSpy()
         hooks_b = HookRegistry()
         hooks_b.register(spy)
-        VeridianRunner(
+        ChitRunner(
             ledger=ledger_b,
             provider=_passing_provider(),
             config=config,
@@ -297,7 +295,7 @@ class TestPauseResumeEvents:
 
 class TestPauseResumeControlFlowEdges:
     def test_on_resume_control_flow_signal_repauses_task(
-        self, ledger: TaskLedger, config: VeridianConfig
+        self, ledger: TaskLedger, config: ChitConfig
     ) -> None:
         """RV3-002: Control-flow signals from on_resume must be routed through
         ledger.pause() and never crash the run."""
@@ -322,7 +320,7 @@ class TestPauseResumeControlFlowEdges:
 
         hooks = HookRegistry()
         hooks.register(PauseOnResumeHook())
-        summary = VeridianRunner(
+        summary = ChitRunner(
             ledger=ledger,
             provider=_passing_provider(),
             config=config,
@@ -337,7 +335,7 @@ class TestPauseResumeControlFlowEdges:
         assert stored.result.extras["pause_payload"]["reason"] == "pause requested during on_resume"
 
     def test_repeatedly_paused_task_does_not_starve_other_paused_tasks(
-        self, ledger: TaskLedger, config: VeridianConfig
+        self, ledger: TaskLedger, config: ChitConfig
     ) -> None:
         """RV3-001 hardening: if paused task A keeps pausing, paused task B
         should still be resumed and processed in the same run."""
@@ -360,7 +358,7 @@ class TestPauseResumeControlFlowEdges:
 
         hooks = HookRegistry()
         hooks.register(PauseTaskAOnBeforeTaskHook())
-        summary = VeridianRunner(
+        summary = ChitRunner(
             ledger=ledger,
             provider=_passing_provider(),
             config=config,

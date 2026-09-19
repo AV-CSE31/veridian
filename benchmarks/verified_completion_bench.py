@@ -8,7 +8,7 @@ output violates the task contract (missing field or out-of-contract value).
 The same task stream is then driven through two harnesses:
 
 * baseline: trusts the claim --- every submitted result is marked DONE
-* gated:    Veridian's contract --- the schema verifier must pass before
+* gated:    Chit's contract --- the schema verifier must pass before
             DONE; failures become FAILED instead
 
 Reported metrics:
@@ -30,9 +30,9 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.ledger.ledger import TaskLedger
-from veridian.verify.base import registry
+from chit.core.task import Task, TaskResult, TaskStatus
+from chit.ledger.ledger import TaskLedger
+from chit.verify.base import registry
 
 CONTRACT: dict[str, Any] = {
     "required": ["status", "artifact"],
@@ -103,7 +103,7 @@ def main() -> int:
     results = [_make_result(rng, args.defect_rate) for _ in range(args.tasks)]
     defective = sum(1 for _, d in results if d)
 
-    with tempfile.TemporaryDirectory(prefix="veridian-vc-bench-") as td:
+    with tempfile.TemporaryDirectory(prefix="chit-vc-bench-") as td:
         baseline = _drive(
             TaskLedger(path=Path(td) / "baseline.json", progress_file=str(Path(td) / "p1.md")),
             results,

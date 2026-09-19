@@ -18,9 +18,9 @@ from typing import Any
 
 import pytest
 
-from veridian.core.exceptions import VeridianConfigError
-from veridian.core.task import Task, TaskResult
-from veridian.verify.builtin.schema import SchemaVerifier
+from chit.core.exceptions import ChitConfigError
+from chit.core.task import Task, TaskResult
+from chit.verify.builtin.schema import SchemaVerifier
 
 _TASK = Task(id="t", title="t", verifier_id="schema")
 
@@ -76,7 +76,7 @@ def test_T4_pattern_is_enforced() -> None:
 def test_T5_malformed_schema_raises_config_error() -> None:
     # `required` must be an array of strings; a string is an invalid schema.
     bad_schema = {"required": "not-a-list", "properties": {"a": {"type": "string"}}}
-    with pytest.raises(VeridianConfigError):
+    with pytest.raises(ChitConfigError):
         SchemaVerifier(schema=bad_schema)
 
 

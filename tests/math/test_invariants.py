@@ -2,7 +2,7 @@ from decimal import ROUND_DOWN, Decimal, localcontext
 
 import pytest
 
-from veridian.math import (
+from chit.math import (
     BoundInvariant,
     ConservationInvariant,
     EqualityInvariant,
@@ -144,7 +144,7 @@ def test_missing_invariant_operand_is_unknown_not_a_false_pass() -> None:
     assert report.results[0].reason_code is ReasonCode.INPUT_MISSING
 
 
-def test_decimal_overflow_is_wrapped_in_veridian_error_hierarchy() -> None:
+def test_decimal_overflow_is_wrapped_in_chit_error_hierarchy() -> None:
     verifier = InvariantVerifier(
         (
             BoundInvariant(

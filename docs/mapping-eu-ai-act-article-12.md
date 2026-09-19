@@ -1,9 +1,9 @@
 # Mapping: EU AI Act Article 12 record-keeping
 
-**This document does not claim that using Veridian makes a system compliant with
+**This document does not claim that using Chit makes a system compliant with
 the EU AI Act.** Compliance is a property of an organisation's whole programme —
 scope determination, risk management, retention, monitoring, human oversight,
-documentation and governance. Veridian supplies evidence primitives that can
+documentation and governance. Chit supplies evidence primitives that can
 *support* specific record-keeping obligations. It supplies nothing else, and it
 is not legal advice.
 
@@ -32,9 +32,9 @@ Records must enable post-hoc reconstruction of individual AI-assisted decisions,
 and be retained so that traceability is preserved. Regulators read "appropriate
 to the intended purpose" as implying tamper-evidence.
 
-## Where Veridian artifacts line up
+## Where Chit artifacts line up
 
-| Obligation characteristic | Veridian artifact | What it actually gives you |
+| Obligation characteristic | Chit artifact | What it actually gives you |
 |---|---|---|
 | Reconstruct an individual decision | `DecisionPayloadV1` | Every clause, its status, reason code, evidence references, and the aggregate disposition — not a summary |
 | Identify what the decision was *about* | `ActionSemanticsV1` | Business meaning, digest-bound, separate from transport |
@@ -46,17 +46,17 @@ to the intended purpose" as implying tamper-evidence.
 | Independent checkability | `verify_proof_bundle` | A third party with public keys can re-derive every binding without contacting you |
 | What was actually executed | `EffectReceiptV1` | Binds permit, outbox, result and external reference |
 
-## Where Veridian gives you nothing
+## Where Chit gives you nothing
 
 State these plainly to anyone who asks whether this "covers Article 12":
 
-- **Retention.** Veridian writes artifacts. It does not retain them, enforce a
+- **Retention.** Chit writes artifacts. It does not retain them, enforce a
   retention period, or manage lifecycle. That is your storage and policy.
 - **Scope determination.** Nothing here tells you whether your system is
   high-risk.
 - **Risk management, oversight, documentation.** Articles 9, 11, 13, 14 and 17
   are untouched.
-- **Log completeness.** Veridian records the decisions it is asked to make. An
+- **Log completeness.** Chit records the decisions it is asked to make. An
   action taken around the gate is not recorded — because it never reached it.
 - **Durable receipt chaining out of the box.** `Gate` maintains its receipt
   sequence **in process memory**. Across restarts the chain restarts. Durable
@@ -74,7 +74,7 @@ State these plainly to anyone who asks whether this "covers Article 12":
 
 If you need one line for a compliance conversation:
 
-> Veridian produces signed, tamper-evident, independently verifiable records of
+> Chit produces signed, tamper-evident, independently verifiable records of
 > individual agent authorization decisions and their executed effects, which can
 > serve as source records supporting Article 12 record-keeping obligations. It
 > does not implement retention, scope determination, or any other Article 12

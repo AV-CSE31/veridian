@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from veridian import MockProvider, Task, TaskLedger, VeridianConfig, VeridianRunner
+from chit import ChitConfig, ChitRunner, MockProvider, Task, TaskLedger
 
 
 def main() -> None:
@@ -21,7 +21,7 @@ def main() -> None:
         artifact = root / "release-summary.md"
         artifact.write_text("Release 2026.06 passed all gates.\n", encoding="utf-8")
 
-        config = VeridianConfig(
+        config = ChitConfig(
             ledger_file=root / "ledger.json",
             progress_file=root / "progress.md",
         )
@@ -38,10 +38,10 @@ def main() -> None:
             ]
         )
 
-        provider = MockProvider().script_veridian_result(
+        provider = MockProvider().script_chit_result(
             structured={"summary": "release summary written"}
         )
-        summary = VeridianRunner(ledger=ledger, provider=provider, config=config).run()
+        summary = ChitRunner(ledger=ledger, provider=provider, config=config).run()
         task = ledger.get("artifact-gate")
         evidence = task.result.verification_evidence if task.result else {}
 

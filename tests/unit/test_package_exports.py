@@ -1,16 +1,16 @@
 """Package export hygiene tests for public subpackages."""
 
-from veridian.core import VerificationReport
-from veridian.core.contract import VerificationContract, VerifierStep, verify_completion
-from veridian.ledger import SCHEMA_VERSION, TaskLedger
-from veridian.providers import (
+from chit.core import VerificationReport
+from chit.core.contract import VerificationContract, VerifierStep, verify_completion
+from chit.ledger import SCHEMA_VERSION, TaskLedger
+from chit.providers import (
     LiteLLMProvider,
     LLMProvider,
     LLMResponse,
     Message,
     MockProvider,
 )
-from veridian.verify import (
+from chit.verify import (
     BaseVerifier,
     VerificationResult,
     VerifierRegistry,
