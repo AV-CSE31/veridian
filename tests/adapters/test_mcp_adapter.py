@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from veridian.adapters import ActionSpecV1, MCPToolCallAdapter
+from chit.adapters import ActionSpecV1, MCPToolCallAdapter
 
 
 def test_mcp_json_rpc_tool_call_normalizes_without_executing() -> None:

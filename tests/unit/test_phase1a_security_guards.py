@@ -6,7 +6,7 @@ Acceptance tests for the Phase 1.A security hardening additions:
 * BashExitCodeVerifier scrubs the child-process env so
   parent secrets cannot leak into agent-issued shells.
 * LiteLLMProvider rejects URL-shaped model strings and enforces a provider
-  prefix allowlist controllable via ``VERIDIAN_ALLOWED_MODELS``.
+  prefix allowlist controllable via ``CHIT_ALLOWED_MODELS``.
 """
 
 from __future__ import annotations
@@ -20,12 +20,12 @@ from unittest.mock import patch
 
 import pytest
 
-from veridian.core.exceptions import ProviderError, VeridianConfigError
-from veridian.providers.litellm_provider import (
+from chit.core.exceptions import ChitConfigError, ProviderError
+from chit.providers.litellm_provider import (
     LiteLLMProvider,
     _validate_model_string,
 )
-from veridian.verify.builtin.bash import BashExitCodeVerifier
+from chit.verify.builtin.bash import BashExitCodeVerifier
 
 
 def _python_cmd(code: str) -> str:
@@ -41,7 +41,7 @@ def _python_cmd(code: str) -> str:
 
 class TestBashExitCodeVerifierGuards:
     def test_blocklist_rejects_dangerous_command_at_construction(self) -> None:
-        with pytest.raises(VeridianConfigError, match="blocklist"):
+        with pytest.raises(ChitConfigError, match="blocklist"):
             BashExitCodeVerifier(command="rm -rf /tmp/anything")
 
     def test_blocklist_can_be_overridden(self) -> None:
@@ -50,7 +50,7 @@ class TestBashExitCodeVerifierGuards:
         assert v.command == "rm -rf /tmp/anything"
 
     def test_env_scrubbed_by_default(self) -> None:
-        from veridian.core.task import Task, TaskResult
+        from chit.core.task import Task, TaskResult
 
         v = BashExitCodeVerifier(
             command=_python_cmd(
@@ -74,11 +74,9 @@ class TestBashExitCodeVerifierGuards:
 
 @pytest.fixture
 def clean_model_env() -> Iterator[None]:
-    """Ensure VERIDIAN_* model env vars don't leak between tests."""
-    saved = {
-        k: os.environ[k] for k in ("VERIDIAN_MODEL", "VERIDIAN_ALLOWED_MODELS") if k in os.environ
-    }
-    for k in ("VERIDIAN_MODEL", "VERIDIAN_ALLOWED_MODELS"):
+    """Ensure CHIT_* model env vars don't leak between tests."""
+    saved = {k: os.environ[k] for k in ("CHIT_MODEL", "CHIT_ALLOWED_MODELS") if k in os.environ}
+    for k in ("CHIT_MODEL", "CHIT_ALLOWED_MODELS"):
         os.environ.pop(k, None)
     try:
         yield
@@ -108,14 +106,14 @@ class TestModelAllowlist:
             _validate_model_string("rogue-vendor/some-model")
 
     def test_env_override_expands_allowlist(self, clean_model_env) -> None:
-        with patch.dict(os.environ, {"VERIDIAN_ALLOWED_MODELS": "rogue-vendor/,gemini/"}):
+        with patch.dict(os.environ, {"CHIT_ALLOWED_MODELS": "rogue-vendor/,gemini/"}):
             _validate_model_string("rogue-vendor/some-model")
             _validate_model_string("gemini/foo")
             with pytest.raises(ProviderError):
                 _validate_model_string("gpt-4o")
 
     def test_wildcard_disables_guard(self, clean_model_env) -> None:
-        with patch.dict(os.environ, {"VERIDIAN_ALLOWED_MODELS": "*"}):
+        with patch.dict(os.environ, {"CHIT_ALLOWED_MODELS": "*"}):
             _validate_model_string("anything-goes/here")
 
     def test_provider_constructor_rejects_url_model(self, clean_model_env) -> None:

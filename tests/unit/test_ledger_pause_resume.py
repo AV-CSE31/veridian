@@ -17,9 +17,9 @@ from pathlib import Path
 
 import pytest
 
-from veridian.core.exceptions import InvalidTransition, TaskNotPaused
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.ledger.ledger import TaskLedger
+from chit.core.exceptions import InvalidTransition, TaskNotPaused
+from chit.core.task import Task, TaskResult, TaskStatus
+from chit.ledger.ledger import TaskLedger
 
 
 @pytest.fixture

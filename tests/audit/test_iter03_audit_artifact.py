@@ -22,12 +22,12 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from veridian.core.report import (
+from chit.core.report import (
     VerificationReport,
     append_report_jsonl,
     validate_report_chain,
 )
-from veridian.core.task import Task, TaskResult
+from chit.core.task import Task, TaskResult
 
 SIGNING_KEY = "audit-artifact-key-material-at-least-32"
 

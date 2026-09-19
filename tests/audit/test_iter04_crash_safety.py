@@ -24,10 +24,10 @@ from pathlib import Path
 
 import pytest
 
-import veridian.ledger.ledger as ledger_mod
-from veridian.core.exceptions import LedgerCorrupted
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.ledger.ledger import TaskLedger
+import chit.ledger.ledger as ledger_mod
+from chit.core.exceptions import LedgerCorrupted
+from chit.core.task import Task, TaskResult, TaskStatus
+from chit.ledger.ledger import TaskLedger
 
 
 def _ledger(tmp_path: Path) -> TaskLedger:

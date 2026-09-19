@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from veridian.core.exceptions import LedgerCorrupted, TaskNotFound
-from veridian.core.task import Task
-from veridian.ledger import TaskLedger
+from chit.core.exceptions import LedgerCorrupted, TaskNotFound
+from chit.core.task import Task
+from chit.ledger import TaskLedger
 
 
 def test_default_ledger_recovers_acknowledged_task_when_snapshot_disappears(
@@ -124,7 +124,7 @@ def test_snapshot_checksum_detects_complete_tampering(tmp_path: Path) -> None:
 def test_wal_compaction_preserves_state_across_restart(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("VERIDIAN_LEDGER_WAL_COMPACT_ENTRIES", "2")
+    monkeypatch.setenv("CHIT_LEDGER_WAL_COMPACT_ENTRIES", "2")
     ledger_path = tmp_path / "ledger.json"
     ledger = TaskLedger(ledger_path, progress_file=str(tmp_path / "progress.md"))
     first = Task(title="first")
@@ -140,9 +140,9 @@ def test_wal_compaction_preserves_state_across_restart(
 def test_restart_finishes_compaction_interrupted_after_snapshot(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from veridian.ledger.wal import WalLog
+    from chit.ledger.wal import WalLog
 
-    monkeypatch.setenv("VERIDIAN_LEDGER_WAL_COMPACT_ENTRIES", "2")
+    monkeypatch.setenv("CHIT_LEDGER_WAL_COMPACT_ENTRIES", "2")
     ledger_path = tmp_path / "ledger.json"
     ledger = TaskLedger(ledger_path, progress_file=str(tmp_path / "progress.md"))
     first = Task(title="first")
@@ -165,7 +165,7 @@ def test_restart_finishes_compaction_interrupted_after_snapshot(
 def test_valid_ledger_specific_temp_is_promoted_before_bootstrap(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("VERIDIAN_LEDGER_WAL_COMPACT_ENTRIES", "1")
+    monkeypatch.setenv("CHIT_LEDGER_WAL_COMPACT_ENTRIES", "1")
     ledger_path = tmp_path / "ledger.json"
     ledger = TaskLedger(ledger_path, progress_file=str(tmp_path / "progress.md"))
     task = Task(title="must survive rename window")
@@ -183,7 +183,7 @@ def test_valid_ledger_specific_temp_is_promoted_before_bootstrap(
 def test_ambiguous_snapshot_temps_fail_closed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("VERIDIAN_LEDGER_WAL_COMPACT_ENTRIES", "1")
+    monkeypatch.setenv("CHIT_LEDGER_WAL_COMPACT_ENTRIES", "1")
     snapshots: list[bytes] = []
     for name in ("left", "right"):
         directory = tmp_path / name
@@ -205,7 +205,7 @@ def test_ambiguous_snapshot_temps_fail_closed(
 def test_missing_compacted_snapshot_does_not_bootstrap_over_history(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("VERIDIAN_LEDGER_WAL_COMPACT_ENTRIES", "1")
+    monkeypatch.setenv("CHIT_LEDGER_WAL_COMPACT_ENTRIES", "1")
     ledger_path = tmp_path / "ledger.json"
     ledger = TaskLedger(ledger_path, progress_file=str(tmp_path / "progress.md"))
     ledger.add([Task(title="anchored history")])
@@ -237,7 +237,7 @@ def test_torn_final_wal_record_is_repaired_before_next_append(tmp_path: Path) ->
 def test_fsync_failure_prevents_successful_acknowledgement(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import veridian.ledger.wal as wal_module
+    import chit.ledger.wal as wal_module
 
     ledger = TaskLedger(
         tmp_path / "ledger.json",
@@ -255,7 +255,7 @@ def test_fsync_failure_prevents_successful_acknowledgement(
 def test_record_without_durable_head_is_not_committed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from veridian.ledger.wal import WalHeadStore
+    from chit.ledger.wal import WalHeadStore
 
     ledger_path = tmp_path / "ledger.json"
     ledger = TaskLedger(ledger_path, progress_file=str(tmp_path / "progress.md"))
@@ -295,9 +295,9 @@ def test_concurrent_writers_preserve_every_acknowledged_task(tmp_path: Path) -> 
 def test_restart_finishes_compaction_interrupted_after_wal_seal(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from veridian.ledger.wal import WalLog
+    from chit.ledger.wal import WalLog
 
-    monkeypatch.setenv("VERIDIAN_LEDGER_WAL_COMPACT_ENTRIES", "1")
+    monkeypatch.setenv("CHIT_LEDGER_WAL_COMPACT_ENTRIES", "1")
     ledger_path = tmp_path / "ledger.json"
     ledger = TaskLedger(ledger_path, progress_file=str(tmp_path / "progress.md"))
     task = Task(title="sealed before crash")
@@ -318,9 +318,9 @@ def test_restart_finishes_compaction_interrupted_after_wal_seal(
 def test_restart_finishes_compaction_interrupted_before_new_head(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from veridian.ledger.wal import WalHead, WalHeadStore
+    from chit.ledger.wal import WalHead, WalHeadStore
 
-    monkeypatch.setenv("VERIDIAN_LEDGER_WAL_COMPACT_ENTRIES", "1")
+    monkeypatch.setenv("CHIT_LEDGER_WAL_COMPACT_ENTRIES", "1")
     ledger_path = tmp_path / "ledger.json"
     ledger = TaskLedger(ledger_path, progress_file=str(tmp_path / "progress.md"))
     task = Task(title="checkpointed before crash")
@@ -357,7 +357,7 @@ def test_snapshot_temps_are_isolated_by_ledger_name(tmp_path: Path) -> None:
 
 
 def test_checksummed_wal_with_invalid_task_fails_as_ledger_corruption(tmp_path: Path) -> None:
-    from veridian.ledger.wal import GENESIS_HASH, WalHead, WalHeadStore, WalLog
+    from chit.ledger.wal import GENESIS_HASH, WalHead, WalHeadStore, WalLog
 
     ledger_path = tmp_path / "ledger.json"
     TaskLedger(ledger_path, progress_file=str(tmp_path / "progress.md"))

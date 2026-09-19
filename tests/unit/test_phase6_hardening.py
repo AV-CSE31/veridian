@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from veridian.core.atomic_io import atomic_write_json, atomic_write_text
+from chit.core.atomic_io import atomic_write_json, atomic_write_text
 
 
 class TestAtomicWriteText:
@@ -24,7 +24,7 @@ class TestAtomicWriteText:
     def test_cleans_temp_on_replace_failure(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import veridian.core.atomic_io as mod
+        import chit.core.atomic_io as mod
 
         def _boom(_src: str, _dst: Path) -> None:
             raise OSError("disk full")

@@ -7,7 +7,7 @@ promise is a lie. Run: pytest tests/audit/test_iter01_attestation.py -v
 Findings:
   I1-1 (P0): "hashable verification reports for audit trails" — the chain is an
              UNSIGNED sha256 chain. The holder (the audited party) can forge the
-             entire chain with Veridian's OWN public API. validate_report_chain
+             entire chain with Chit's OWN public API. validate_report_chain
              returns valid=True on a tampered chain.
   I1-2 (P1): the audit trail is opt-in (report_file defaults to None). A user
              following the README Quick Start produces NO durable evidence chain.
@@ -22,12 +22,12 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from veridian.core.report import (
+from chit.core.report import (
     VerificationReport,
     append_report_jsonl,
     validate_report_chain,
 )
-from veridian.core.task import Task, TaskResult
+from chit.core.task import Task, TaskResult
 
 SIGNING_KEY = "audit-report-signing-key-material-32-bytes"
 
@@ -51,7 +51,7 @@ def test_I1_1_tampered_audit_chain_must_be_detected() -> None:
 
     We act as the audited company: take a clean 3-link chain, flip a middle
     report from passed=True to passed=False (a compliance-relevant lie), then
-    re-chain everything forward using ONLY Veridian's shipped public API.
+    re-chain everything forward using ONLY Chit's shipped public API.
     validate_report_chain MUST reject the forgery.
 
     This test asserts the security property. It FAILS today because the chain
@@ -97,12 +97,12 @@ def test_I1_1_tampered_audit_chain_must_be_detected() -> None:
 
 def test_I1_2_quickstart_does_not_create_a_chain_with_implicit_key_material() -> None:
     """A default runner remains usable but never emits deceptively signed evidence."""
-    from veridian import MockProvider, TaskLedger, VeridianRunner
-    from veridian.core.config import VeridianConfig
+    from chit import ChitRunner, MockProvider, TaskLedger
+    from chit.core.config import ChitConfig
 
     with TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
-        cfg = VeridianConfig(
+        cfg = ChitConfig(
             ledger_file=tmp_path / "ledger.json",
             progress_file=str(tmp_path / "progress.md"),
         )
@@ -117,8 +117,8 @@ def test_I1_2_quickstart_does_not_create_a_chain_with_implicit_key_material() ->
                 )
             ]
         )
-        provider = MockProvider().script_veridian_result(structured={"ok": "yes"})
-        VeridianRunner(ledger=ledger, provider=provider, config=cfg).run()
+        provider = MockProvider().script_chit_result(structured={"ok": "yes"})
+        ChitRunner(ledger=ledger, provider=provider, config=cfg).run()
 
         assert cfg.report_file is None
         assert list(tmp_path.glob("**/*.jsonl")) == []
@@ -129,7 +129,7 @@ def test_I1_3_confidence_max_retries_changes_the_score() -> None:
     so max_retries should influence the score. It does not (`del max_retries`):
     a decorative parameter on a fabricated number that ships in the record.
     """
-    from veridian.verify.builtin.confidence import ConfidenceScore
+    from chit.verify.builtin.confidence import ConfidenceScore
 
     tight = ConfidenceScore.compute(retry_count=2, max_retries=2)  # at the limit
     loose = ConfidenceScore.compute(retry_count=2, max_retries=100)  # far from limit

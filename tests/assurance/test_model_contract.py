@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     ActionSemanticsV1,
     AssuranceValidationError,
     AuthorizationEnvelope,
@@ -22,11 +22,11 @@ def test_action_semantics_has_an_independent_golden_encoding_and_digest() -> Non
 
     assert action.to_bytes() == (
         b'{"action_type":"bank.transfer","parameters":{"amount_minor":125000,'
-        b'"currency":"USD"},"schema_id":"veridian.action-semantics.v1",'
+        b'"currency":"USD"},"schema_id":"chit.action-semantics.v1",'
         b'"target":"account:merchant-42"}'
     )
     assert (
-        action.digest == "sha256:47ef12a7aa729ad017685ee0d82c1ac7b00cc39eebba62ba2996affe54986d65"
+        action.digest == "sha256:e2b93309310eb1872b704a6cbb2a643d9bc691977516f5d7b9c78d7120d405db"
     )
     assert ActionSemanticsV1.from_bytes(action.to_bytes()) == action
 

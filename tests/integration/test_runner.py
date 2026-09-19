@@ -1,7 +1,7 @@
 """
 tests.integration.test_runner
 ------------------------------------------------------------------------------------------
-Integration tests for VeridianRunner.
+Integration tests for ChitRunner.
 Full pipeline: task --- execution --- verification --- DONE.
 """
 
@@ -10,27 +10,27 @@ from pathlib import Path
 
 import pytest
 
-from veridian.core.config import VeridianConfig
-from veridian.core.exceptions import HardControlViolation
-from veridian.core.report import SCHEMA_VERSION as REPORT_SCHEMA_VERSION
-from veridian.core.report import validate_report_chain
-from veridian.core.task import (
+from chit.core.config import ChitConfig
+from chit.core.exceptions import HardControlViolation
+from chit.core.report import SCHEMA_VERSION as REPORT_SCHEMA_VERSION
+from chit.core.report import validate_report_chain
+from chit.core.task import (
     Task,
     TaskStatus,
 )
-from veridian.hooks.builtin.cost_guard import CostGuardHook
-from veridian.hooks.registry import HookRegistry
-from veridian.ledger.ledger import TaskLedger
-from veridian.loop.runner import RunSummary, VeridianRunner
-from veridian.providers.base import LLMResponse
-from veridian.providers.mock_provider import MockProvider
+from chit.hooks.builtin.cost_guard import CostGuardHook
+from chit.hooks.registry import HookRegistry
+from chit.ledger.ledger import TaskLedger
+from chit.loop.runner import ChitRunner, RunSummary
+from chit.providers.base import LLMResponse
+from chit.providers.mock_provider import MockProvider
 
 # ------ Fixtures ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 @pytest.fixture
-def config(tmp_path: Path) -> VeridianConfig:
-    return VeridianConfig(
+def config(tmp_path: Path) -> ChitConfig:
+    return ChitConfig(
         max_turns_per_task=5,
         ledger_file=tmp_path / "ledger.json",
         progress_file=tmp_path / "progress.md",
@@ -38,7 +38,7 @@ def config(tmp_path: Path) -> VeridianConfig:
 
 
 @pytest.fixture
-def ledger(config: VeridianConfig) -> TaskLedger:
+def ledger(config: ChitConfig) -> TaskLedger:
     return TaskLedger(
         path=config.ledger_file,
         progress_file=str(config.progress_file),
@@ -68,7 +68,7 @@ def make_task(title: str = "test", **kwargs) -> Task:
 def make_result_response(structured: dict, tool_calls: list | None = None) -> LLMResponse:
     payload = json.dumps({"summary": "done", "structured": structured, "artifacts": []})
     return LLMResponse(
-        content=f"<veridian:result>\n{payload}\n</veridian:result>",
+        content=f"<chit:result>\n{payload}\n</chit:result>",
         input_tokens=100,
         output_tokens=50,
         model="mock",
@@ -79,7 +79,7 @@ def make_result_response(structured: dict, tool_calls: list | None = None) -> LL
 # ------ Full pipeline ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-class TestVeridianRunnerHappyPath:
+class TestChitRunnerHappyPath:
     def test_full_pipeline_single_task_done(self, config, ledger, mock_provider, tmp_path):
         """Full pipeline: task --- worker --- verification --- DONE."""
         task = make_task("Test task", id="t1", description="Do the thing")
@@ -87,7 +87,7 @@ class TestVeridianRunnerHappyPath:
 
         mock_provider.script([make_result_response({"summary": "done"})])
 
-        runner = VeridianRunner(
+        runner = ChitRunner(
             ledger=ledger,
             provider=mock_provider,
             config=config,
@@ -102,13 +102,13 @@ class TestVeridianRunnerHappyPath:
         """runner.run() always returns a RunSummary."""
         ledger.add([make_task("t1")])
         mock_provider.script([make_result_response({"summary": "ok"})])
-        runner = VeridianRunner(ledger=ledger, provider=mock_provider, config=config)
+        runner = ChitRunner(ledger=ledger, provider=mock_provider, config=config)
         summary = runner.run()
         assert isinstance(summary, RunSummary)
 
     def test_empty_ledger_returns_immediately(self, config, ledger, mock_provider):
         """With no tasks, run() returns immediately with done_count=0."""
-        runner = VeridianRunner(ledger=ledger, provider=mock_provider, config=config)
+        runner = ChitRunner(ledger=ledger, provider=mock_provider, config=config)
         summary = runner.run()
         assert summary.done_count == 0
         assert summary.failed_count == 0
@@ -120,7 +120,7 @@ class TestVeridianRunnerHappyPath:
         ledger.claim(task.id, "crashed-runner")
         # Task is IN_PROGRESS --- reset_in_progress should reset it
         mock_provider.script([make_result_response({"summary": "ok"})])
-        runner = VeridianRunner(ledger=ledger, provider=mock_provider, config=config)
+        runner = ChitRunner(ledger=ledger, provider=mock_provider, config=config)
         summary = runner.run()
         assert summary.done_count == 1
 
@@ -131,7 +131,7 @@ class TestVeridianRunnerHappyPath:
         for _ in tasks:
             mock_provider.script([make_result_response({"summary": "done"})])
 
-        runner = VeridianRunner(ledger=ledger, provider=mock_provider, config=config)
+        runner = ChitRunner(ledger=ledger, provider=mock_provider, config=config)
         summary = runner.run()
         assert summary.done_count == 3
         assert summary.failed_count == 0
@@ -144,7 +144,7 @@ class TestVeridianRunnerHappyPath:
             [make_result_response({"summary": "done"}, tool_calls=[{"name": "search_docs"}])]
         )
 
-        runner = VeridianRunner(ledger=ledger, provider=mock_provider, config=config)
+        runner = ChitRunner(ledger=ledger, provider=mock_provider, config=config)
         summary = runner.run()
         assert summary.done_count == 1
 
@@ -170,7 +170,7 @@ class TestVeridianRunnerHappyPath:
         ledger.add([make_task("evidence export", id="report-1")])
         mock_provider.script([make_result_response({"summary": "done"})])
 
-        runner = VeridianRunner(ledger=ledger, provider=mock_provider, config=config)
+        runner = ChitRunner(ledger=ledger, provider=mock_provider, config=config)
         summary = runner.run()
 
         assert summary.done_count == 1
@@ -198,7 +198,7 @@ class TestVeridianRunnerHappyPath:
         ledger.add([make_task("must not execute", id="invalid-chain")])
 
         with pytest.raises(HardControlViolation, match="report chain preflight failed"):
-            VeridianRunner(ledger=ledger, provider=mock_provider, config=config).run()
+            ChitRunner(ledger=ledger, provider=mock_provider, config=config).run()
 
         assert mock_provider.call_count == 0
         assert ledger.get("invalid-chain").status == TaskStatus.PENDING
@@ -209,7 +209,7 @@ class TestDryRun:
         """dry_run=True assembles context but never calls provider.complete()."""
         config.dry_run = True
         ledger.add([make_task("test")])
-        runner = VeridianRunner(ledger=ledger, provider=mock_provider, config=config)
+        runner = ChitRunner(ledger=ledger, provider=mock_provider, config=config)
         summary = runner.run()
         assert summary.dry_run is True
         assert mock_provider.call_count == 0
@@ -224,7 +224,7 @@ class TestHardControlDenial:
         hooks = HookRegistry()
         hooks.register(CostGuardHook(max_cost_usd=0.0))
 
-        summary = VeridianRunner(
+        summary = ChitRunner(
             ledger=ledger,
             provider=mock_provider,
             config=config,
@@ -257,7 +257,7 @@ class TestRunSummary:
         """RunSummary includes done_count, failed_count, run_id."""
         ledger.add([make_task("t1")])
         mock_provider.script([make_result_response({"summary": "ok"})])
-        runner = VeridianRunner(ledger=ledger, provider=mock_provider, config=config)
+        runner = ChitRunner(ledger=ledger, provider=mock_provider, config=config)
         summary = runner.run()
         assert hasattr(summary, "done_count")
         assert hasattr(summary, "failed_count")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Versioned adversarial and durability benchmark for Veridian assurance surfaces.
+"""Versioned adversarial and durability benchmark for Chit assurance surfaces.
 
 The default ``smoke`` profile is intentionally bounded for CI.  An explicit
 campaign can be scheduled with, for example::
@@ -30,14 +30,14 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from veridian.adapters import (
+from chit.adapters import (
     ActionSpecV1,
     GenericActionAdapter,
     LangGraphToolCallAdapter,
     MCPToolCallAdapter,
     OpenAIResponsesAdapter,
 )
-from veridian.assurance import (
+from chit.assurance import (
     ActionSemanticsV1,
     AssuranceValidationError,
     AuthorizationEnvelope,
@@ -48,7 +48,7 @@ from veridian.assurance import (
     Ed25519Signer,
     StaticKeyProvider,
 )
-from veridian.effects import (
+from chit.effects import (
     ExecutionPermitV1,
     PermitError,
     PermitReplayError,
@@ -56,7 +56,7 @@ from veridian.effects import (
     sign_execution_permit,
     verify_execution_permit,
 )
-from veridian.math import (
+from chit.math import (
     AtMostOnceRule,
     BoundInvariant,
     ConservationInvariant,
@@ -76,13 +76,13 @@ from veridian.math import (
     VectorNorm,
 )
 
-SCHEMA_ID = "veridian.assurance-benchmark-report.v1"
+SCHEMA_ID = "chit.assurance-benchmark-report.v1"
 HARNESS_VERSION = "1.0.0"
 DEFAULT_SEED = 20260819
 DEFAULT_SMOKE_ITERATIONS = 32
 DEFAULT_CAMPAIGN_ITERATIONS = 100_000
 CRASH_EXIT_CODE = 91
-EXPECTED_ACTION_DIGEST = "sha256:ea1f897fb86084a58b535e3a6a3c2c2810b778ae277dcb07cada86db0568920f"
+EXPECTED_ACTION_DIGEST = "sha256:07fbecea79ea8bb5ade9bfdafb4ddb9636efc536968e0ae46438dbd6ed2750be"
 
 _STATE = "sha256:" + "5" * 64
 _POLICY = "sha256:" + "9" * 64
@@ -137,7 +137,7 @@ def _digest(value: object) -> str:
 
 
 def _seed_material(seed: int, index: int) -> bytes:
-    return hashlib.sha256(f"veridian-benchmark-schedule-v1\n{seed}\n{index}".encode()).digest()
+    return hashlib.sha256(f"chit-benchmark-schedule-v1\n{seed}\n{index}".encode()).digest()
 
 
 def _weighted_choice(names: Sequence[str], seed: int, index: int) -> str:
@@ -377,7 +377,7 @@ def _permit_context(_seed: int, _concurrency: int) -> ScenarioObservation:
 def _sqlite_concurrent_redemption(_seed: int, concurrency: int) -> ScenarioObservation:
     _, permit, _ = _permit_fixture()
     attempts = max(2, concurrency * 2)
-    with tempfile.TemporaryDirectory(prefix="veridian-permit-race-") as directory:
+    with tempfile.TemporaryDirectory(prefix="chit-permit-race-") as directory:
         path = Path(directory) / "effects.db"
         store = SqlitePermitStore(path)
         store.register(permit)
@@ -435,7 +435,7 @@ def _run_crash_worker(database: Path, stage: str) -> None:
 
 def _sqlite_crash_recovery(_seed: int, _concurrency: int) -> ScenarioObservation:
     _, permit, _ = _permit_fixture()
-    with tempfile.TemporaryDirectory(prefix="veridian-permit-crash-") as directory:
+    with tempfile.TemporaryDirectory(prefix="chit-permit-crash-") as directory:
         root = Path(directory)
 
         registered_path = root / "registered.db"
@@ -505,7 +505,7 @@ def _adapter_semantic_determinism(_seed: int, _concurrency: int) -> ScenarioObse
         ),
         GenericActionAdapter(specs).normalize(
             {
-                "schema_id": "veridian.generic-action.v1",
+                "schema_id": "chit.generic-action.v1",
                 "message_id": "call-generic",
                 "action": "transfer_funds",
                 "arguments": arguments,
@@ -521,7 +521,7 @@ def _adapter_semantic_determinism(_seed: int, _concurrency: int) -> ScenarioObse
 
     generic = GenericActionAdapter(specs)
     base = {
-        "schema_id": "veridian.generic-action.v1",
+        "schema_id": "chit.generic-action.v1",
         "message_id": "generic-1",
         "action": "transfer_funds",
         "arguments": arguments,
@@ -738,7 +738,7 @@ def _environment() -> Mapping[str, object]:
 
 def _schedule_fingerprint(schedule: Sequence[ScheduleItem]) -> str:
     digest = hashlib.sha256()
-    digest.update(b"veridian-benchmark-schedule.v1\n")
+    digest.update(b"chit-benchmark-schedule.v1\n")
     for index, item in enumerate(schedule):
         digest.update(f"{index}\t{item.scenario}\t{item.seed}\n".encode())
     return "sha256:" + digest.hexdigest()

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from veridian.adapters import ActionSpecV1, OpenAIResponsesAdapter
+from chit.adapters import ActionSpecV1, OpenAIResponsesAdapter
 
 
 def test_openai_function_call_normalizes_business_action_and_transport_separately() -> None:

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     ActionSemanticsV1,
     AuthorizationEnvelope,
     ClauseResultV1,
@@ -13,7 +13,7 @@ from veridian.assurance import (
     ClauseStatus,
     DecisionPayloadV1,
 )
-from veridian.effects import (
+from chit.effects import (
     ExecutionPermitV1,
     OutboxStatus,
     PermitError,

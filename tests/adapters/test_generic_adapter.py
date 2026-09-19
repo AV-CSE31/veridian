@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from veridian.adapters import ActionSpecV1, GenericActionAdapter
+from chit.adapters import ActionSpecV1, GenericActionAdapter
 
 
 def test_generic_callable_envelope_normalizes_declared_action() -> None:
@@ -8,7 +8,7 @@ def test_generic_callable_envelope_normalizes_declared_action() -> None:
         {"transfer_funds": ActionSpecV1("bank.transfer", "destination_account")}
     )
     envelope = {
-        "schema_id": "veridian.generic-action.v1",
+        "schema_id": "chit.generic-action.v1",
         "message_id": "generic-12",
         "action": "transfer_funds",
         "arguments": {
@@ -22,5 +22,5 @@ def test_generic_callable_envelope_normalizes_declared_action() -> None:
 
     assert normalized.semantics.action_type == "bank.transfer"
     assert normalized.semantics.target == "account:merchant-42"
-    assert normalized.transport.protocol == "veridian.generic-action"
+    assert normalized.transport.protocol == "chit.generic-action"
     assert normalized.transport.message_id == "generic-12"

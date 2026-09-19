@@ -4,14 +4,14 @@ from dataclasses import replace
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     AuthorizationEnvelope,
     Disposition,
     Ed25519Signer,
     StaticKeyProvider,
     sha256_digest,
 )
-from veridian.banking import (
+from chit.banking import (
     BankApprovalV1,
     BankControlSnapshotV1,
     BankingGate,

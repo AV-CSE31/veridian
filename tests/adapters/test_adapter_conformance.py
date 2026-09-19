@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from veridian.adapters import (
+from chit.adapters import (
     ActionAdapter,
     ActionSpecV1,
     GenericActionAdapter,
@@ -9,7 +9,7 @@ from veridian.adapters import (
     OpenAIResponsesAdapter,
 )
 
-EXPECTED_SEMANTIC_DIGEST = "sha256:ea1f897fb86084a58b535e3a6a3c2c2810b778ae277dcb07cada86db0568920f"
+EXPECTED_SEMANTIC_DIGEST = "sha256:07fbecea79ea8bb5ade9bfdafb4ddb9636efc536968e0ae46438dbd6ed2750be"
 
 
 def test_protocol_adapters_share_one_golden_semantic_identity() -> None:
@@ -49,7 +49,7 @@ def test_protocol_adapters_share_one_golden_semantic_identity() -> None:
         ),
         GenericActionAdapter(specs).normalize(
             {
-                "schema_id": "veridian.generic-action.v1",
+                "schema_id": "chit.generic-action.v1",
                 "message_id": "call-generic",
                 "action": "transfer_funds",
                 "arguments": arguments,
@@ -79,7 +79,7 @@ def test_business_argument_mutation_changes_semantics_but_not_adapter_identity()
     specs = {"transfer_funds": ActionSpecV1("bank.transfer", "destination_account")}
     adapter = GenericActionAdapter(specs)
     base = {
-        "schema_id": "veridian.generic-action.v1",
+        "schema_id": "chit.generic-action.v1",
         "message_id": "call-generic",
         "action": "transfer_funds",
         "arguments": {
@@ -105,7 +105,7 @@ def test_canonical_bytes_and_mapping_bind_the_same_exact_transport_record() -> N
     specs = {"transfer_funds": ActionSpecV1("bank.transfer", "destination_account")}
     adapter = GenericActionAdapter(specs)
     mapping = {
-        "schema_id": "veridian.generic-action.v1",
+        "schema_id": "chit.generic-action.v1",
         "message_id": "generic-1",
         "action": "transfer_funds",
         "arguments": {
@@ -117,7 +117,7 @@ def test_canonical_bytes_and_mapping_bind_the_same_exact_transport_record() -> N
     canonical_bytes = (
         b'{"action":"transfer_funds","arguments":{"amount_minor":125000,'
         b'"currency":"USD","destination_account":"account:merchant-42"},'
-        b'"message_id":"generic-1","schema_id":"veridian.generic-action.v1"}'
+        b'"message_id":"generic-1","schema_id":"chit.generic-action.v1"}'
     )
 
     from_mapping = adapter.normalize(mapping)

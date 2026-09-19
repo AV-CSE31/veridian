@@ -4,17 +4,17 @@ import json
 
 import pytest
 
-from veridian.core.config import VeridianConfig
-from veridian.core.task import Task, TaskResult
-from veridian.loop.worker import WorkerAgent
-from veridian.providers.base import LLMResponse
-from veridian.providers.mock_provider import MockProvider
+from chit.core.config import ChitConfig
+from chit.core.task import Task, TaskResult
+from chit.loop.worker import WorkerAgent
+from chit.providers.base import LLMResponse
+from chit.providers.mock_provider import MockProvider
 
 
 class TestWorkerAgent:
     @pytest.fixture
-    def config(self) -> VeridianConfig:
-        return VeridianConfig(max_turns_per_task=5)
+    def config(self) -> ChitConfig:
+        return ChitConfig(max_turns_per_task=5)
 
     @pytest.fixture
     def mock_provider(self) -> MockProvider:
@@ -29,11 +29,11 @@ class TestWorkerAgent:
             verifier_id="schema",
         )
 
-    def test_extracts_result_from_veridian_block(self, config, mock_provider, task):
+    def test_extracts_result_from_chit_block(self, config, mock_provider, task):
         payload = json.dumps({"summary": "done", "structured": {"answer": "42"}})
         mock_provider.script(
             [
-                LLMResponse(content=f"<veridian:result>\n{payload}\n</veridian:result>"),
+                LLMResponse(content=f"<chit:result>\n{payload}\n</chit:result>"),
             ]
         )
         agent = WorkerAgent(provider=mock_provider, config=config)
@@ -44,19 +44,19 @@ class TestWorkerAgent:
         payload = json.dumps({"summary": "ok", "structured": {}})
         mock_provider.script(
             [
-                LLMResponse(content=f"<veridian:result>\n{payload}\n</veridian:result>"),
+                LLMResponse(content=f"<chit:result>\n{payload}\n</chit:result>"),
             ]
         )
         agent = WorkerAgent(provider=mock_provider, config=config)
         result = agent.run(task)
-        assert "veridian:result" in result.raw_output
+        assert "chit:result" in result.raw_output
 
     def test_worker_captures_tool_calls_and_timing(self, config, mock_provider, task):
         payload = json.dumps({"summary": "ok", "structured": {"x": 1}})
         mock_provider.script(
             [
                 LLMResponse(
-                    content=f"<veridian:result>\n{payload}\n</veridian:result>",
+                    content=f"<chit:result>\n{payload}\n</chit:result>",
                     input_tokens=12,
                     output_tokens=7,
                     tool_calls=[{"name": "shell"}],
@@ -89,26 +89,26 @@ class TestWorkerAgent:
         mock_provider.script(
             [
                 LLMResponse(content="I'm done"),
-                LLMResponse(content=f"<veridian:result>\n{payload}\n</veridian:result>"),
+                LLMResponse(content=f"<chit:result>\n{payload}\n</chit:result>"),
             ]
         )
         agent = WorkerAgent(provider=mock_provider, config=config)
         agent.run(task)
         assert mock_provider.call_count == 2
 
-    def test_result_regex_matches_veridian_block(self):
-        from veridian.loop.worker import _RESULT_RE
+    def test_result_regex_matches_chit_block(self):
+        from chit.loop.worker import _RESULT_RE
 
-        content = '<veridian:result>\n{"summary": "ok", "structured": {}}\n</veridian:result>'
+        content = '<chit:result>\n{"summary": "ok", "structured": {}}\n</chit:result>'
         match = _RESULT_RE.search(content)
         assert match is not None
         data = json.loads(match.group(1))
         assert data["summary"] == "ok"
 
     def test_result_regex_does_not_match_partial(self):
-        from veridian.loop.worker import _RESULT_RE
+        from chit.loop.worker import _RESULT_RE
 
-        content = '<veridian:result>{"summary": "ok"}'
+        content = '<chit:result>{"summary": "ok"}'
         match = _RESULT_RE.search(content)
         assert match is None
 

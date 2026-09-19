@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from veridian.adapters import (
+from chit.adapters import (
     ActionSpecV1,
     AdapterValidationError,
     GenericActionAdapter,
@@ -21,7 +21,7 @@ ARGS = {
 
 def _request(kind: str = "approval") -> dict[str, object]:
     return {
-        "schema_id": "veridian.pydantic-ai.deferred-tool.v1",
+        "schema_id": "chit.pydantic-ai.deferred-tool.v1",
         "request_kind": kind,
         "tool_call": {
             "tool_name": "transfer_funds",
@@ -35,7 +35,7 @@ def test_pydantic_deferred_profile_has_same_business_semantics_as_generic() -> N
     pydantic = PydanticAIDeferredToolAdapter(SPECS).normalize(_request())
     generic = GenericActionAdapter(SPECS).normalize(
         {
-            "schema_id": "veridian.generic-action.v1",
+            "schema_id": "chit.generic-action.v1",
             "message_id": "generic-1",
             "action": "transfer_funds",
             "arguments": ARGS,
@@ -82,7 +82,7 @@ def test_adapter_is_dependency_free_and_never_imports_pydantic_ai() -> None:
             "tool_call": {**_request()["tool_call"], "tool_call_id": ""},
         },
         {
-            "schema_id": "veridian.pydantic-ai.deferred-tool.v1",
+            "schema_id": "chit.pydantic-ai.deferred-tool.v1",
             "request_kind": "approval",
             "approvals": [_request()["tool_call"]],
         },
@@ -98,7 +98,7 @@ def test_malformed_or_ambiguous_pydantic_profiles_fail_closed(
 def test_canonical_profile_bytes_bind_the_exact_transport() -> None:
     adapter = PydanticAIDeferredToolAdapter(SPECS)
     canonical = (
-        b'{"request_kind":"approval","schema_id":"veridian.pydantic-ai.deferred-tool.v1",'
+        b'{"request_kind":"approval","schema_id":"chit.pydantic-ai.deferred-tool.v1",'
         b'"tool_call":{"args":{"amount_minor":125000,"currency":"USD",'
         b'"destination_account":"account:merchant-42"},"tool_call_id":"pyd-ai-call-1",'
         b'"tool_name":"transfer_funds"}}'

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from veridian.adapters import ActionSpecV1, LangGraphToolCallAdapter
+from chit.adapters import ActionSpecV1, LangGraphToolCallAdapter
 
 
 def test_langgraph_style_object_record_is_accepted_without_sdk_dependency() -> None:

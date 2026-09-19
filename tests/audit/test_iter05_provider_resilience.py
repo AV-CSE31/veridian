@@ -22,9 +22,9 @@ import types
 
 import pytest
 
-from veridian.core.exceptions import ProviderError
-from veridian.providers.base import Message
-from veridian.providers.litellm_provider import LiteLLMProvider
+from chit.core.exceptions import ProviderError
+from chit.providers.base import Message
+from chit.providers.litellm_provider import LiteLLMProvider
 
 
 def _inject_litellm(monkeypatch, raiser) -> dict:
@@ -72,7 +72,7 @@ def test_I5_2_deterministic_bug_is_not_retried(monkeypatch) -> None:
     guaranteed failure N times. _is_retryable's 'retry on unknown' default does
     exactly that.
     """
-    # The retry loop is implemented by Veridian itself; the optional provider
+    # The retry loop is implemented by Chit itself; the optional provider
     # backend must not acquire a second, unused Tenacity dependency at runtime.
     monkeypatch.setitem(sys.modules, "tenacity", None)
     calls = _inject_litellm(monkeypatch, lambda: ValueError("unexpected None in choices[0]"))

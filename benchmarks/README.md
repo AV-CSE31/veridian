@@ -1,7 +1,7 @@
-# Veridian assurance benchmark
+# Chit assurance benchmark
 
 `sota_assurance_bench.py` is the versioned adversarial and durability harness
-for Veridian's assurance, effects, adapter, and mathematical-verification
+for Chit's assurance, effects, adapter, and mathematical-verification
 surfaces. It emits one self-contained JSON report with the exact configuration,
 environment, deterministic schedule fingerprint, case and outcome
 distributions, observation counts, and latency percentiles.

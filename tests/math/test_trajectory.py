@@ -1,4 +1,4 @@
-from veridian.math import (
+from chit.math import (
     AtMostOnceRule,
     ForbiddenAfterRule,
     FreshnessRule,

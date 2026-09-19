@@ -16,8 +16,8 @@ from typing import Any
 
 import pytest
 
-from veridian.providers.base import LLMResponse, Message
-from veridian.providers.mock_provider import MockProvider
+from chit.providers.base import LLMResponse, Message
+from chit.providers.mock_provider import MockProvider
 
 
 @pytest.fixture
@@ -39,7 +39,7 @@ class TestMockProviderComplete:
 
     async def test_async_returns_default_when_unscripted(self, provider: MockProvider) -> None:
         resp = await provider.complete_async(_msg())
-        assert "veridian:result" in resp.content
+        assert "chit:result" in resp.content
         assert resp.model == "mock"
         assert resp.input_tokens == provider.default_tokens
 

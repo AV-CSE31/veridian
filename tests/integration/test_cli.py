@@ -1,4 +1,4 @@
-"""End-to-end tests for the supported ``veridian`` command."""
+"""End-to-end tests for the supported ``chit`` command."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, "-m", "veridian.cli", *args],
+        [sys.executable, "-m", "chit.cli", *args],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -44,7 +44,7 @@ def test_verify_command_writes_passing_machine_readable_result(tmp_path: Path) -
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout)["passed"] is True
     assert json.loads(output_path.read_text(encoding="utf-8")) == {
-        "schema_version": "veridian-cli-result.v1",
+        "schema_version": "chit-cli-result.v1",
         "passed": True,
         "verifier": "schema",
         "error": None,
@@ -106,7 +106,7 @@ def _write_proof_fixture(tmp_path: Path) -> tuple[Path, Path]:
     keys_path.write_text(
         json.dumps(
             {
-                "schema_id": "veridian.verification-keys.v1",
+                "schema_id": "chit.verification-keys.v1",
                 "keys": [
                     {
                         "key_id": key_id,
@@ -171,7 +171,7 @@ def test_verify_receipt_rejects_malformed_trust_roots_as_configuration_error(
 ) -> None:
     bundle_path, keys_path = _write_proof_fixture(tmp_path)
     keys_path.write_text(
-        '{"schema_id":"veridian.verification-keys.v1","keys":[]}',
+        '{"schema_id":"chit.verification-keys.v1","keys":[]}',
         encoding="utf-8",
     )
 

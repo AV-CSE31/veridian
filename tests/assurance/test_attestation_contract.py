@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     ActionSemanticsV1,
     AnchorContext,
     AnchorHead,
@@ -139,7 +139,7 @@ def _proof() -> tuple[ProofBundleV1, StaticKeyProvider]:
         receipt_id="receipt-9001",
         issued_at="2026-08-19T10:00:03Z",
         sequence=41,
-        deployment_id="veridian-bank-prod-1",
+        deployment_id="chit-bank-prod-1",
         transport_binding_digest=transport.digest,
         stream_id="tenant-acme-payments",
         previous_receipt_digest="sha256:" + "0" * 64,
@@ -172,7 +172,7 @@ def test_receipt_statement_has_an_exact_versioned_encoding() -> None:
         receipt_id="receipt-9001",
         issued_at="2026-08-19T10:00:03Z",
         sequence=41,
-        deployment_id="veridian-bank-prod-1",
+        deployment_id="chit-bank-prod-1",
         transport_binding_digest="sha256:" + "2" * 64,
         stream_id="tenant-acme-payments",
         previous_receipt_digest="sha256:" + "0" * 64,
@@ -180,9 +180,9 @@ def test_receipt_statement_has_an_exact_versioned_encoding() -> None:
 
     expected = (
         b'{"decision_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111",'
-        b'"deployment_id":"veridian-bank-prod-1","issued_at":"2026-08-19T10:00:03Z",'
+        b'"deployment_id":"chit-bank-prod-1","issued_at":"2026-08-19T10:00:03Z",'
         b'"previous_receipt_digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000",'
-        b'"receipt_id":"receipt-9001","schema_id":"veridian.receipt-statement.v1",'
+        b'"receipt_id":"receipt-9001","schema_id":"chit.receipt-statement.v1",'
         b'"sequence":41,"stream_id":"tenant-acme-payments",'
         b'"transport_binding_digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222"}'
     )
@@ -256,7 +256,7 @@ def test_internally_bound_but_stale_evidence_is_rejected() -> None:
     )
     receipt_payload = verify_attestation(
         bundle.receipt_envelope_bytes,
-        expected_payload_type="application/vnd.veridian.receipt-statement.v1+json",
+        expected_payload_type="application/vnd.chit.receipt-statement.v1+json",
         keys=keys,
     ).payload
     receipt = replace(
@@ -298,10 +298,10 @@ def test_generic_exact_byte_attestation_seam_enforces_payload_type() -> None:
     keys = StaticKeyProvider.from_signers(signer)
     payload = b'{"permit_id":"permit-41"}'
 
-    envelope = sign_attestation("application/vnd.veridian.permit.v1+json", payload, signer)
+    envelope = sign_attestation("application/vnd.chit.permit.v1+json", payload, signer)
     verified = verify_attestation(
         envelope,
-        expected_payload_type="application/vnd.veridian.permit.v1+json",
+        expected_payload_type="application/vnd.chit.permit.v1+json",
         keys=keys,
     )
 
@@ -310,7 +310,7 @@ def test_generic_exact_byte_attestation_seam_enforces_payload_type() -> None:
     with pytest.raises(AssuranceVerificationError, match="payload type"):
         verify_attestation(
             envelope,
-            expected_payload_type="application/vnd.veridian.effect-receipt.v1+json",
+            expected_payload_type="application/vnd.chit.effect-receipt.v1+json",
             keys=keys,
         )
 

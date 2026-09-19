@@ -35,7 +35,7 @@ def test_smoke_report_is_versioned_reproducible_and_discloses_limits() -> None:
     first = _run(*arguments)
     second = _run(*arguments)
 
-    assert first["schema_id"] == "veridian.assurance-benchmark-report.v1"
+    assert first["schema_id"] == "chit.assurance-benchmark-report.v1"
     assert first["harness_version"] == "1.0.0"
     assert first["passed"] is True
     assert first["totals"] == {

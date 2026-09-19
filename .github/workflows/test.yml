@@ -50,20 +50,20 @@ jobs:
           pip install -e ".[${{ matrix.extras }}]"
 
       - name: Lint
-        run: ruff check veridian tests examples
+        run: ruff check chit tests examples
 
       - name: Format
-        run: ruff format --check veridian tests examples
+        run: ruff format --check chit tests examples
 
       - name: Type check
-        run: mypy veridian --strict
+        run: mypy chit --strict
 
       - name: Tests
         run: pytest -q --tb=short
 
       - name: Coverage
         if: matrix.primary
-        run: pytest --cov=veridian --cov-report=term-missing --cov-fail-under=85 -q
+        run: pytest --cov=chit --cov-report=term-missing --cov-fail-under=85 -q
 
       - name: Build package
         if: matrix.primary
@@ -94,8 +94,8 @@ jobs:
           python -m pip check
       - name: Smoke-test installed interfaces
         run: |
-          python -c "import veridian, veridian.assurance, veridian.effects, veridian.math"
-          veridian --help
+          python -c "import chit, chit.assurance, chit.effects, chit.math"
+          chit --help
 
   composite-action-smoke:
     runs-on: ubuntu-latest
@@ -103,22 +103,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Execute checked-out Veridian Action
-        id: veridian
+      - name: Execute checked-out Chit Action
+        id: chit
         uses: ./.github/actions/verify
         with:
           verifier: schema
           verifier-config: '{"required_fields":["decision"]}'
           agent-output: '{"decision":"ship"}'
           task: "Composite Action smoke verification"
-          output-path: veridian-action-smoke.json
+          output-path: chit-action-smoke.json
 
       - name: Assert Action outputs and evidence artifact
         env:
-          VERIDIAN_ACTION_PASSED: ${{ steps.veridian.outputs.passed }}
+          CHIT_ACTION_PASSED: ${{ steps.chit.outputs.passed }}
         run: |
-          test "$VERIDIAN_ACTION_PASSED" = "true"
-          python -c "import json; result=json.load(open('veridian-action-smoke.json', encoding='utf-8')); assert result['passed'] is True"
+          test "$CHIT_ACTION_PASSED" = "true"
+          python -c "import json; result=json.load(open('chit-action-smoke.json', encoding='utf-8')); assert result['passed'] is True"
 
   container-smoke:
     runs-on: ubuntu-latest
@@ -127,14 +127,14 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Build runtime image
-        run: docker build --tag veridian-ci:${{ github.sha }} .
+        run: docker build --tag chit-ci:${{ github.sha }} .
 
       - name: Execute installed container entrypoint
         run: |
-          docker run --rm veridian-ci:${{ github.sha }} --help
-          docker run --rm veridian-ci:${{ github.sha }} verify \
+          docker run --rm chit-ci:${{ github.sha }} --help
+          docker run --rm chit-ci:${{ github.sha }} verify \
             --verifier schema \
             --verifier-config '{"required_fields":["decision"]}' \
             --agent-output '{"decision":"ship"}' \
             --task "Container smoke verification" \
-            --output-path /tmp/veridian-container-smoke.json
+            --output-path /tmp/chit-container-smoke.json

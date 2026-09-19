@@ -8,7 +8,7 @@ from datetime import datetime
 
 import pytest
 
-from veridian.core.task import (
+from chit.core.task import (
     LedgerStats,
     Task,
     TaskPriority,

@@ -3,7 +3,7 @@ tests.unit.test_phase1b_resource_lifecycle
 
 Acceptance tests for production-blocking lifecycle fixes:
 
-* ``VeridianRunner.run`` saves and restores the parent SIGINT handler so
+* ``ChitRunner.run`` saves and restores the parent SIGINT handler so
   nested runs do not leak handlers into the host process.
 """
 
@@ -14,16 +14,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from veridian.core.config import VeridianConfig
-from veridian.core.task import Task
-from veridian.ledger.ledger import TaskLedger
-from veridian.loop.runner import VeridianRunner
-from veridian.providers.mock_provider import MockProvider
+from chit.core.config import ChitConfig
+from chit.core.task import Task
+from chit.ledger.ledger import TaskLedger
+from chit.loop.runner import ChitRunner
+from chit.providers.mock_provider import MockProvider
 
 
 @pytest.fixture
 def env(tmp_path):
-    config = VeridianConfig(
+    config = ChitConfig(
         ledger_file=tmp_path / "ledger.json",
         progress_file=tmp_path / "progress.md",
     )
@@ -43,11 +43,11 @@ class TestSigintHandlerLifecycle:
 
         original = signal.signal(signal.SIGINT, previous_handler)
         try:
-            runner = VeridianRunner(ledger=ledger, provider=provider, config=config)
+            runner = ChitRunner(ledger=ledger, provider=provider, config=config)
             runner.run()  # no tasks, returns fast
             current = signal.getsignal(signal.SIGINT)
             assert current is previous_handler, (
-                "VeridianRunner.run leaked its SIGINT handler into the parent"
+                "ChitRunner.run leaked its SIGINT handler into the parent"
             )
         finally:
             signal.signal(signal.SIGINT, original)
@@ -62,7 +62,7 @@ class TestSigintHandlerLifecycle:
 
         original = signal.signal(signal.SIGINT, previous_handler)
         try:
-            runner = VeridianRunner(ledger=ledger, provider=provider, config=config)
+            runner = ChitRunner(ledger=ledger, provider=provider, config=config)
 
             runner._task_loop = MagicMock(side_effect=RuntimeError("boom"))  # type: ignore[assignment]
             with pytest.raises(RuntimeError, match="boom"):

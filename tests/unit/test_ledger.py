@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from veridian.core.exceptions import InvalidTransition, TaskAlreadyClaimed, TaskNotFound
-from veridian.core.task import Task, TaskPriority, TaskResult, TaskStatus
-from veridian.ledger.ledger import TaskLedger
+from chit.core.exceptions import InvalidTransition, TaskAlreadyClaimed, TaskNotFound
+from chit.core.task import Task, TaskPriority, TaskResult, TaskStatus
+from chit.ledger.ledger import TaskLedger
 
 # ------ Fixtures ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -344,7 +344,7 @@ class TestAtomicWrite:
                 raise PermissionError("Access is denied")
             return original_replace(src, dst)
 
-        monkeypatch.setattr("veridian.ledger.ledger.os.replace", flaky_replace)
+        monkeypatch.setattr("chit.ledger.ledger.os.replace", flaky_replace)
 
         task = make_task(title="retry write")
         ledger.add([task])

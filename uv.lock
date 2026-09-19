@@ -367,6 +367,70 @@ wheels = [
 ]
 
 [[package]]
+name = "chit"
+version = "0.4.0"
+source = { editable = "." }
+dependencies = [
+    { name = "cryptography" },
+    { name = "filelock" },
+    { name = "jsonschema" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "httpx" },
+    { name = "litellm" },
+    { name = "pydantic" },
+    { name = "pypdf" },
+    { name = "tiktoken" },
+]
+dev = [
+    { name = "build" },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "twine" },
+]
+http = [
+    { name = "httpx" },
+]
+llm = [
+    { name = "litellm" },
+    { name = "tiktoken" },
+]
+pdf = [
+    { name = "pypdf" },
+]
+pydantic = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
+    { name = "chit", extras = ["http", "llm", "pdf", "pydantic"], marker = "extra == 'all'" },
+    { name = "cryptography", specifier = ">=43" },
+    { name = "filelock", specifier = ">=3.13" },
+    { name = "httpx", marker = "extra == 'http'", specifier = ">=0.27" },
+    { name = "jsonschema", specifier = ">=4.18" },
+    { name = "litellm", marker = "extra == 'llm'", specifier = ">=1.55.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
+    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7" },
+    { name = "pydantic", marker = "extra == 'pydantic'", specifier = ">=2.5" },
+    { name = "pypdf", marker = "extra == 'pdf'", specifier = ">=4.3" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
+    { name = "tiktoken", marker = "extra == 'llm'", specifier = ">=0.7" },
+    { name = "twine", marker = "extra == 'dev'", specifier = ">=7.0" },
+]
+provides-extras = ["llm", "pdf", "http", "pydantic", "dev", "all"]
+
+[[package]]
 name = "click"
 version = "8.3.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2500,70 +2564,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/c7/24/5f1b3bdffd70275f6
 wheels = [
     { url = "https://files.pythonhosted.org/packages/39/08/aaaad47bc4e9dc8c725e68f9d04865dbcb2052843ff09c97b08904852d84/urllib3-2.6.3-py3-none-any.whl", hash = "sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4", size = 131584, upload-time = "2026-01-07T16:24:42.685Z" },
 ]
-
-[[package]]
-name = "veridian-ai"
-version = "0.4.0"
-source = { editable = "." }
-dependencies = [
-    { name = "cryptography" },
-    { name = "filelock" },
-    { name = "jsonschema" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "httpx" },
-    { name = "litellm" },
-    { name = "pydantic" },
-    { name = "pypdf" },
-    { name = "tiktoken" },
-]
-dev = [
-    { name = "build" },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "twine" },
-]
-http = [
-    { name = "httpx" },
-]
-llm = [
-    { name = "litellm" },
-    { name = "tiktoken" },
-]
-pdf = [
-    { name = "pypdf" },
-]
-pydantic = [
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
-    { name = "cryptography", specifier = ">=43" },
-    { name = "filelock", specifier = ">=3.13" },
-    { name = "httpx", marker = "extra == 'http'", specifier = ">=0.27" },
-    { name = "jsonschema", specifier = ">=4.18" },
-    { name = "litellm", marker = "extra == 'llm'", specifier = ">=1.55.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7" },
-    { name = "pydantic", marker = "extra == 'pydantic'", specifier = ">=2.5" },
-    { name = "pypdf", marker = "extra == 'pdf'", specifier = ">=4.3" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
-    { name = "tiktoken", marker = "extra == 'llm'", specifier = ">=0.7" },
-    { name = "twine", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "veridian-ai", extras = ["http", "llm", "pdf", "pydantic"], marker = "extra == 'all'" },
-]
-provides-extras = ["llm", "pdf", "http", "pydantic", "dev", "all"]
 
 [[package]]
 name = "virtualenv"

@@ -12,8 +12,8 @@ from __future__ import annotations
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from veridian import MockProvider, Task, TaskLedger, VeridianConfig, VeridianRunner
-from veridian.core.report import validate_report_chain
+from chit import ChitConfig, ChitRunner, MockProvider, Task, TaskLedger
+from chit.core.report import validate_report_chain
 
 RELEASE_CONTRACT = {
     "required": ["decision", "risk", "reason"],
@@ -26,13 +26,13 @@ RELEASE_CONTRACT = {
 
 # Demonstration material only. Production callers must load a unique secret
 # from their secret manager and retain the resulting chain head independently.
-DEMO_REPORT_SIGNING_KEY = "demo-only-veridian-report-key-2026-0001"
+DEMO_REPORT_SIGNING_KEY = "demo-only-chit-report-key-2026-0001"
 
 
 def main() -> None:
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        config = VeridianConfig(
+        config = ChitConfig(
             ledger_file=root / "ledger.json",
             progress_file=root / "progress.md",
             report_file=root / "verification-reports.jsonl",
@@ -52,14 +52,14 @@ def main() -> None:
             ]
         )
 
-        provider = MockProvider().script_veridian_result(
+        provider = MockProvider().script_chit_result(
             structured={
                 "decision": "ship",
                 "risk": "low",
                 "reason": "tests, lint, and verification passed",
             }
         )
-        summary = VeridianRunner(ledger=ledger, provider=provider, config=config).run()
+        summary = ChitRunner(ledger=ledger, provider=provider, config=config).run()
         validation = validate_report_chain(
             config.report_file,
             signing_key=DEMO_REPORT_SIGNING_KEY,

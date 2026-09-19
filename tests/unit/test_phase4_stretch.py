@@ -15,8 +15,8 @@ from unittest.mock import patch
 
 import pytest
 
-from veridian.core.exceptions import VeridianConfigError
-from veridian.verify.builtin.http import HttpStatusVerifier
+from chit.core.exceptions import ChitConfigError
+from chit.verify.builtin.http import HttpStatusVerifier
 
 # ------ HttpStatusVerifier SSRF guard ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ class TestHttpVerifierSSRFGuard:
         ],
     )
     def test_private_targets_rejected_by_default(self, blocked_url: str) -> None:
-        with pytest.raises(VeridianConfigError, match="SSRF"):
+        with pytest.raises(ChitConfigError, match="SSRF"):
             HttpStatusVerifier(url=blocked_url)
 
     def test_constructor_opt_in_allows_private(self) -> None:
@@ -49,7 +49,7 @@ class TestHttpVerifierSSRFGuard:
         assert v.url == "http://localhost:8080/health"
 
     def test_env_opt_in_allows_private(self) -> None:
-        with patch.dict(os.environ, {"VERIDIAN_HTTP_ALLOW_PRIVATE": "1"}):
+        with patch.dict(os.environ, {"CHIT_HTTP_ALLOW_PRIVATE": "1"}):
             v = HttpStatusVerifier(url="http://127.0.0.1/internal")
         assert v.url == "http://127.0.0.1/internal"
 

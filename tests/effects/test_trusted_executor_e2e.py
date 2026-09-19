@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from veridian.assurance import (
+from chit.assurance import (
     ActionSemanticsV1,
     AuthorizationEnvelope,
     ClauseResultV1,
@@ -17,7 +17,7 @@ from veridian.assurance import (
     StaticKeyProvider,
     sha256_digest,
 )
-from veridian.effects import (
+from chit.effects import (
     DispatchRequest,
     DispatchResult,
     EffectExecutionError,

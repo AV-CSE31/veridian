@@ -6,9 +6,9 @@
 
 - [ ] `ruff check .`
 - [ ] `ruff format --check .`
-- [ ] `mypy veridian/ --strict`
+- [ ] `mypy chit/ --strict`
 - [ ] `pytest -q --tb=short`
-- [ ] `pytest --cov=veridian --cov-fail-under=85`
+- [ ] `pytest --cov=chit --cov-fail-under=85`
 
 ## Production-Grade PR Checklist
 

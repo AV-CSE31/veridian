@@ -2,7 +2,7 @@ from decimal import ROUND_DOWN, Decimal, localcontext
 
 import pytest
 
-from veridian.math import (
+from chit.math import (
     ControlLevel,
     ControlPerturbation,
     DeltaComponent,

@@ -6,11 +6,11 @@ Unit tests for BaseHook ABC, HookRegistry, and builtin hooks.
 
 import pytest
 
-from veridian.core.events import RunStarted, TaskClaimed, TaskCompleted, TaskFailed
-from veridian.core.exceptions import CostLimitExceeded, HumanReviewRequired
-from veridian.core.task import Task, TaskResult, TaskStatus
-from veridian.hooks.base import BaseHook
-from veridian.hooks.registry import HookRegistry
+from chit.core.events import RunStarted, TaskClaimed, TaskCompleted, TaskFailed
+from chit.core.exceptions import CostLimitExceeded, HumanReviewRequired
+from chit.core.task import Task, TaskResult, TaskStatus
+from chit.hooks.base import BaseHook
+from chit.hooks.registry import HookRegistry
 
 # ------ BaseHook ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -153,26 +153,26 @@ class TestHookRegistry:
 
 class TestLoggingHook:
     def test_priority_is_zero(self):
-        from veridian.hooks.builtin.logging_hook import LoggingHook
+        from chit.hooks.builtin.logging_hook import LoggingHook
 
         assert LoggingHook.priority == 0
 
     def test_before_task_does_not_raise(self):
-        from veridian.hooks.builtin.logging_hook import LoggingHook
+        from chit.hooks.builtin.logging_hook import LoggingHook
 
         hook = LoggingHook()
         task = Task(title="test", id="t1")
         hook.before_task(TaskClaimed(run_id="r1", task=task))
 
     def test_after_task_does_not_raise(self):
-        from veridian.hooks.builtin.logging_hook import LoggingHook
+        from chit.hooks.builtin.logging_hook import LoggingHook
 
         hook = LoggingHook()
         task = Task(title="test", id="t1", status=TaskStatus.DONE)
         hook.after_task(TaskCompleted(run_id="r1", task=task))
 
     def test_on_failure_does_not_raise(self):
-        from veridian.hooks.builtin.logging_hook import LoggingHook
+        from chit.hooks.builtin.logging_hook import LoggingHook
 
         hook = LoggingHook()
         task = Task(title="test", id="t1")
@@ -184,13 +184,13 @@ class TestLoggingHook:
 
 class TestCostGuardHook:
     def test_no_raise_under_budget(self):
-        from veridian.hooks.builtin.cost_guard import CostGuardHook
+        from chit.hooks.builtin.cost_guard import CostGuardHook
 
         hook = CostGuardHook(max_cost_usd=10.0)
         hook.before_task(TaskClaimed(run_id="r1"))  # must not raise
 
     def test_raises_cost_limit_exceeded_when_over_budget(self):
-        from veridian.hooks.builtin.cost_guard import CostGuardHook
+        from chit.hooks.builtin.cost_guard import CostGuardHook
 
         hook = CostGuardHook(max_cost_usd=0.01)
         hook._current_cost = 0.02
@@ -198,7 +198,7 @@ class TestCostGuardHook:
             hook.before_task(TaskClaimed(run_id="r1"))
 
     def test_accumulates_cost_from_task_tokens(self):
-        from veridian.hooks.builtin.cost_guard import CostGuardHook
+        from chit.hooks.builtin.cost_guard import CostGuardHook
 
         hook = CostGuardHook(max_cost_usd=100.0, cost_per_token=0.001)
         task = Task(title="t1")
@@ -211,7 +211,7 @@ class TestCostGuardHook:
         assert hook.current_cost == pytest.approx(0.1)
 
     def test_error_message_actionable(self):
-        from veridian.hooks.builtin.cost_guard import CostGuardHook
+        from chit.hooks.builtin.cost_guard import CostGuardHook
 
         hook = CostGuardHook(max_cost_usd=1.0)
         hook._current_cost = 2.0
@@ -222,7 +222,7 @@ class TestCostGuardHook:
 
     def test_after_task_no_op_when_task_missing(self):
         """after_task with no task attribute should return early without error."""
-        from veridian.hooks.builtin.cost_guard import CostGuardHook
+        from chit.hooks.builtin.cost_guard import CostGuardHook
 
         hook = CostGuardHook(max_cost_usd=10.0)
         event_no_task = type("FakeEvent", (), {})()
@@ -230,7 +230,7 @@ class TestCostGuardHook:
 
     def test_after_task_no_op_when_result_missing(self):
         """after_task with task but no result should return early."""
-        from veridian.hooks.builtin.cost_guard import CostGuardHook
+        from chit.hooks.builtin.cost_guard import CostGuardHook
 
         hook = CostGuardHook(max_cost_usd=10.0)
         task_no_result = Task(title="t1")
@@ -239,7 +239,7 @@ class TestCostGuardHook:
 
     def test_after_task_logs_warning_when_near_budget(self):
         """after_task should log a warning when cost exceeds warn_at_pct threshold."""
-        from veridian.hooks.builtin.cost_guard import CostGuardHook
+        from chit.hooks.builtin.cost_guard import CostGuardHook
 
         hook = CostGuardHook(max_cost_usd=1.0, cost_per_token=0.001, warn_at_pct=0.5)
         task = Task(title="t1")
@@ -254,7 +254,7 @@ class TestCostGuardHook:
 
 class TestHumanReviewHook:
     def test_raises_human_review_required_when_flagged(self):
-        from veridian.hooks.builtin.human_review import HumanReviewHook
+        from chit.hooks.builtin.human_review import HumanReviewHook
 
         hook = HumanReviewHook()
         task = Task(title="t1", metadata={"requires_human_review": True})
@@ -262,14 +262,14 @@ class TestHumanReviewHook:
             hook.before_task(TaskClaimed(run_id="r1", task=task))
 
     def test_no_raise_when_not_flagged(self):
-        from veridian.hooks.builtin.human_review import HumanReviewHook
+        from chit.hooks.builtin.human_review import HumanReviewHook
 
         hook = HumanReviewHook()
         task = Task(title="t1", metadata={})
         hook.before_task(TaskClaimed(run_id="r1", task=task))  # must not raise
 
     def test_no_raise_without_task(self):
-        from veridian.hooks.builtin.human_review import HumanReviewHook
+        from chit.hooks.builtin.human_review import HumanReviewHook
 
         hook = HumanReviewHook()
         hook.before_task(TaskClaimed(run_id="r1"))  # event with no task attached
@@ -280,13 +280,13 @@ class TestHumanReviewHook:
 
 class TestRateLimitHook:
     def test_does_not_raise_under_limit(self):
-        from veridian.hooks.builtin.rate_limit import RateLimitHook
+        from chit.hooks.builtin.rate_limit import RateLimitHook
 
         hook = RateLimitHook(max_per_minute=100)
         hook.before_task(TaskClaimed(run_id="r1"))  # must not raise
 
     def test_priority_is_50(self):
-        from veridian.hooks.builtin.rate_limit import RateLimitHook
+        from chit.hooks.builtin.rate_limit import RateLimitHook
 
         assert RateLimitHook.priority == 50
 
@@ -299,15 +299,15 @@ class TestBuiltinHookBoundary:
         import importlib.util
 
         removed = [
-            "veridian.hooks.builtin.adaptive_safety",
-            "veridian.hooks.builtin.anomaly_detector",
-            "veridian.hooks.builtin.behavioral_fingerprint",
-            "veridian.hooks.builtin.boundary_fluidity",
-            "veridian.hooks.builtin.cross_run_consistency",
-            "veridian.hooks.builtin.drift_detector",
-            "veridian.hooks.builtin.evolution_monitor",
-            "veridian.hooks.builtin.identity_guard",
-            "veridian.hooks.builtin.slack",
+            "chit.hooks.builtin.adaptive_safety",
+            "chit.hooks.builtin.anomaly_detector",
+            "chit.hooks.builtin.behavioral_fingerprint",
+            "chit.hooks.builtin.boundary_fluidity",
+            "chit.hooks.builtin.cross_run_consistency",
+            "chit.hooks.builtin.drift_detector",
+            "chit.hooks.builtin.evolution_monitor",
+            "chit.hooks.builtin.identity_guard",
+            "chit.hooks.builtin.slack",
         ]
         assert all(importlib.util.find_spec(name) is None for name in removed)
 
@@ -315,10 +315,10 @@ class TestBuiltinHookBoundary:
 # ------ Exception coverage ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-class TestVeridianEventToDict:
+class TestChitEventToDict:
     def test_to_dict_returns_serialisable_dict(self):
-        """VeridianEvent.to_dict() should return a dict with standard keys."""
-        from veridian.core.events import RunStarted
+        """ChitEvent.to_dict() should return a dict with standard keys."""
+        from chit.core.events import RunStarted
 
         ev = RunStarted(run_id="r1", event_type="run_started")
         d = ev.to_dict()

@@ -2,8 +2,8 @@
 tests.unit.test_guardrail_adapter
 ---------------------------------------------------------------------
 BaseVerifier.as_guardrail() --- the framework-agnostic adapter that lets a
-Veridian verifier run as a CrewAI-style function guardrail or inside a
-LangGraph node without Veridian owning the execution loop.
+Chit verifier run as a CrewAI-style function guardrail or inside a
+LangGraph node without Chit owning the execution loop.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from veridian.verify.base import registry
+from chit.verify.base import registry
 
 CONTRACT: dict[str, Any] = {
     "required": ["status"],
@@ -60,8 +60,8 @@ class TestGuardrailContract:
         assert isinstance(payload, str)
 
     def test_string_output_becomes_raw_output(self) -> None:
-        from veridian.core.task import Task, TaskResult
-        from veridian.verify.base import BaseVerifier, VerificationResult
+        from chit.core.task import Task, TaskResult
+        from chit.verify.base import BaseVerifier, VerificationResult
 
         class MarkerVerifier(BaseVerifier):
             id = "test_marker"

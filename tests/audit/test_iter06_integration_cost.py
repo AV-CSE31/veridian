@@ -1,7 +1,7 @@
 """
 ADVERSARIAL AUDIT — Iteration 6: Integration cost for a Monday adopter.
 
-The WorkerAgent system prompt DOES ship the <veridian:result> contract to the
+The WorkerAgent system prompt DOES ship the <chit:result> contract to the
 model (noted; not silent coupling). The integration tax is elsewhere:
 misconfiguration fails late and cryptically, and is not isolated per task.
 
@@ -11,7 +11,7 @@ misconfiguration fails late and cryptically, and is not isolated per task.
   I6-2 (P1): one task's bad verifier config is not isolated — it can crash the
              run, taking healthy sibling tasks down with it.
   I6-3 (P2): a typo'd verifier_config key raises a raw Python TypeError from deep
-             in the stack at run time, not a Veridian config error at setup.
+             in the stack at run time, not a Chit config error at setup.
 """
 
 from __future__ import annotations
@@ -20,13 +20,13 @@ from pathlib import Path
 
 import pytest
 
-from veridian import MockProvider, Task, TaskLedger, VeridianRunner
-from veridian.core.config import VeridianConfig
-from veridian.core.exceptions import VerifierNotFound
+from chit import ChitRunner, MockProvider, Task, TaskLedger
+from chit.core.config import ChitConfig
+from chit.core.exceptions import VerifierNotFound
 
 
-def _env(tmp_path: Path) -> tuple[VeridianConfig, TaskLedger]:
-    cfg = VeridianConfig(
+def _env(tmp_path: Path) -> tuple[ChitConfig, TaskLedger]:
+    cfg = ChitConfig(
         ledger_file=tmp_path / "ledger.json",
         progress_file=str(tmp_path / "progress.md"),
     )
@@ -78,8 +78,8 @@ def test_I6_2_config_error_is_distinguishable_from_verification_failure(tmp_path
             )  # typo key -> TypeError
         ]
     )
-    provider = MockProvider().script_veridian_result(structured={"ok": "yes"})
-    VeridianRunner(ledger=led, provider=provider, config=cfg).run()
+    provider = MockProvider().script_chit_result(structured={"ok": "yes"})
+    ChitRunner(ledger=led, provider=provider, config=cfg).run()
 
     broken = led.get([t for t in led.list()][0].id)
     last_error = (broken.last_error or "").lower()
@@ -94,16 +94,16 @@ def test_I6_2_config_error_is_distinguishable_from_verification_failure(tmp_path
     )
 
 
-def test_I6_3_typo_config_key_raises_veridian_config_error(tmp_path: Path) -> None:
-    """A typo'd config key should surface as a Veridian configuration error with
+def test_I6_3_typo_config_key_raises_chit_config_error(tmp_path: Path) -> None:
+    """A typo'd config key should surface as a Chit configuration error with
     guidance, not a raw TypeError from a verifier constructor.
     """
-    from veridian.core.exceptions import VeridianConfigError, VeridianError
-    from veridian.verify.base import registry
+    from chit.core.exceptions import ChitConfigError, ChitError
+    from chit.verify.base import registry
 
     try:
         registry.get("schema", {"requried_fields": ["x"]})
-    except (VeridianConfigError, VeridianError):
+    except (ChitConfigError, ChitError):
         return  # acceptable: typed, actionable
     except TypeError as exc:
         pytest.fail(

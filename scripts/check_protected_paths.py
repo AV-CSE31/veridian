@@ -20,11 +20,22 @@ PROTECTED_EXACT = {
     "AGENTS.md",
     "CLAUDE.md",
     "ONBOARDING.md",
-    "CHANGELOG.md",
     "ARCHITECTURE.md",
     "CODEBASE_HEALTH.md",
     "SESSION_HANDOFF.md",
     "GEMINI.md",
+}
+
+# docs/ is private by default. These files are the public documentation subtree
+# and are published deliberately; the same list is allowlisted in .gitignore.
+# Anything else under docs/ is still treated as confidential working material.
+PUBLIC_DOCS = {
+    "docs/README.md",
+    "docs/quickstart.md",
+    "docs/threat-model.md",
+    "docs/proof-format.md",
+    "docs/mapping-eu-ai-act-article-12.md",
+    "docs/mapping-open-agent-passport.md",
 }
 
 
@@ -39,6 +50,8 @@ def _run_git(args: list[str]) -> list[str]:
 
 
 def _is_protected(path: str) -> bool:
+    if path in PUBLIC_DOCS:
+        return False
     if path in PROTECTED_EXACT:
         return True
     return any(path.startswith(prefix) for prefix in PROTECTED_PREFIXES)
