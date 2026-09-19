@@ -27,6 +27,11 @@ api_stability_progress.log
 api_stability_report.md
 api_stability_report.html
 
+# Ad-hoc research scratch space (deep-research skill output) -- not part of
+# the library; never intended for the repository's history.
+/research_notes/
+/reports/
+
 # Local agent/tooling state
 .claude/
 .code-review-graph/
